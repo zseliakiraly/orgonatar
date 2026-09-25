@@ -527,9 +527,14 @@ const OsmdViewer = ({ fileUrl, zoom = 1.0 }) => {
     const renderScore = () => {
         const osmd = osmdRef.current;
         if (!osmd || !readyRef.current || !containerRef.current) return;
-        osmd.Zoom = zoomRef.current; // a Zoom setter a gerendákat is újraszámolja
-        osmd.render();
-        renderedWidthRef.current = containerRef.current.clientWidth;
+        try {
+            osmd.Zoom = zoomRef.current; // a Zoom setter a gerendákat is újraszámolja
+            osmd.render();
+            renderedWidthRef.current = containerRef.current.clientWidth;
+        } catch (err) {
+            console.error("Kotta rajzolási hiba:", err);
+            setStatus({ kind: 'error', text: `Hiba történt: ${err.message}` });
+        }
     };
 
     // 1. OSMD példány és méretfigyelő: egyszer, a komponens teljes élettartamára
