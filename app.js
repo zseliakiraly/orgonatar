@@ -11,26 +11,20 @@ const Icons = {
     Music: (props) => <IconBase {...props}><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></IconBase>,
     ListMusic: (props) => <IconBase {...props}><path d="M21 15V6"></path><path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"></path><path d="M12 12H3"></path><path d="M16 6H3"></path><path d="M12 18H3"></path></IconBase>,
     Search: (props) => <IconBase {...props}><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></IconBase>,
-    Menu: (props) => <IconBase {...props}><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></IconBase>,
     Plus: (props) => <IconBase {...props}><path d="M5 12h14"></path><path d="M12 5v14"></path></IconBase>,
     ChevronLeft: (props) => <IconBase {...props}><path d="m15 18-6-6 6-6"></path></IconBase>,
     ChevronRight: (props) => <IconBase {...props}><path d="m9 18 6-6-6-6"></path></IconBase>,
     Trash2: (props) => <IconBase {...props}><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></IconBase>,
     Play: (props) => <IconBase {...props}><polygon points="5 3 19 12 5 21 5 3"></polygon></IconBase>,
-    SidebarLeft: (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><line x1="9" x2="9" y1="3" y2="21"></line></IconBase>,
-    SidebarRight: (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><line x1="15" x2="15" y1="3" y2="21"></line></IconBase>,
     Settings: (props) => <IconBase {...props}><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></IconBase>,
     Book: (props) => <IconBase {...props}><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></IconBase>,
     Info: (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="16" y2="12"></line><line x1="12" x2="12.01" y1="8" y2="8"></line></IconBase>,
-    Save: (props) => <IconBase {...props}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></IconBase>,
     Edit: (props) => <IconBase {...props}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></IconBase>,
     GripVertical: (props) => <IconBase {...props}><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></IconBase>,
     CheckSquare: (props) => <IconBase {...props}><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></IconBase>,
     Square: (props) => <IconBase {...props}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></IconBase>,
     X: (props) => <IconBase {...props}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></IconBase>,
-    ChevronUp: (props) => <IconBase {...props}><path d="m18 15-6-6-6 6"/></IconBase>,
     ChevronDown: (props) => <IconBase {...props}><path d="m6 9 6 6 6-6"/></IconBase>,
-    Star: (props) => <IconBase {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></IconBase>,
     Eye: (props) => <IconBase {...props}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></IconBase>,
     EyeOff: (props) => <IconBase {...props}><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path><line x1="2" x2="22" y1="2" y2="22"></line></IconBase>,
     LayoutBottom: (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><line x1="3" x2="21" y1="15" y2="15" /></IconBase>,
@@ -54,7 +48,7 @@ const parseVerses = (lyrics) => {
 // --- TÁROLÁS (localStorage) ---
 const STORAGE_KEYS = { playlists: 'orgonista_playlists', settings: 'orgonista_settings' };
 
-const DEFAULT_SETTINGS = { theme: 'papyrus', showLyrics: true, sidebarSide: 'right', lyricsWidth: '15%', scoreMaxWidth: '100%', bookActive: {} };
+const DEFAULT_SETTINGS = { theme: 'papyrus', showLyrics: true, sidebarSide: 'right', lyricsWidth: '15%', scoreMaxWidth: '100%', bookActive: {}, skipFullscreenPrompt: false };
 
 const loadJSON = (key, fallback) => {
     try {
@@ -105,6 +99,22 @@ const isBookActive = (book, bookActive) => {
     return Object.prototype.hasOwnProperty.call(bookActive, key) ? bookActive[key] : book.active !== false;
 };
 
+// --- TELJES KÉPERNYŐ ---
+// iPhone-on nincs Fullscreen API (ott a hívás hibát dobott), régebbi iPadeken csak webkit előtaggal
+const FULLSCREEN_SUPPORTED = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+const isFullscreen = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+const toggleFullScreen = () => {
+    const el = document.documentElement;
+    try {
+        const action = isFullscreen()
+            ? (document.exitFullscreen || document.webkitExitFullscreen).call(document)
+            : (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+        Promise.resolve(action).catch(err => console.error(err));
+    } catch (err) {
+        console.error(err);
+    }
+};
+
 // --- KERESÉS ---
 // Kisbetűs, ékezet nélküli alak az összehasonlításhoz ("eros var" = "Erős vár")
 const normalizeText = (text) => String(text ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -147,7 +157,7 @@ const NavigationSidebar = ({ activeTab, onTabChange, menuSide, toggleFullScreen 
 
         </div>
         <div className="sidebar-group">
-            <button onClick={toggleFullScreen} className="nav-btn" title="Teljes képernyő"><Icons.Maximize size={24} /></button>
+            {toggleFullScreen && <button onClick={toggleFullScreen} className="nav-btn" title="Teljes képernyő"><Icons.Maximize size={24} /></button>}
             <button onClick={() => onTabChange('settings')} className={`nav-btn ${activeTab === 'settings' ? 'active' : ''}`} title="Beállítások"><Icons.Settings size={24} /></button>
             <button onClick={() => onTabChange('about')} className={`nav-btn ${activeTab === 'about' ? 'active' : ''}`} title="Névjegy"><Icons.Info size={24} /></button>
         </div>
@@ -177,15 +187,20 @@ const AlertModal = ({ isOpen, onClose, message }) => {
 };
 
 const FullscreenModal = ({ isOpen, onClose, onConfirm }) => {
+    const [dontAsk, setDontAsk] = useState(false);
     if (!isOpen) return null;
     return (
-        <Modal title="Teljes képernyő" onClose={onClose} footer={
+        <Modal title="Teljes képernyő" onClose={() => onClose(dontAsk)} footer={
             <>
-                <button onClick={onClose} className="btn">Mégse</button>
-                <button onClick={onConfirm} className="btn btn-primary">Teljes képernyő</button>
+                <button onClick={() => onClose(dontAsk)} className="btn">Mégse</button>
+                <button onClick={() => onConfirm(dontAsk)} className="btn btn-primary">Teljes képernyő</button>
             </>
         }>
             <p className="text-ink">A jobb élmény érdekében javasoljuk a teljes képernyős mód használatát.</p>
+            <label className="text-sm text-gray-500" style={{display:'flex', alignItems:'center', gap:'0.5rem', marginTop:'0.75rem', cursor:'pointer'}}>
+                <input type="checkbox" checked={dontAsk} onChange={e => setDontAsk(e.target.checked)} />
+                Ne kérdezze újra
+            </label>
         </Modal>
     );
 };
@@ -416,7 +431,7 @@ const SettingsView = ({ settings, onUpdateSettings }) => (
                     </div>
                     <select className="input" style={{width:'auto', minWidth:'150px'}} value={settings.theme} onChange={(e) => onUpdateSettings({...settings, theme: e.target.value})}>
                         <option value="papyrus">Papirusz</option>
-                        <option value="dark-papyrus">Sötét Pergamen</option>
+                        <option value="dark-papyrus">Sötét pergamen</option>
                         <option value="white">Törtfehér</option>
                     </select>
                 </div>
@@ -745,7 +760,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
     );
 };
 
-const PlaylistEditor = ({ playlist, onClose, onRemoveItem, onAddItem, onPlay, onReorder, getScoreInfo }) => {
+const PlaylistEditor = ({ playlist, onRemoveItem, onAddItem, onPlay, onReorder, getScoreInfo }) => {
     const [dragItem, setDragItem] = useState(null);
     const [dragOverItem, setDragOverItem] = useState(null);
     const handleDragStart = (e, index) => { setDragItem(index); e.dataTransfer.effectAllowed = "move"; };
@@ -844,27 +859,32 @@ function OrganistApp() {
     const [itemToDelete, setItemToDelete] = useState(null);
     const [playlistToDelete, setPlaylistToDelete] = useState(null);
     const [alertMessage, setAlertMessage] = useState(null);
-    const [isFullscreenModalOpen, setIsFullscreenModalOpen] = useState(true);
+    const [isFullscreenModalOpen, setIsFullscreenModalOpen] = useState(() => FULLSCREEN_SUPPORTED && !isFullscreen() && !settings.skipFullscreenPrompt);
 
     // LOAD DATA & PERSISTENCE
     useEffect(() => {
         setLoading(true);
-        const idobelyeg = new Date().getTime();
-        
-        Promise.all([
-            fetch(`./data/enek.json?t=${idobelyeg}`).then(res => res.ok ? res.json() : []),
-            fetch(`./data/kottakonyvek.json?t=${idobelyeg}`).then(res => res.ok ? res.json() : [])  
-        ])
-        .then(eredmenyek => {
-            setHymnBook(eredmenyek[0]);
-            setScorebooks(eredmenyek[1]); // <-- setScores helyett most már a könyveket mentjük
-            setLoading(false);
-        })
-        .catch(err => {
-            console.error("Adatbetöltési hiba:", err);
-            setAlertMessage("Hiba a JSON fájlok betöltésekor.");
-            setLoading(false);
-        });
+        const errors = [];
+        // no-cache: a böngésző mindig rákérdez a szerverre, de változatlan fájlnál nem tölti le újra (304)
+        const loadJSONFile = (url) => fetch(url, { cache: 'no-cache' })
+            .then(res => {
+                if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+                return res.json();
+            })
+            .then(data => Array.isArray(data) ? data : [])
+            .catch(err => {
+                console.error("Adatbetöltési hiba:", err);
+                errors.push(err.message);
+                return [];
+            });
+
+        Promise.all([loadJSONFile('./data/enek.json'), loadJSONFile('./data/kottakonyvek.json')])
+            .then(([hymns, books]) => {
+                setHymnBook(hymns);
+                setScorebooks(books);
+                if (errors.length) setAlertMessage(`Hiba az adatfájlok betöltésekor: ${errors.join(', ')}`);
+                setLoading(false);
+            });
     }, []);
 
     // NAVIGÁCIÓ: minden nézetváltás egy history-bejegyzés, a vissza gomb ezt állítja vissza.
@@ -898,13 +918,6 @@ function OrganistApp() {
         window.history.replaceState({ ...window.history.state, playerIndex: index }, '');
     };
 
-    const toggleFullScreen = () => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(err => console.error(err));
-        } else {
-            if (document.exitFullscreen) document.exitFullscreen();
-        }
-    };
     // A kottakönyvek ki-/bekapcsolását a beállításokban tároljuk, így újratöltés után is megmarad
     const toggleBookActive = (book) => {
         setSettings(prev => ({
@@ -1039,11 +1052,10 @@ function OrganistApp() {
     };
     const getScoreInfo = (scoreId, varId, preId) => {
         const score = getScoreById(scoreId);
-        if(!score) return { scoreName: '?', variationName: '?', variationComposer: '?', preludeName: null };
+        if(!score) return { variationName: '?', variationComposer: '?', preludeName: null };
         const variation = score.variations ? score.variations.find(v => v.id === varId) : null;
         const prelude = score.preludes ? score.preludes.find(p => p.id === preId) : null;
         return { 
-            scoreName: score.name, 
             variationName: variation ? variation.name : '?', 
             variationComposer: variation?.composer,
             preludeName: prelude ? prelude.name : null
@@ -1052,6 +1064,11 @@ function OrganistApp() {
     
     const searchIndex = useMemo(() => buildSearchIndex(hymnBook), [hymnBook]);
     const filteredHymns = useMemo(() => searchHymns(searchIndex, searchQuery), [searchIndex, searchQuery]);
+
+    const closeFullscreenModal = (dontAsk) => {
+        setIsFullscreenModalOpen(false);
+        if (dontAsk) setSettings(prev => ({ ...prev, skipFullscreenPrompt: true }));
+    };
 
     // Handlers (minden módosítás csak a playlists állapotot írja, a nézetek ebből számolnak)
     const handleCreatePlaylist = (name) => {
@@ -1112,7 +1129,7 @@ function OrganistApp() {
                 activeTab={view}
                 onTabChange={(t) => navigate({ activeTab: t })}
                 menuSide={settings.sidebarSide}
-                toggleFullScreen={toggleFullScreen} 
+                toggleFullScreen={FULLSCREEN_SUPPORTED ? toggleFullScreen : null} 
             />
             
             <div className="main-content">
@@ -1120,10 +1137,10 @@ function OrganistApp() {
                 <AlertModal isOpen={!!alertMessage} onClose={() => setAlertMessage(null)} message={alertMessage} />
                 <FullscreenModal 
                     isOpen={isFullscreenModalOpen} 
-                    onClose={() => setIsFullscreenModalOpen(false)} 
-                    onConfirm={() => {
+                    onClose={closeFullscreenModal} 
+                    onConfirm={(dontAsk) => {
                         toggleFullScreen();
-                        setIsFullscreenModalOpen(false);
+                        closeFullscreenModal(dontAsk);
                     }} 
                 />
                 <CreatePlaylistModal isOpen={isCreateListModalOpen} onClose={() => setIsCreateListModalOpen(false)} onConfirm={handleCreatePlaylist} />
@@ -1222,7 +1239,7 @@ function OrganistApp() {
                     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
                         <div className="header">
                             <div style={{flex:1}}></div>
-                            <h1 className="header-title main">Liturgikus Listák</h1>
+                            <h1 className="header-title main">Liturgikus listák</h1>
                             <div style={{flex:1, display:'flex', justifyContent:'flex-end'}}>
                                 <button onClick={() => setIsCreateListModalOpen(true)} className="btn btn-primary"><Icons.Plus size={20}/> Új lista</button>
                             </div>
@@ -1265,7 +1282,7 @@ function OrganistApp() {
                         </div>
 
                         <div className="main-content" style={{padding:'1rem', overflowY:'auto'}}>
-                            <p textAlign="center">
+                            <p className="text-center">
                                 Kapcsold ki azokat a könyveket, amiknek a kottáit nem szeretnéd látni.
                             </p>
 
