@@ -1,0 +1,564 @@
+/* --- Változók (Téma) --- */
+:root {
+    --col-galaxy-blue: #002B36;
+    --col-galaxy-light: #073642;
+    --col-papyrus: #FDF6E3;
+    --col-papyrus-dark: #EEE8D5;
+    --col-accent: #B58900;
+    --col-ink: #2a2a2a;
+    --col-white: #ffffff;
+    --col-red: #dc2626;
+    
+    --font-serif: 'Georgia', 'Cambria', 'Times New Roman', serif;
+    --font-sans: 'Segoe UI', 'Roboto', 'Helvetica', sans-serif;
+
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* --- Alapok --- */
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--col-galaxy-blue);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden; /* App-szerű viselkedés */
+}
+
+* { box-sizing: border-box; }
+
+button { cursor: pointer; border: none; background: none; font-family: inherit; }
+button:disabled { cursor: not-allowed; opacity: 0.5; }
+
+/* --- Layout --- */
+.app-root { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+
+/* Oldalsáv */
+.sidebar {
+    width: 64px;
+    background-color: var(--col-galaxy-blue);
+    border-right: 1px solid var(--col-galaxy-light);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 0;
+    z-index: 50;
+    box-shadow: var(--shadow-xl);
+}
+.sidebar.right { order: 2; border-right: none; border-left: 1px solid var(--col-galaxy-light); }
+.sidebar-group { display: flex; flex-direction: column; gap: 1rem; }
+
+/* Fő tartalom */
+.main-content {
+    flex: 1;
+    background-color: var(--col-papyrus);
+    color: var(--col-ink);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+/* --- Komponensek --- */
+
+/* Gombok */
+.nav-btn {
+    padding: 10px;
+    border-radius: 8px;
+    color: #9ca3af;
+    transition: all 0.2s;
+}
+.nav-btn:hover { color: var(--col-white); background-color: var(--col-galaxy-light); }
+.nav-btn.active { background-color: var(--col-accent); color: var(--col-white); box-shadow: var(--shadow-md); }
+
+.btn {
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.2s;
+}
+.btn-primary { background-color: var(--col-accent); color: var(--col-white); }
+.btn-primary:hover { background-color: #d4a000; }
+.btn-ghost { color: #666; }
+.btn-ghost:hover { background-color: rgba(0,0,0,0.05); color: var(--col-ink); }
+.btn-danger { color: #999; }
+.btn-danger:hover { color: var(--col-red); }
+
+/* Header */
+.header {
+    height: 64px;
+    background-color: var(--col-galaxy-blue);
+    color: var(--col-papyrus);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1rem;
+    border-bottom: 1px solid var(--col-galaxy-light);
+    box-shadow: var(--shadow-md);
+    z-index: 30;
+    flex-shrink: 0;
+}
+
+/* Kártyák (Listákhoz) */
+.card {
+    background-color: var(--col-papyrus);
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 20rem;
+    position: relative;
+    transition: box-shadow 0.2s;
+}
+.card:hover { box-shadow: var(--shadow-xl); }
+.card-decoration { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background-color: var(--col-galaxy-blue); transition: background 0.2s; }
+.card:hover .card-decoration { background-color: var(--col-accent); }
+
+/* Modal */
+.modal-overlay {
+    position: fixed; inset: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+}
+.modal-box {
+    background-color: var(--col-papyrus);
+    width: 100%; max-width: 28rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--col-galaxy-light);
+    animation: modalFadeIn 0.2s ease-out;
+    display: flex; flex-direction: column;
+    max-height: 90vh;
+}
+.modal-header {
+    padding: 1rem;
+    background-color: rgba(238, 232, 213, 0.5);
+    border-bottom: 1px solid #d1d5db;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.modal-body { padding: 1.5rem; overflow-y: auto; }
+.modal-footer {
+    padding: 1rem;
+    background-color: rgba(238, 232, 213, 0.3);
+    border-top: 1px solid #d1d5db;
+    display: flex; justify-content: flex-end; gap: 0.75rem;
+}
+
+/* Kotta Nézet */
+.score-wrapper {
+    background-color: var(--col-papyrus);
+    box-shadow: var(--shadow-xl);
+    border-radius: 4px;
+    width: 100%; height: 100%;
+    position: relative;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+}
+.score-image { mix-blend-mode: multiply; max-width: 100%; max-height: 100%; object-fit: contain; }
+
+/* Form elemek */
+.input {
+    width: 100%; padding: 0.75rem 1rem;
+    background-color: var(--col-papyrus-dark);
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    outline: none;
+    color: var(--col-ink);
+}
+.input:focus { background-color: var(--col-white); border-color: var(--col-accent); }
+.input.search {
+    padding-left: 2.5rem;
+}
+
+/* Typography */
+.font-serif { font-family: var(--font-serif); }
+.text-accent { color: var(--col-accent); }
+.text-galaxy { color: var(--col-galaxy-blue); }
+
+/* Inaktív kártya halványítása */
+.card.inactive {
+    opacity: 0.6;
+    filter: grayscale(0.5); /* Kicsit szürkébbé teszi az inaktív kártyát */
+}
+
+/* Animált Toggle Switch */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.toggle-switch .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc;
+    transition: .3s;
+    border-radius: 24px;
+}
+.toggle-switch .slider:before {
+    position: absolute;
+    content: "";
+    height: 18px; width: 18px;
+    left: 3px; bottom: 3px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+}
+.toggle-switch input:checked + .slider {
+    background-color: var(--col-accent);
+}
+.toggle-switch input:checked + .slider:before {
+    transform: translateX(20px);
+}
+
+
+/* Animáció */
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* --- Refactor styles --- */
+
+.modal-header h3 {
+    margin: 0;
+}
+.modal-body {
+    flex: 1;
+}
+
+/* Other components */
+.btn-danger-solid {
+    background-color: var(--col-red);
+    color: white;
+}
+/* Clickable cursor */
+.clickable {
+    cursor: pointer;
+}
+
+.card.clickable {
+    cursor: pointer;
+}
+.card.clickable:hover {
+    box-shadow: var(--shadow-xl);
+    border-color: var(--col-accent);
+}
+
+.btn-success {
+    background-color: #16a34a;
+    color: white;
+}
+.btn-success:hover {
+    background-color: #15803d;
+}
+
+/* Header variations */
+.header.centered {
+    justify-content: center;
+}
+
+/* Modal Content */
+.modal-header h3 {
+    margin: 0;
+}
+.modal-body {
+    flex: 1;
+}
+.player-view .header {
+    background-color: var(--col-papyrus);
+    color: var(--col-ink);
+    border-bottom-color: #aaa;
+}
+
+.player-view {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background-color: var(--col-papyrus);
+    color: var(--col-ink);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Card variations */
+.card.card-row {
+    height: auto;
+    min-height: auto;
+    flex-direction: row;
+    padding: 1rem;
+    align-items: center;
+    gap: 2rem;
+    justify-content: flex-start;
+}
+
+.card.list-item {
+    height: auto;
+    min-height: auto;
+    flex-direction: row;
+    padding: 1rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+}
+
+.playlist-editor-item {
+    background-color: white;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* About view */
+.about-view {
+    padding: 4rem;
+    text-align: center;
+}
+.about-view .icon-container {
+    margin: 0 auto 2rem;
+    width: 80px;
+    height: 80px;
+    background-color: var(--col-galaxy-blue);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--col-accent);
+}
+.about-view .content-box {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 2rem;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: var(--shadow-md);
+    text-align: left;
+}
+.about-view .content-box p {
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* Verse item in AddToPlaylistModal */
+.verse-item {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    background-color: white;
+}
+.verse-item:last-child {
+    border-bottom: none;
+}
+.verse-item.selected {
+    background-color: #e6f4f1;
+}
+
+/* HymnSelectorModal */
+.hymn-selector-search {
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 0.5rem;
+    position: relative;
+}
+.hymn-selector-search .search-icon {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: #999;
+}
+.hymn-selector-list {
+    display: flex;
+    flex-direction: column;
+}
+.hymn-selector-list .icon-plus {
+    color: #ccc;
+}
+
+.hymn-selector-item {
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 0.25rem;
+}
+.hymn-selector-item:hover {
+    background-color: #f3f4f6; /* gray-100 */
+}
+.hymn-selector-item:last-child {
+    border-bottom: none;
+}
+.hymn-selector-item-hymn-number {
+    color: var(--col-accent);
+    font-weight: bold;
+    margin-right: 0.5rem;
+}
+.hymn-selector-item-hymn-title {
+    color: var(--col-ink);
+    font-weight: 500; /* font-medium */
+}
+
+
+/* PlaylistEditor */
+.playlist-editor-empty {
+    text-align: center;
+    margin-top: 3rem;
+    color: #999;
+}
+.playlist-editor-empty .icon {
+    opacity: 0.2;
+    margin: 0 auto;
+}
+.playlist-editor-empty p {
+    font-style: italic;
+    margin-top: 1rem;
+}
+.playlist-editor-add-btn {
+    border: 2px dashed #ccc;
+    color: #666;
+    width: 100%;
+    max-width: 400px;
+    justify-content: center;
+}
+
+/* Playlist card */
+.playlist-card-header {
+    padding: 1rem;
+    border-bottom: 1px solid #ddd;
+    background-color: rgba(0,0,0,0.03);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.playlist-card-item {
+    padding: 5px 1rem;
+    font-size: 13px;
+    border-bottom: 1px dashed #eee;
+    display: flex;
+    gap: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.playlist-card-item:last-child {
+    border-bottom: none;
+}
+.playlist-card-item span:last-child {
+    color: #666;
+    font-style: italic;
+}
+.playlist-card-start-btn {
+    background-color: var(--col-galaxy-light);
+    color: white;
+    width: 100%;
+    justify-content: center;
+}
+
+/* Scorebook card */
+.scorebook-card-content-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* --- Typography --- */
+.header-title {
+    font-family: var(--font-serif);
+    font-weight: bold;
+    color: var(--col-accent);
+}
+.header-title.main {
+    font-size: 1.25rem; /* text-xl */
+    white-space: nowrap;
+}
+.header-title.large {
+    font-size: 1.5rem; /* text-2xl */
+    flex: 1;
+}
+
+/* --- Scorebook View --- */
+.scorebook-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.card.list-item.scorebook-item {
+    cursor: default;
+    align-items: stretch;
+}
+
+.card.inactive .card-decoration {
+    background-color: #999 !important;
+}
+
+.scorebook-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 4px 0;
+}
+
+.scorebook-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.scorebook-title {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.scorebook-toggle {
+    transform: scale(0.8);
+    margin: 0;
+}
+
+.scorebook-details {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.scorebook-description {
+    font-size: 0.75rem;
+    color: #888;
+    line-height: 1.2;
+}
+
+.scorebook-empty {
+    justify-content: center;
+    cursor: default;
+    max-width: 600px;
+    margin: 0 auto;
+    width: 100%;
+}
