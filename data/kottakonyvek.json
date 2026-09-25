@@ -1,0 +1,68 @@
+[
+  {
+    "id": "fazekas_kottak",
+    "title": "Fazekas Márton letétei",
+    "author": "Fazekas Márton",
+    "copyright": "Fazekas Márton saját kották",
+    "description": "Saját letéteim, egy része Parola Csaba segítségével készült, a többi szabadon tenyészik.",
+    "active": true,
+    "scores": [
+      { "id": "1", "composer": "Teszt Mihály", "voiceCount": 3, "year": "2010", "xmlUrl": "./data/genfi/001-bm-3k-2010.mxl" },
+      { "id": "165", "composer": "Fazekas Márton", "voiceCount": 3, "year": "2017", "xmlUrl": "./data/fazekas/165fm-3k-2017.svg" },
+      { "id": "196", "composer": "Fazekas Márton", "voiceCount": 4, "year": "2015", "xmlUrl": "/data/fazekas/196fm-4k-2015.svg" }
+    ],
+    "preludes": [
+      { "id": "165", "composer": "Fazekas Márton", "year": "2017", "xmlUrl": "/data/fazekas/165fm-E-2017.svg" }
+    ]
+  },
+  {
+    "id": "genfikoralkonyv",
+    "title": "Korálkönyv - Genfi zsoltárok (2010)",
+    "author": "Bessenyi Mihály, Gárdonyi Zsolt, Karasszon Dezső,",
+    "copyright": "egyhazzene.reformatus.hu",
+    "description": "A 2010-ben kiadott korálkönyv a genfi zsoltárokkal. Letölthető az egyhazzene.reformatus.hu weboldalról. ",
+    "active": true,
+    "scores": [
+      { "id": "1", "composer": "Bessenyei Mihály", "voiceCount": 3, "year": "2010", "xmlUrl": "./data/genfi/001-bm-3k-2010.mxl" },
+      { "id": "2", "composer": "szgy", "voiceCount": 3, "year": "2010", "xmlUrl": "/data/genfi/002-szgy-3k-2010.mxl" },
+      { "id": "3", "composer": "ksz", "voiceCount": 3, "year": "2010", "xmlUrl": "/data/genfi/003-ksz-3k-2010.mxl" },
+      { "id": "4", "composer": "csg", "voiceCount": 3, "year": "2010", "xmlUrl": "/data/genfi/004-csg-3k-2010.mxl" },
+      { "id": "5", "composer": "Bessenyei Mihály", "voiceCount": 3, "year": "2010", "xmlUrl": "/data/genfi/005-bm-3k-2010.png" },
+      { "id": "6", "composer": "Bessenyei Mihály", "voiceCount": 3, "year": "2010", "xmlUrl": "/data/genfi/006-vl-3k-2010.png" },
+      { "id": "7", "composer": "Karasszon Dezső", "voiceCount": 4, "year": "2010", "xmlUrl": "/data/genfi/007-kd-4k-2010.png" },
+      { "id": "7", "composer": "szgy", "voiceCount": 3, "year": "2010", "xmlUrl": "/data/genfi/007-szgy-3k-2010.png" },
+      { "id": "8", "composer": "Bessenyei Mihály", "voiceCount": 4, "year": "2010", "xmlUrl": "/data/genfi/008-bm-4k-2010.png" },
+      { "id": "9", "composer": "vl", "voiceCount": 3, "year": "2010", "xmlUrl": "/data/genfi/009-vl-3k-2010.png" },
+      { "id": "10", "composer": "Bessenyei Mihály", "voiceCount": 3, "year": "2010", "xmlUrl": "/data/genfi/010-bm-3k-2010.png" },
+      { "id": "11", "composer": "szgy", "voiceCount": 3, "year": "2010", "xmlUrl": "/data/genfi/011szgy-3k-2010.png" },
+      { "id": "12", "composer": "Bessenyei Mihály", "voiceCount": 3, "year": "2010", "xmlUrl": "/data/genfi/012bm-3k-2010.png" },
+      { "id": "12", "composer": "Karasszon Dezső", "voiceCount": 4, "year": "2010", "xmlUrl": "/data/genfi/012kd-4k-2010.png" },
+      { "id": "13", "composer": "Karasszon Dezső", "voiceCount": 4, "year": "2010", "xmlUrl": "/data/genfi/013kd-4k-2010.png" },
+      { "id": "14", "composer": "Karasszon Dezső", "voiceCount": 4, "year": "2010", "xmlUrl": "/data/genfi/014kd-4k-2010.png" },
+      { "id": "15", "composer": "ksz", "voiceCount": 3, "year": "2010", "xmlUrl": "/data/genfi/015ksz-3k-2010.png" },
+      { "id": "16", "composer": "ncs", "voiceCount": 4, "year": "2010", "xmlUrl": "/data/genfi/016ncs-3k-2010.png" },
+      { "id": "17", "composer": "Karasszon Dezső", "voiceCount": 3, "year": "2010", "xmlUrl": "/data/genfi/017kd-4k-2010.png" },
+      { "id": "18", "composer": "szgy", "voiceCount": 3, "year": "2010", "xmlUrl": "/data/genfi/018szgy-3k-2010.png" },
+      { "id": "19", "composer": "Bessenyei Mihály", "voiceCount": 3, "year": "2010", "xmlUrl": "/data/genfi/019bm-3k-2010.png" },
+      { "id": "20", "composer": "Bessenyei Mihály", "voiceCount": 3, "year": "2010", "xmlUrl": "/data/genfi/020bm-3k-2010.png" },
+      { "id": "21", "composer": "csg", "voiceCount": 3, "year": "2010", "xmlUrl": "/data/genfi/021csg-3k-2010.png" },
+      { "id": "22", "composer": "Karasszon Dezső", "voiceCount": 4, "year": "2010", "xmlUrl": "/data/genfi/022kd-4k-2010.png" },
+      { "id": "22", "composer": "szgy", "voiceCount": 3, "year": "2010", "xmlUrl": "/data/genfi/022szgy-3k-2010.png" },
+      { "id": "23", "composer": "Gárdonyi Zsolt", "voiceCount": 4, "year": "2010", "xmlUrl": "/data/genfi/023gzs-4k-2010.png" },
+      { "id": "23", "composer": "szgy", "voiceCount": 3, "year": "2010", "xmlUrl": "/data/genfi/023szgy-3k-2010.png" },
+      { "id": "24", "composer": "Bessenyei Mihály", "voiceCount": 3, "year": "2010", "xmlUrl": "/data/genfi/024bm-3k-2010.png" },
+      { "id": "24", "composer": "Gárdonyi Zsolt", "voiceCount": 4, "year": "2010", "xmlUrl": "/data/genfi/024gzs-4k-2010.png" }
+    ]
+  },
+  {
+    "id": "koralkonyv59",
+    "title": "Református Korálkönyv (1959)",
+    "author": "Ismeretlen",
+    "copyright": "egyhazzene.reformatus.hu",
+    "description": "Az 1959-as kiadású korálkönyv. Letölthető az egyhazzene.reformatus.hu weboldalról. ",
+    "active": true,
+    "scores": [
+      { "id": "641", "composer": "Erkel Ferenc", "voiceCount": 4, "year": "1844", "xmlUrl": "/data/kk59/641-erkel-1844.svg" }
+    ]
+  }
+]
