@@ -105,6 +105,37 @@ const isBookActive = (book, bookActive) => {
     return Object.prototype.hasOwnProperty.call(bookActive, key) ? bookActive[key] : book.active !== false;
 };
 
+// --- KERESÉS ---
+// Kisbetűs, ékezet nélküli alak az összehasonlításhoz ("eros var" = "Erős vár")
+const normalizeText = (text) => String(text ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+// Az ékezet nélküli címet és szöveget egyszer számoljuk ki, nem minden billentyűleütésnél
+const buildSearchIndex = (hymns) => hymns.map(h => ({
+    hymn: h,
+    number: String(h.number),
+    title: normalizeText(h.title),
+    lyrics: normalizeText(h.lyrics)
+}));
+
+// Csak számjegyek: az énekszám elejére keres (a pontos egyezés kerül előre), a szövegben nem,
+// mert ott minden éneknél ott vannak a versszakszámok ("1.", "2." ...).
+// Egyébként ékezet nélkül keres a számban, a címben és a szövegben; a címbeli találatok kerülnek előre.
+const searchHymns = (index, query) => {
+    const q = query.trim();
+    if (!q) return index.map(e => e.hymn);
+    if (/^\d+$/.test(q)) {
+        return index
+            .filter(e => e.number.startsWith(q))
+            .sort((a, b) => (b.number === q) - (a.number === q))
+            .map(e => e.hymn);
+    }
+    const nq = normalizeText(q);
+    return index
+        .filter(e => normalizeText(e.number).startsWith(nq) || e.title.includes(nq) || e.lyrics.includes(nq))
+        .sort((a, b) => b.title.includes(nq) - a.title.includes(nq))
+        .map(e => e.hymn);
+};
+
 // --- KOMPONENSEK ---
 
 const NavigationSidebar = ({ activeTab, onTabChange, menuSide, toggleFullScreen }) => (
@@ -131,7 +162,7 @@ const Modal = ({ title, onClose, children, footer, maxWidth }) => (
                 <button onClick={onClose}><Icons.X size={20} className="text-gray-500 hover:text-black"/></button>
             </div>
             <div className="modal-body" style={{padding:'1rem'}}>{children}</div>
-            <div className="modal-footer" style={{padding:'0.75rem 1rem'}}>{footer}</div>
+            {footer && <div className="modal-footer" style={{padding:'0.75rem 1rem'}}>{footer}</div>}
         </div>
     </div>
 );
@@ -163,14 +194,15 @@ const HymnSelectorModal = ({ isOpen, onClose, onSelect, hymnBook }) => {
     const [search, setSearch] = useState('');
     const inputRef = useRef(null);
     useEffect(() => { if(isOpen) { setSearch(''); setTimeout(() => inputRef.current?.focus(), 100); } }, [isOpen]);
-    const filtered = useMemo(() => { if (!hymnBook) return []; if (!search) return hymnBook; const lower = search.toLowerCase(); return hymnBook.filter(h => h.number.includes(lower) || h.title.toLowerCase().includes(lower)); }, [search, hymnBook]);
+    const searchIndex = useMemo(() => buildSearchIndex(hymnBook || []), [hymnBook]);
+    const filtered = useMemo(() => searchHymns(searchIndex, search), [searchIndex, search]);
     if (!isOpen) return null;
 
     return (
         <Modal title="Ének választása" onClose={onClose} footer={null}>
             <div className="hymn-selector-search">
                 <Icons.Search className="search-icon" size={18}/>
-                <input ref={inputRef} type="text" className="input" placeholder="Keresés..." value={search} onChange={e => setSearch(e.target.value)} />
+                <input ref={inputRef} type="text" className="input search" placeholder="Keresés számra, címre vagy szövegre..." value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && filtered.length > 0) onSelect(filtered[0]); }} />
             </div>
             <div className="hymn-selector-list">
                 {filtered.map(h => (
@@ -199,7 +231,7 @@ const CreatePlaylistModal = ({ isOpen, onClose, onConfirm }) => {
         }>
             <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Lista neve</label>
-                <input ref={inputRef} type="text" className="input" placeholder="pl. Vasárnapi mise" value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && name && onConfirm(name)} />
+                <input ref={inputRef} type="text" className="input" placeholder="pl. Vasárnapi istentisztelet" value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && name && onConfirm(name)} />
             </div>
         </Modal>
     );
@@ -269,31 +301,46 @@ const CustomSelect = ({ items, currentId, onChange, labelKey = "name", subLabelK
     );
 }
 
-const AddToPlaylistModal = ({ isOpen, onClose, onConfirm, playlists, initialVariationId, initialPreludeId, hymn, variations, preludes, defaultPlaylistId, lockPlaylistId }) => {
-    if (!isOpen) return null;
-    const [selectedPlaylistId, setSelectedPlaylistId] = useState(defaultPlaylistId || (playlists.length > 0 ? playlists[0].id : null));
-    const [selectedVariationId, setSelectedVariationId] = useState(initialVariationId);
-    const [selectedPreludeId, setSelectedPreludeId] = useState(initialPreludeId);
-    const [selectedVerses, setSelectedVerses] = useState([]); 
-    const parsedVerses = useMemo(() => parseVerses(hymn.lyrics), [hymn.lyrics]);
+const NEW_PLAYLIST = '__new__';
 
-    useEffect(() => { 
-        if (isOpen) { 
-            setSelectedVerses(parsedVerses.map(v => v.index)); 
-            if (!initialVariationId && variations && variations.length > 0) setSelectedVariationId(variations[0].id); else setSelectedVariationId(initialVariationId); 
-            setSelectedPreludeId(initialPreludeId || (preludes && preludes.length > 0 ? null : null)); 
-            if (lockPlaylistId) setSelectedPlaylistId(lockPlaylistId); else if (!selectedPlaylistId && playlists.length > 0) setSelectedPlaylistId(playlists[0].id); 
-        } 
-    }, [isOpen]);
+// Csak nyitott állapotban csatoljuk, ezért a kezdőértékeket egyszer, a megnyitáskor számoljuk ki
+const AddToPlaylistModal = ({ onClose, onConfirm, playlists, initialVariationId, initialPreludeId, hymn, variations, preludes, lockPlaylistId }) => {
+    const parsedVerses = useMemo(() => parseVerses(hymn.lyrics), [hymn.lyrics]);
+    const [targetId, setTargetId] = useState(() => lockPlaylistId ?? (playlists.length > 0 ? playlists[0].id : NEW_PLAYLIST));
+    const [newName, setNewName] = useState('');
+    const [selectedVariationId, setSelectedVariationId] = useState(() => variations.some(v => v.id === initialVariationId) ? initialVariationId : (variations.length > 0 ? variations[0].id : null));
+    const [selectedPreludeId, setSelectedPreludeId] = useState(() => preludes.some(p => p.id === initialPreludeId) ? initialPreludeId : null);
+    const [selectedVerses, setSelectedVerses] = useState(() => parsedVerses.map(v => v.index));
+    const newNameRef = useRef(null);
+
+    const isNewList = targetId === NEW_PLAYLIST;
+    const canSave = isNewList ? newName.trim().length > 0 : targetId != null;
+
+    // Ha még nincs lista, vagy az "Új lista" opciót választották, a névmező kapja a fókuszt
+    useEffect(() => { if (isNewList && newNameRef.current) newNameRef.current.focus(); }, [isNewList]);
 
     const toggleVerse = (index) => { if (selectedVerses.includes(index)) setSelectedVerses(selectedVerses.filter(i => i !== index)); else setSelectedVerses([...selectedVerses, index].sort((a, b) => a - b)); };
-    const handleConfirm = () => { if (!selectedPlaylistId) return; onConfirm({ playlistId: selectedPlaylistId, variationId: selectedVariationId, preludeId: selectedPreludeId, verses: selectedVerses }); };
+    const handleConfirm = () => {
+        if (!canSave) return;
+        onConfirm({
+            playlistId: isNewList ? null : targetId,
+            newPlaylistName: isNewList ? newName.trim() : null,
+            variationId: selectedVariationId,
+            preludeId: selectedPreludeId,
+            verses: selectedVerses
+        });
+    };
+    const handleTargetChange = (value) => {
+        if (value === NEW_PLAYLIST) { setTargetId(NEW_PLAYLIST); return; }
+        const pl = playlists.find(p => String(p.id) === value);
+        setTargetId(pl ? pl.id : null);
+    };
 
     return (
         <Modal title="Hozzáadás" onClose={onClose} maxWidth="600px" footer={
             <>
                 <button onClick={onClose} className="btn">Mégse</button>
-                <button onClick={handleConfirm} className="btn btn-primary">Mentés</button>
+                <button onClick={handleConfirm} disabled={!canSave} className="btn btn-primary">Mentés</button>
             </>
         }>
             <div className="text-center pb-2 border-b border-gray-200 mb-4">
@@ -302,21 +349,29 @@ const AddToPlaylistModal = ({ isOpen, onClose, onConfirm, playlists, initialVari
             </div>
             
             <div className="flex flex-col gap-4">
-                {!lockPlaylistId && (
+                {lockPlaylistId == null && (
                     <div>
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Cél lista</label>
-                        <select className="input" value={selectedPlaylistId || ''} onChange={(e) => setSelectedPlaylistId(Number(e.target.value))}>
-                            {playlists.map(pl => <option key={pl.id} value={pl.id}>{pl.name}</option>)}
-                        </select>
+                        {playlists.length > 0 && (
+                            <select className="input" value={isNewList ? NEW_PLAYLIST : String(targetId)} onChange={(e) => handleTargetChange(e.target.value)}>
+                                {playlists.map(pl => <option key={pl.id} value={String(pl.id)}>{pl.name}</option>)}
+                                <option value={NEW_PLAYLIST}>+ Új lista…</option>
+                            </select>
+                        )}
+                        {isNewList && (
+                            <input ref={newNameRef} type="text" className="input" style={playlists.length > 0 ? {marginTop:'0.5rem'} : undefined}
+                                placeholder="Új lista neve, pl. Vasárnapi istentisztelet" value={newName}
+                                onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleConfirm()} />
+                        )}
                     </div>
                 )}
                 
                 <div style={{display:'flex', gap:'1rem'}}>
-                    <div style={{flex:1}}>
+                    <div style={{flex:1, minWidth:0}}>
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Előjáték</label>
                         <CustomSelect items={preludes} currentId={selectedPreludeId} onChange={setSelectedPreludeId} placeholder="Nincs kiválasztva" emptyText="Nincs előjáték" width="100%" />
                     </div>
-                    <div style={{flex:1}}>
+                    <div style={{flex:1, minWidth:0}}>
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Változat</label>
                         <CustomSelect items={variations} currentId={selectedVariationId} onChange={setSelectedVariationId} placeholder="Változat választása" width="100%" />
                     </div>
@@ -326,7 +381,7 @@ const AddToPlaylistModal = ({ isOpen, onClose, onConfirm, playlists, initialVari
                     <div className="flex justify-between items-end mb-1">
                         <label className="block text-xs font-bold text-gray-500 uppercase">Versszakok</label>
                         <button onClick={() => setSelectedVerses(selectedVerses.length === parsedVerses.length ? [] : parsedVerses.map(v => v.index))} className="text-xs text-accent hover:underline">
-                            {selectedVerses.length === parsedVerses.length ? "Mégse" : "Mind"}
+                            {selectedVerses.length === parsedVerses.length ? "Egyik sem" : "Mind"}
                         </button>
                     </div>
                     <div style={{maxHeight:'150px', overflowY:'auto', border:'1px solid #ddd', borderRadius:'4px'}}>
@@ -995,11 +1050,8 @@ function OrganistApp() {
         };
     }
     
-    const filteredHymns = useMemo(() => {
-        if (!searchQuery) return hymnBook;
-        const lower = searchQuery.toLowerCase();
-        return hymnBook.filter(h => h.number.includes(lower) || h.title.toLowerCase().includes(lower) || (h.lyrics && h.lyrics.toLowerCase().includes(lower)));
-    }, [searchQuery, hymnBook]);
+    const searchIndex = useMemo(() => buildSearchIndex(hymnBook), [hymnBook]);
+    const filteredHymns = useMemo(() => searchHymns(searchIndex, searchQuery), [searchIndex, searchQuery]);
 
     // Handlers (minden módosítás csak a playlists állapotot írja, a nézetek ebből számolnak)
     const handleCreatePlaylist = (name) => {
@@ -1007,11 +1059,12 @@ function OrganistApp() {
         setIsCreateListModalOpen(false);
     };
 
-    const handleAddToPlaylist = ({ playlistId, variationId, preludeId, verses }) => {
+    const handleAddToPlaylist = ({ playlistId, newPlaylistName, variationId, preludeId, verses }) => {
         const hymn = pendingHymnToAdd || selectedHymn;
         if (!hymn) return;
         const item = { id: newItemId(), hymnNumber: String(hymn.number), variationId, preludeId, verses };
-        setPlaylists(prev => prev.map(p => sameId(p.id, playlistId) ? { ...p, items: [...p.items, item] } : p));
+        if (newPlaylistName) setPlaylists(prev => [...prev, { id: Date.now(), name: newPlaylistName, items: [item] }]);
+        else setPlaylists(prev => prev.map(p => sameId(p.id, playlistId) ? { ...p, items: [...p.items, item] } : p));
         setIsAddModalOpen(false);
         setPendingHymnToAdd(null);
     };
@@ -1080,14 +1133,12 @@ function OrganistApp() {
                 
                 {isAddModalOpen && (pendingHymnToAdd || selectedHymn) && (
                     <AddToPlaylistModal 
-                        isOpen={isAddModalOpen} 
                         onClose={() => setIsAddModalOpen(false)} 
                         onConfirm={handleAddToPlaylist} 
                         playlists={playlists}
                         initialVariationId={pendingHymnToAdd ? null : currentVariationId}
                         initialPreludeId={pendingHymnToAdd ? null : currentPreludeId}
                         lockPlaylistId={targetPlaylistId} 
-                        defaultPlaylistId={targetPlaylistId} 
                         hymn={pendingHymnToAdd || selectedHymn} 
                         variations={getScoreById((pendingHymnToAdd || selectedHymn).scoreId)?.variations || []}
                         preludes={getScoreById((pendingHymnToAdd || selectedHymn).scoreId)?.preludes || []}
@@ -1149,7 +1200,7 @@ function OrganistApp() {
                         <div style={{padding:'0.5rem 1rem', borderBottom:'1px solid #ddd', backgroundColor:'rgba(0,0,0,0.02)'}}>
                             <div style={{position:'relative', width:'100%', maxWidth:'600px', margin:'0 auto'}}>
                                 <Icons.Search style={{position:'absolute', top:'10px', left:'12px', color:'#999', pointerEvents:'none'}} size={20}/>
-                                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Keresés..." className="input" style={{paddingLeft:'40px', width:'100%', height:'40px'}}/>
+                                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && filteredHymns.length > 0) navigate({ activeTab: 'library', selectedHymnNumber: filteredHymns[0].number }); }} placeholder="Keresés számra, címre vagy szövegre..." className="input" style={{paddingLeft:'40px', width:'100%', height:'40px'}}/>
                             </div>
                         </div>
                         <div style={{flex:1, overflowY:'auto', padding:'1rem'}}>
