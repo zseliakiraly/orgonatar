@@ -1,17 +1,19 @@
 <!DOCTYPE html>
 <html lang="hu">
+<!-- Fejlesztői változat: az app.js-t a böngésző fordítja (Babel), így szerkesztés után nem kell buildelni.
+     Lassabb indulás; élesben az index.html-t használd (npm run build után). -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Református Kottagyűjtemény</title>
     <script src="libs/react.js"></script>
     <script src="libs/react-dom.js"></script>
+    <script src="libs/babel.js"></script>
     <script src="libs/opensheetmusicdisplay.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="root"></div>
-    <!-- Előfordított változat (npm run build). Fejlesztéshez, build nélkül: dev.html -->
-    <script src="app.min.js"></script>
+    <script type="text/babel" src="app.js"></script>
 </body>
 </html>
