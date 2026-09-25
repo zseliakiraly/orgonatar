@@ -420,176 +420,209 @@ const SettingsView = ({ settings, onUpdateSettings }) => (
 );
 
 // --- OSMD KOTTA RENDERELŐ KOMPONENS ---
+const OSMD_OPTIONS = {
+    autoResize: false, // Mi magunk kezeljük a ResizeObserverrel
+    backend: "svg",
+    drawTitle: false,
+    drawSubtitle: false,
+    drawComposer: false,
+    drawLyricist: false,
+    drawPartNames: false,
+    drawPartAbbreviations: false
+};
+
+// Az OSMD-nek nincs "engravingRules" opciója: a szabályokat a példány EngravingRules objektumán kell beállítani.
+// (Vízszintes térközhöz a VoiceSpacingMultiplierVexflow használható, alapértéke 0.85.)
+const OSMD_ENGRAVING_RULES = {
+    MinNoteDistance: 6, // Minimum térköz a kottafejek között (az OSMD alapértéke 2)
+    PageTopMargin: 10,  // alapérték: 5
+    PageBottomMargin: 10
+};
+
 const OsmdViewer = ({ fileUrl, zoom = 1.0 }) => {
     const containerRef = useRef(null);
     const osmdRef = useRef(null);
-    const [status, setStatus] = useState('Betöltésre vár...');
-    const resizeObserverRef = useRef(null);
-    const renderTimeoutRef = useRef(null);
+    const zoomRef = useRef(zoom);
+    const readyRef = useRef(false);          // az aktuális fájl betöltve, rajzolható
+    const renderedWidthRef = useRef(0);
+    const loadIdRef = useRef(0);
+    const loadQueueRef = useRef(Promise.resolve());
+    const [status, setStatus] = useState({ kind: 'loading', text: 'Betöltésre vár...' });
 
-    // 1. Fájl betöltése és kezdeti inicializálás
+    const renderScore = () => {
+        const osmd = osmdRef.current;
+        if (!osmd || !readyRef.current || !containerRef.current) return;
+        osmd.Zoom = zoomRef.current; // a Zoom setter a gerendákat is újraszámolja
+        osmd.render();
+        renderedWidthRef.current = containerRef.current.clientWidth;
+    };
+
+    // 1. OSMD példány és méretfigyelő: egyszer, a komponens teljes élettartamára
     useEffect(() => {
-        if (!containerRef.current) return;
-        let isMounted = true;
+        const osmd = new window.opensheetmusicdisplay.OpenSheetMusicDisplay(containerRef.current, OSMD_OPTIONS);
+        Object.assign(osmd.EngravingRules, OSMD_ENGRAVING_RULES);
+        osmdRef.current = osmd;
 
-        if (!osmdRef.current) {
-            osmdRef.current = new window.opensheetmusicdisplay.OpenSheetMusicDisplay(containerRef.current, {
-                autoResize: false, // Mi magunk kezeljük a ResizeObserverrel
-                backend: "svg",
-                drawTitle: false,
-                drawSubtitle: false,
-                drawComposer: false, 
-                drawLyricist: false,
-                drawPartNames: false,
-                drawPartAbbreviations: false,
-                engravingRules: {
-                    MinNoteDistance: 6, // Minimum térköz a kottafejek között (alapértelmezettnél kicsit nagyobb)
-                    VoiceSpacingMultiplierNormal: 1.5, // Általános vízszintes szorzó a szellősebb megjelenésért
-                    VoiceSpacingMultiplierVocal: 1.2,
-                    DistanceBetweenBarlineAndFirstNote: 2.5, // Távolság az ütemvonal és az első hang között
-                    DistanceBetweenLastNoteAndBarline: 15.0,  // Távolság az utolsó hang és az ütemvonal között
-                    PageBottomMargin: 10,
-                    PageTopMargin: 10
-                }
-            });
-        }
+        let resizeTimeout = null;
+        const observer = new ResizeObserver(() => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                // Csak szélességváltozásra rajzolunk újra (ablakméret, tablet elforgatása, szövegpanel áthelyezése)
+                if (containerRef.current && containerRef.current.clientWidth !== renderedWidthRef.current) renderScore();
+            }, 300);
+        });
+        observer.observe(containerRef.current);
 
-        if (fileUrl) {
-            setStatus('Fájl letöltése és feldolgozása...');
-            osmdRef.current.load(fileUrl)
-                .then(() => {
-                    if (!isMounted) return;
-                    setStatus('Renderelés...');
-                    
-                    // Kezdeti zoom beállítása a renderelés előtt
-                    osmdRef.current.zoom = zoom; 
-                    osmdRef.current.render();
-                    setStatus('');
-
-                    // ResizeObserver: Figyeli a tároló méretváltozását
-                    if (!resizeObserverRef.current) {
-                        resizeObserverRef.current = new ResizeObserver(() => {
-                            if (!isMounted || !osmdRef.current) return;
-                            
-                            clearTimeout(renderTimeoutRef.current);
-                            renderTimeoutRef.current = setTimeout(() => {
-                                osmdRef.current.render();
-                            }, 300); 
-                        });
-                        resizeObserverRef.current.observe(containerRef.current);
-                    }
-                })
-                .catch(err => {
-                    if (!isMounted) return;
-                    setStatus(`Hiba történt: ${err.message}`);
-                });
-        }
-
-        return () => { 
-            isMounted = false; 
-            if (resizeObserverRef.current) {
-                resizeObserverRef.current.disconnect();
-            }
-            clearTimeout(renderTimeoutRef.current);
+        return () => {
+            observer.disconnect();
+            clearTimeout(resizeTimeout);
+            loadIdRef.current++; // a még futó betöltés eredményét eldobjuk
+            osmdRef.current = null;
         };
-    }, [fileUrl]); // Csak a fájl megváltozásakor fut le ez a drága folyamat
+    }, []);
 
-    // 2. Gyors újra-renderelés csak a ZOOM változásakor
+    // 2. Fájl betöltése. A betöltések sorban futnak, és csak a legutolsó kérés rajzolódik ki,
+    //    így gyors lapozásnál sem kerülhet a képernyőre egy korábbi ének kottája.
     useEffect(() => {
-        if (osmdRef.current && !status) {
-            osmdRef.current.zoom = zoom;
-            osmdRef.current.render();
-        }
+        if (!fileUrl) return;
+        const loadId = ++loadIdRef.current;
+        readyRef.current = false;
+        setStatus({ kind: 'loading', text: 'Fájl letöltése és feldolgozása...' });
+
+        loadQueueRef.current = loadQueueRef.current
+            .then(() => {
+                const osmd = osmdRef.current;
+                if (!osmd || loadId !== loadIdRef.current) return; // közben újabb kérés jött
+                return osmd.load(fileUrl).then(() => {
+                    if (loadId !== loadIdRef.current) return;
+                    readyRef.current = true;
+                    renderScore();
+                    setStatus(null);
+                });
+            })
+            .catch(err => {
+                if (loadId !== loadIdRef.current) return;
+                if (osmdRef.current) osmdRef.current.clear(); // ne maradjon kint az előző ének kottája
+                setStatus({ kind: 'error', text: `Hiba történt: ${err.message}` });
+            });
+    }, [fileUrl]);
+
+    // 3. Zoom változásakor újrarajzolás (betöltés közben a betöltés végén érvényesül)
+    useEffect(() => {
+        zoomRef.current = zoom;
+        renderScore();
     }, [zoom]);
 
     return (
-        <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {status && (
-                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: 'rgba(255,255,255,0.95)', padding: '10px 20px', borderRadius: '8px', border: '1px solid #ccc', color: '#333', zIndex: 10, fontWeight: 'bold', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
-                    ⏳ {status}
-                </div>
-            )}
-            <div ref={containerRef} style={{ flex: 1, width: '100%', height: '100%', overflow: 'auto', mixBlendMode: 'multiply' }}></div>
+        <div className="osmd-viewer">
+            {status && <div className="osmd-status">{status.kind === 'error' ? '⚠️' : '⏳'} {status.text}</div>}
+            <div ref={containerRef} className="osmd-container"></div>
         </div>
     );
 };
 
+const PAGE_FORWARD_KEYS = ['PageDown', 'ArrowDown', 'ArrowRight'];
+const PAGE_BACK_KEYS = ['PageUp', 'ArrowUp', 'ArrowLeft'];
 
 const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyricsWidth, scoreMaxWidth, onNext, onPrev }) => {
     const [textPosition, setTextPosition] = useState('bottom'); 
     const [textLayout, setTextLayout] = useState('columns');
     const [zoom, setZoom] = useState(1.0);
-    
-    if (!score || !score.variations || score.variations.length === 0) return (
+    const scrollerRef = useRef(null);
+    const navRef = useRef({});
+    navRef.current = { onNext, onPrev };
+
+    const variations = (score && score.variations) || [];
+    const variation = variations.find(v => v.id === variationId) || variations[0] || null;
+    const prelude = (score && score.preludes && score.preludes.find(p => p.id === preludeId)) || null;
+
+    // Másik ének vagy változat mindig a kotta tetejéről induljon
+    useEffect(() => {
+        if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
+    }, [variation && variation.id, prelude && prelude.id]);
+
+    // Lapozás billentyűzettel vagy Bluetooth lapozópedállal (ezek nyíl- vagy PageUp/PageDown billentyűt küldenek).
+    // Előre: ha a kottából van még lent, egy képernyőnyit görget, különben a következő ének jön. Hátra ugyanígy.
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+            if (document.querySelector('.modal-overlay')) return;
+            if (e.target.closest && e.target.closest('input, select, textarea, [contenteditable="true"]')) return;
+            const forward = PAGE_FORWARD_KEYS.includes(e.key);
+            if (!forward && !PAGE_BACK_KEYS.includes(e.key)) return;
+
+            const el = scrollerRef.current;
+            const step = el ? el.clientHeight * 0.85 : 0;
+            const { onNext, onPrev } = navRef.current;
+            if (forward) {
+                if (el && el.scrollTop + el.clientHeight < el.scrollHeight - 2) el.scrollBy({ top: step, behavior: 'smooth' });
+                else if (onNext) onNext();
+                else return;
+            } else {
+                if (el && el.scrollTop > 2) el.scrollBy({ top: -step, behavior: 'smooth' });
+                else if (onPrev) onPrev();
+                else return;
+            }
+            e.preventDefault();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    if (!variation && !prelude) return (
         <div style={{display:'flex', height:'100%', alignItems:'center', justifyContent:'center', flexDirection:'column', opacity:0.5}}>
             <Icons.Music size={64}/>
             <p>Nincs elérhető kotta</p>
         </div>
     );
 
-    const variation = score.variations && score.variations.length > 0 
-        ? (score.variations.find(v => v.id === variationId) || score.variations[0]) 
-        : score; 
-        
-    const prelude = score.preludes ? score.preludes.find(p => p.id === preludeId) : null;
-
-    if (!variation) return null;
-
     const isSide = textPosition === 'right';
 
     return (
         <div style={{display:'flex', height:'100%', flexDirection: isSide ? 'row' : 'column'}}>
-            {/* Kotta rész */}
-            <div style={{flex:1, position:'relative', overflow:'hidden', display:'flex', flexDirection:'column', minHeight:0, backgroundColor:'transparent'}}>
-                <div style={{width:'100%', height:'100%', display:'flex', flexDirection:'column', alignItems:'center', overflow:'auto', paddingTop:'10px', paddingBottom:'20px', paddingLeft:'20px', paddingRight:'20px'}}>
+            {/* Kotta rész: egyetlen görgethető terület az előjátéknak és a kottának */}
+            <div className="score-pane">
+                <div ref={scrollerRef} className="score-scroller">
                     
                     {/* Előjáték */}
                     {prelude && (
-                        <div style={{width:'100%', maxWidth: scoreMaxWidth || '100%', display:'flex', flexDirection:'column', alignItems:'center', marginBottom:'1rem', paddingBottom:'1rem', borderBottom:'1px dashed #ccc'}}>
-                            <div style={{fontSize:'12px', fontWeight:'bold', color:'var(--col-accent)', marginBottom:'4px', textTransform:'uppercase'}}>Előjáték: {prelude.name}</div>
+                        <div className="score-block prelude-block" style={{maxWidth: scoreMaxWidth || '100%'}}>
+                            <div className="prelude-label">Előjáték: {prelude.name}</div>
                             {prelude.xmlUrl ? (
-                                <div style={{ width: '100%', minHeight: '150px' }}>
-                                    <OsmdViewer fileUrl={prelude.xmlUrl} zoom={zoom} />
-                                </div>
-                            ) : prelude.xmlUrl ? (
-                                <img src={prelude.xmlUrl} alt={prelude.name} className="score-image" style={{width:'auto', maxWidth:'100%', maxHeight:'40vh', objectFit:'contain', boxShadow:'var(--shadow-lg)'}} />
+                                <OsmdViewer fileUrl={prelude.xmlUrl} zoom={zoom} />
                             ) : (
-                                <div style={{padding:'20px', border:'1px solid #ccc', borderRadius:'4px', backgroundColor:'rgba(0,0,0,0.05)'}}>Előjáték Kotta Helye</div>
+                                <div className="score-missing">Előjáték kotta helye</div>
                             )}
                         </div>
                     )}
 
                     {/* Fő Kotta / Variáció */}
-                    {variation.xmlUrl ? (
-                        <div style={{ width: '100%', maxWidth: scoreMaxWidth || '100%', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '300px' }}>
+                    {variation && (variation.xmlUrl ? (
+                        <div className="score-block" style={{maxWidth: scoreMaxWidth || '100%'}}>
                             <OsmdViewer fileUrl={variation.xmlUrl} zoom={zoom} />
                         </div>
-                    ) : variation.xmlUrl ? (
-                        <div style={{width:'100%', maxWidth: scoreMaxWidth || '100%', display:'flex', justifyContent:'center', alignItems:'flex-start'}}>
-                            <img src={variation.xmlUrl} alt={variation.name || 'Kotta'} className="score-image" style={{width:'100%', height:'auto', objectFit:'contain', boxShadow:'var(--shadow-lg)'}} />
-                        </div>
                     ) : (
-                        <div style={{opacity:0.2, display:'flex', flexDirection:'column', alignItems:'center'}}>
+                        <div className="score-placeholder">
                             <Icons.Music size={80} className="text-ink"/>
                             <p className="font-serif mt-4">Kotta helye</p>
                         </div>
-                    )}
+                    ))}
                 </div>
                  
-                 <div style={{position:'absolute', bottom:'5px', right:'10px', fontSize:'12px', color:'#999', pointerEvents:'none'}}>
-                     {variation.year} {variation.voiceCount && ` • ${variation.voiceCount} szólam`}
-                 </div>
-                {/* ÚJ: Lebegő Zoom és Navigációs Sáv a kotta alján */}
-                <div style={{ position: 'absolute', bottom: '1rem', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.95)', padding: '0.5rem 1rem', borderRadius: '30px', boxShadow: '0 4px 15px rgba(0,0,0,0.15)', zIndex: 30, alignItems: 'center', border: '1px solid #eee' }}>
-                     <button onClick={() => setZoom(z => Math.max(0.4, z - 0.1))} style={{border:'none', background:'transparent', fontSize:'1.5rem', cursor:'pointer', fontWeight:'bold', color:'var(--col-galaxy-blue)', width:'30px', height:'30px', display:'flex', alignItems:'center', justifyContent:'center'}} title="Kicsinyítés">-</button>
-                     <span style={{ fontSize: '0.9rem', fontWeight: 'bold', width: '50px', textAlign: 'center', color:'var(--col-galaxy-blue)' }}>
-                         {Math.round(zoom * 100)}%
-                     </span>
-                     <button onClick={() => setZoom(z => Math.min(2.5, z + 0.1))} style={{border:'none', background:'transparent', fontSize:'1.5rem', cursor:'pointer', fontWeight:'bold', color:'var(--col-galaxy-blue)', width:'30px', height:'30px', display:'flex', alignItems:'center', justifyContent:'center'}} title="Nagyítás">+</button>
-                 </div>
-                 {/* Lapozó gombok (overlay) */}
-                 {onPrev && <div onClick={onPrev} style={{position:'absolute', top:0, left:0, width:'15%', height:'100%', cursor:'w-resize', zIndex:10}} title="Előző"></div>}
-                 {onNext && <div onClick={onNext} style={{position:'absolute', top:0, right:0, width:'15%', height:'100%', cursor:'e-resize', zIndex:10}} title="Következő"></div>}
+                {variation && (
+                    <div className="score-info">
+                        {variation.year} {variation.voiceCount && ` • ${variation.voiceCount} szólam`}
+                    </div>
+                )}
+                {/* Lebegő zoom sáv a kotta alján */}
+                <div className="zoom-bar">
+                    <button onClick={() => setZoom(z => Math.max(0.4, z - 0.1))} title="Kicsinyítés">-</button>
+                    <span>{Math.round(zoom * 100)}%</span>
+                    <button onClick={() => setZoom(z => Math.min(2.5, z + 0.1))} title="Nagyítás">+</button>
+                </div>
+                {/* Lapozó gombok: láthatóak, és nem takarják el a kotta szélét */}
+                {onPrev && <button onClick={onPrev} className="page-turn-btn prev" title="Előző ének" aria-label="Előző ének"><Icons.ChevronLeft size={32}/></button>}
+                {onNext && <button onClick={onNext} className="page-turn-btn next" title="Következő ének" aria-label="Következő ének"><Icons.ChevronRight size={32}/></button>}
             </div>
             
             {showLyrics && (
@@ -636,6 +669,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
                                     borderLeft: '3px solid #eee', 
                                     fontFamily: 'var(--font-serif)', 
                                     lineHeight: '1.4',
+                                    whiteSpace: 'pre-line', // a versszakon belüli sortörések megmaradnak
                                     breakInside: 'avoid-column',
                                     flex: (!isSide && textLayout === 'columns') ? '0 0 auto' : 'auto',
                                     width: (!isSide && textLayout === 'columns') ? '300px' : 'auto'
