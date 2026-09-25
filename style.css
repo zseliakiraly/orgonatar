@@ -5,6 +5,7 @@
     --col-papyrus: #FDF6E3;
     --col-papyrus-dark: #EEE8D5;
     --col-accent: #B58900;
+    --col-accent-text: #8a6800; /* akcentus szín szövegre világos háttéren (4.5:1 kontraszt) */
     --col-ink: #2a2a2a;
     --col-white: #ffffff;
     --col-red: #dc2626;
@@ -33,7 +34,8 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 button:disabled { cursor: not-allowed; opacity: 0.5; }
 
 /* --- Layout --- */
-.app-root { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+.app-root { display: flex; height: 100vh; height: 100dvh; width: 100vw; overflow: hidden; }
+.loading-screen { height: 100vh; height: 100dvh; display: flex; align-items: center; justify-content: center; color: var(--col-white); }
 
 /* Oldalsáv */
 .sidebar {
@@ -84,7 +86,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     transition: background 0.2s;
 }
 .btn-primary { background-color: var(--col-accent); color: var(--col-white); }
-.btn-primary:hover { background-color: #d4a000; }
+.btn-primary:hover { filter: brightness(1.12); }
 .btn-ghost { color: #666; }
 .btn-ghost:hover { background-color: rgba(0,0,0,0.05); color: var(--col-ink); }
 .btn-danger { color: #999; }
@@ -104,6 +106,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     z-index: 30;
     flex-shrink: 0;
 }
+.header h1, .header h2, .header h3 { margin: 0; }
 
 /* Kártyák (Listákhoz) */
 .card {
@@ -242,7 +245,9 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 
 /* Typography */
 .font-serif { font-family: var(--font-serif); }
-.text-accent { color: var(--col-accent); }
+.text-accent { color: var(--col-accent-text); }
+.header .text-accent { color: var(--col-accent); }
+.player-view .header .text-accent { color: var(--col-accent-text); }
 .text-galaxy { color: var(--col-galaxy-blue); }
 
 /* Inaktív kártya halványítása */
@@ -334,13 +339,6 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     justify-content: center;
 }
 
-/* Modal Content */
-.modal-header h3 {
-    margin: 0;
-}
-.modal-body {
-    flex: 1;
-}
 .player-view .header {
     background-color: var(--col-papyrus);
     color: var(--col-ink);
@@ -473,7 +471,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     border-bottom: none;
 }
 .hymn-selector-item-hymn-number {
-    color: var(--col-accent);
+    color: var(--col-accent-text);
     font-weight: bold;
     margin-right: 0.5rem;
 }
@@ -538,12 +536,6 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     justify-content: center;
 }
 
-/* Scorebook card */
-.scorebook-card-content-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
 
 /* --- Typography --- */
 .header-title {
@@ -554,10 +546,6 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .header-title.main {
     font-size: 1.25rem; /* text-xl */
     white-space: nowrap;
-}
-.header-title.large {
-    font-size: 1.5rem; /* text-2xl */
-    flex: 1;
 }
 
 /* --- Scorebook View --- */
@@ -621,3 +609,103 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     margin: 0 auto;
     width: 100%;
 }
+/* --- Ének fejléce (könyvtár) --- */
+.hymn-header { gap: 0.75rem; }
+.hymn-header-title { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+.hymn-header-text { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.hymn-header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.header-back { color: rgba(255,255,255,0.8); display: flex; }
+
+/* --- Legördülő választó (CustomSelect) --- */
+.custom-select { position: relative; }
+.custom-select-btn {
+    height: 36px; width: auto;
+    min-width: var(--select-min-width, 180px); max-width: 100%;
+    display: flex; justify-content: space-between; align-items: center; gap: 4px;
+    padding-right: 10px;
+    font-size: 0.9rem; text-align: left;
+    background-color: var(--col-white);
+}
+.custom-select-btn.empty { cursor: default; opacity: 0.6; background-color: rgba(0,0,0,0.05); }
+.custom-select-menu {
+    position: absolute; top: 100%; margin-top: 5px;
+    width: max(100%, 240px); max-width: calc(100vw - 1rem);
+    max-height: 300px; overflow-y: auto;
+    background-color: var(--col-papyrus);
+    border: 1px solid #ccc; border-radius: 4px;
+    box-shadow: var(--shadow-xl);
+    z-index: 100;
+}
+.custom-select-option { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
+.custom-select-option.placeholder { font-style: italic; color: #666; }
+.custom-select-option.selected { background-color: rgba(0,0,0,0.05); }
+.custom-select-option-label { font-weight: bold; font-size: 0.9rem; color: var(--col-galaxy-blue); }
+.custom-select-option-sub { font-size: 0.75rem; color: #666; margin-top: 2px; font-style: italic; }
+
+/* --- Listák rácsa --- */
+.playlist-grid {
+    flex: 1; overflow-y: auto;
+    padding: 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+    gap: 1.5rem;
+}
+
+/* --- Beállítások sorai --- */
+.card.card-row { flex-wrap: wrap; row-gap: 0.75rem; }
+.setting-label { flex: 1 1 200px; min-width: 0; }
+
+/* --- Keskeny képernyő (telefon, álló tablet) --- */
+@media (max-width: 700px) {
+    .hymn-header { flex-wrap: wrap; height: auto; min-height: 64px; padding: 0.5rem 0.75rem; row-gap: 0.5rem; }
+    .hymn-header-actions { width: 100%; flex-shrink: 1; }
+    .hymn-header-actions .custom-select { flex: 1; min-width: 0; }
+    .hymn-header-actions .custom-select-btn { min-width: 0; width: 100%; }
+    .playlist-grid { padding: 1rem; gap: 1rem; }
+    .about-view { padding: 2rem 1rem; }
+    .header-title.main { white-space: normal; text-align: center; }
+    .card.card-row { gap: 0.75rem 1rem; }
+}
+
+/* --- Segédosztályok ---
+   A JSX Tailwind-osztályneveket használ, de Tailwind nincs betöltve: az itt használtakat pótoljuk. */
+.block { display: block; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.flex-wrap { flex-wrap: wrap; }
+.items-end { align-items: flex-end; }
+.justify-between { justify-content: space-between; }
+.gap-2 { gap: 0.5rem; }
+.gap-4 { gap: 1rem; }
+.font-bold { font-weight: 700; }
+.text-xs { font-size: 0.75rem; line-height: 1rem; }
+.text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+.text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+.text-2xl { font-size: 1.5rem; line-height: 2rem; }
+.text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
+.text-center { text-align: center; }
+.uppercase { text-transform: uppercase; }
+.tracking-widest { letter-spacing: 0.1em; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.text-ink { color: var(--col-ink); }
+.text-gray-500 { color: #6b7280; }
+.opacity-50 { opacity: 0.5; }
+.opacity-70 { opacity: 0.7; }
+.border-b { border-bottom: 1px solid #e5e7eb; }
+.border-l { border-left: 1px solid #e5e7eb; }
+.border-gray-200 { border-color: #e5e7eb; }
+.border-gray-500 { border-color: #6b7280; }
+.p-1 { padding: 0.25rem; }
+.pb-2 { padding-bottom: 0.5rem; }
+.pl-3 { padding-left: 0.75rem; }
+.mb-1 { margin-bottom: 0.25rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mb-8 { margin-bottom: 2rem; }
+.mt-1 { margin-top: 0.25rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mt-4 { margin-top: 1rem; }
+.ml-2 { margin-left: 0.5rem; }
+.hover\:bg-gray-100:hover { background-color: #f3f4f6; }
+.hover\:text-black:hover { color: #000; }
+.hover\:underline:hover { text-decoration: underline; }

@@ -221,6 +221,7 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, title, message }) => {
 
 const CustomSelect = ({ items, currentId, onChange, labelKey = "name", subLabelKey = "composer", placeholder = "Nincs kiválasztva", emptyText = "Nincs adat", width="180px" }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [alignRight, setAlignRight] = useState(false);
     const dropdownRef = useRef(null);
     const currentItem = items && items.find(v => v.id === currentId);
 
@@ -234,28 +235,32 @@ const CustomSelect = ({ items, currentId, onChange, labelKey = "name", subLabelK
 
     const isEmpty = !items || items.length === 0;
 
+    const toggleOpen = () => {
+        if (isEmpty) return;
+        if (!isOpen && dropdownRef.current) {
+            // A menü jobbra nyílik; ha ott nem férne el (pl. telefonon), a gomb jobb széléhez igazítjuk
+            const rect = dropdownRef.current.getBoundingClientRect();
+            setAlignRight(rect.left + Math.max(rect.width, 240) > window.innerWidth - 8);
+        }
+        setIsOpen(!isOpen);
+    };
+
     return (
-        <div style={{position:'relative'}} ref={dropdownRef}>
-            <button 
-                onClick={() => !isEmpty && setIsOpen(!isOpen)} 
-                className="input" 
-                style={{height:'36px', fontSize:'0.9rem', width:'auto', minWidth: width, textAlign:'left', display:'flex', justifyContent:'space-between', alignItems:'center', cursor: isEmpty ? 'default' : 'pointer', paddingRight:'10px', opacity: isEmpty ? 0.6 : 1, backgroundColor: isEmpty ? 'rgba(0,0,0,0.05)' : 'white'}}
-            >
+        <div className="custom-select" ref={dropdownRef} style={{'--select-min-width': width}}>
+            <button onClick={toggleOpen} className={`input custom-select-btn ${isEmpty ? 'empty' : ''}`}>
                 <span className="truncate">{isEmpty ? emptyText : (currentItem ? currentItem[labelKey] : placeholder)}</span>
-                <Icons.ChevronDown size={16} style={{opacity:0.5}}/>
+                <Icons.ChevronDown size={16} style={{opacity:0.5, flexShrink:0}}/>
             </button>
             
             {isOpen && !isEmpty && (
-                <div style={{position:'absolute', top:'100%', right:0, marginTop:'5px', backgroundColor:'var(--col-papyrus)', border:'1px solid #ccc', borderRadius:'4px', boxShadow:'var(--shadow-xl)', width:'300px', zIndex:100, maxHeight:'300px', overflowY:'auto'}}>
-                    <div onClick={() => { onChange(null); setIsOpen(false); }} style={{padding:'10px', borderBottom:'1px solid #eee', cursor:'pointer', fontStyle:'italic', color:'#666'}} className="hover:bg-gray-100">
+                <div className="custom-select-menu" style={alignRight ? {right:0} : {left:0}}>
+                    <div onClick={() => { onChange(null); setIsOpen(false); }} className="custom-select-option placeholder hover:bg-gray-100">
                         {placeholder}
                     </div>
                     {items.map(v => (
-                        <div key={v.id} onClick={() => { onChange(v.id); setIsOpen(false); }} style={{padding:'10px', borderBottom:'1px solid #eee', cursor:'pointer', backgroundColor: currentId === v.id ? 'rgba(0,0,0,0.05)' : 'transparent'}} className="hover:bg-gray-100">
-                            <div style={{fontWeight:'bold', fontSize:'0.9rem', color:'var(--col-galaxy-blue)'}}>{v[labelKey]}</div>
-                            <div style={{fontSize:'0.75rem', color:'#666', marginTop:'2px'}}>
-                                <span style={{fontStyle:'italic'}}>{v[subLabelKey]}</span>
-                            </div>
+                        <div key={v.id} onClick={() => { onChange(v.id); setIsOpen(false); }} className={`custom-select-option hover:bg-gray-100 ${currentId === v.id ? 'selected' : ''}`}>
+                            <div className="custom-select-option-label">{v[labelKey]}</div>
+                            <div className="custom-select-option-sub">{v[subLabelKey]}</div>
                         </div>
                     ))}
                 </div>
@@ -345,12 +350,12 @@ const SettingsView = ({ settings, onUpdateSettings }) => (
         </div>
         
         <div className="main-content" style={{padding:'2rem', overflowY:'auto'}}>
-            <div style={{maxWidth:'800px', margin:'0 auto', display:'flex', flexDirection:'column', gap:'10px'}}>
+            <div style={{width:'100%', maxWidth:'800px', margin:'0 auto', display:'flex', flexDirection:'column', gap:'10px'}}>
                 
                 {/* Kártyák a beállításoknak */}
                 <div className="card card-row">
                     <div className="card-decoration"></div>
-                    <div style={{width: '600px', minWidth: '200px'}}>
+                    <div className="setting-label">
                         <div className="font-bold text-ink">Háttér téma</div>
                         <div className="text-xs text-gray-500">Válassz megjelenítési módot</div>
                     </div>
@@ -363,22 +368,22 @@ const SettingsView = ({ settings, onUpdateSettings }) => (
 
                 <div className="card card-row">
                     <div className="card-decoration"></div>
-                    <div style={{width: '600px', minWidth: '200px'}}>
+                    <div className="setting-label">
                         <div className="font-bold text-ink">Szövegpanel megjelenítése</div>
                         <div className="text-xs text-gray-500">Kotta mellett a szöveg láthatósága</div>
                     </div>
-                    <button onClick={() => onUpdateSettings({...settings, showLyrics: !settings.showLyrics})} className="btn-ghost" style={{color: settings.showLyrics ? 'var(--col-accent)' : '#ccc'}}>
+                    <button onClick={() => onUpdateSettings({...settings, showLyrics: !settings.showLyrics})} className="btn-ghost" style={{color: settings.showLyrics ? 'var(--col-accent-text)' : '#999'}}>
                         {settings.showLyrics ? <Icons.Eye size={24}/> : <Icons.EyeOff size={24}/>}
                     </button>
                 </div>
 
                 <div className="card card-row">
                     <div className="card-decoration"></div>
-                    <div style={{width: '600px', minWidth: '200px'}}>
+                    <div className="setting-label">
                         <div className="font-bold text-ink">Oldalsáv szélessége</div>
                         <div className="text-xs text-gray-500">Ha oldalt van a szöveg</div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                          <button onClick={() => onUpdateSettings({...settings, lyricsWidth: '15%'})} className={`btn ${settings.lyricsWidth === '15%' ? 'btn-primary' : 'btn-ghost'}`}>15%</button>
                          <button onClick={() => onUpdateSettings({...settings, lyricsWidth: '20%'})} className={`btn ${settings.lyricsWidth === '20%' ? 'btn-primary' : 'btn-ghost'}`}>20%</button>
                          <button onClick={() => onUpdateSettings({...settings, lyricsWidth: '25%'})} className={`btn ${settings.lyricsWidth === '25%' ? 'btn-primary' : 'btn-ghost'}`}>25%</button>
@@ -388,7 +393,7 @@ const SettingsView = ({ settings, onUpdateSettings }) => (
 
                 <div className="card card-row">
                     <div className="card-decoration"></div>
-                    <div style={{width: '600px', minWidth: '200px'}}>
+                    <div className="setting-label">
                         <div className="font-bold text-ink">Kotta szélessége</div>
                         <div className="text-xs text-gray-500">Maximális szélesség</div>
                     </div>
@@ -404,11 +409,11 @@ const SettingsView = ({ settings, onUpdateSettings }) => (
 
                 <div className="card card-row">
                     <div className="card-decoration"></div>
-                    <div style={{width: '600px', minWidth: '200px'}}>
+                    <div className="setting-label">
                          <div className="font-bold text-ink">Oldalmenü helye</div>
                          <div className="text-xs text-gray-500">Bal vagy jobb oldalon legyen a menü</div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                          <button onClick={() => onUpdateSettings({...settings, sidebarSide: 'left'})} className={`btn ${settings.sidebarSide === 'left' ? 'btn-primary' : 'btn-ghost'}`}>Bal</button>
                          <button onClick={() => onUpdateSettings({...settings, sidebarSide: 'right'})} className={`btn ${settings.sidebarSide === 'right' ? 'btn-primary' : 'btn-ghost'}`}>Jobb</button>
                     </div>
@@ -724,10 +729,10 @@ const PlaylistEditor = ({ playlist, onClose, onRemoveItem, onAddItem, onPlay, on
                              return (
                                 <div key={item.id} draggable onDragStart={(e) => handleDragStart(e, idx)} onDragEnter={(e) => handleDragEnter(e, idx)} onDragEnd={handleDragEnd} onDragOver={(e) => e.preventDefault()} 
                                      className="playlist-editor-item"
-                                     style={{opacity: isDragging ? 0.5 : 1, borderTop: isDragOver && !isDragging ? '2px solid #B58900' : '1px solid #ddd'}}>
+                                     style={{opacity: isDragging ? 0.5 : 1, borderTop: isDragOver && !isDragging ? '2px solid var(--col-accent)' : '1px solid #ddd'}}>
                                     <div style={{display:'flex', alignItems:'center', gap:'1rem'}}>
                                         <div style={{cursor:'move', color:'#ccc'}}><Icons.GripVertical size={20} /></div>
-                                        <div style={{fontWeight:'bold', color:'#ccc', width:'20px'}}>{idx + 1}.</div>
+                                        <div style={{fontWeight:'bold', color:'#6b7280', width:'20px'}}>{idx + 1}.</div>
                                         <div>
                                             <div><span className="text-accent font-bold">#{item.hymn.number}</span> <span className="font-bold text-ink">{item.hymn.title}</span></div>
                                             <div style={{fontSize:'12px', color:'#666', marginTop:'2px'}}>
@@ -959,9 +964,9 @@ function OrganistApp() {
 
     // Apply Themes
     const themeColors = {
-        'papyrus': { bg: '#FDF6E3', text: '#2a2a2a', sidebar: '#002B36', accent: '#B58900' },
-        'dark-papyrus': { bg: '#d4cebc', text: '#1a1a1a', sidebar: '#001e26', accent: '#8a6800' },
-        'white': { bg: '#f9fafb', text: '#111827', sidebar: '#1f2937', accent: '#2563eb' }
+        'papyrus': { bg: '#FDF6E3', text: '#2a2a2a', sidebar: '#002B36', accent: '#B58900', accentText: '#8a6800' },
+        'dark-papyrus': { bg: '#d4cebc', text: '#1a1a1a', sidebar: '#001e26', accent: '#8a6800', accentText: '#6b5000' },
+        'white': { bg: '#f9fafb', text: '#111827', sidebar: '#1f2937', accent: '#2563eb', accentText: '#2563eb' }
     };
     const currentTheme = themeColors[settings.theme] || themeColors['papyrus'];
 
@@ -1045,11 +1050,11 @@ function OrganistApp() {
         setTimeout(() => setIsAddModalOpen(true), 100);
     };
 
-    if (loading) return <div style={{height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:'white'}}>Betöltés...</div>;
+    if (loading) return <div className="loading-screen">Betöltés...</div>;
     
     // --- RENDER ---
     return (
-        <div className="app-root" style={{ '--col-papyrus': currentTheme.bg, '--col-ink': currentTheme.text, '--col-galaxy-blue': currentTheme.sidebar, '--col-accent': currentTheme.accent }}>
+        <div className="app-root" style={{ '--col-papyrus': currentTheme.bg, '--col-ink': currentTheme.text, '--col-galaxy-blue': currentTheme.sidebar, '--col-accent': currentTheme.accent, '--col-accent-text': currentTheme.accentText }}>
             <NavigationSidebar
                 activeTab={view}
                 onTabChange={(t) => navigate({ activeTab: t })}
@@ -1107,18 +1112,18 @@ function OrganistApp() {
 
                 {view === 'library' && (selectedHymn ? (
                     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
-                        <div className="header">
+                        <div className="header hymn-header">
                             {/* Left: Number + Title */}
-                            <div style={{display:'flex', alignItems:'center', gap:'12px', flex:1}}>
-                                <button onClick={() => window.history.back()} style={{color: 'rgba(255,255,255,0.8)'}}><Icons.ChevronLeft size={24}/></button>
-                                <div style={{display:'flex', alignItems:'baseline', gap:'8px'}}>
+                            <div className="hymn-header-title">
+                                <button onClick={() => window.history.back()} className="header-back" title="Vissza"><Icons.ChevronLeft size={24}/></button>
+                                <div className="hymn-header-text">
                                     <h2 className="font-serif font-bold text-2xl text-accent">{selectedHymn.number}</h2>
-                                    <h3 className="font-bold text-lg text-ink truncate">{selectedHymn.title}</h3>
+                                    <h3 className="font-bold text-lg truncate">{selectedHymn.title}</h3>
                                 </div>
                             </div>
                             
                             {/* Right: Selectors */}
-                            <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                            <div className="hymn-header-actions">
                                 {(() => { 
                                     const score = getScoreById(selectedHymn.scoreId); 
                                     if(!score) return null;
@@ -1178,7 +1183,7 @@ function OrganistApp() {
                                 <button onClick={() => setIsCreateListModalOpen(true)} className="text-accent font-bold hover:underline mt-2">Hozz létre egyet!</button>
                             </div>
                         ) : (
-                            <div style={{flex:1, overflowY:'auto', padding:'2rem', display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))', gap:'1.5rem'}}>
+                            <div className="playlist-grid">
                                 {playlists.map(pl => (
                                     <div key={pl.id} onClick={() => openPlaylistEditor(pl)} className="card clickable">
                                         <div className="card-decoration"></div>
