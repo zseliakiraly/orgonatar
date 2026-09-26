@@ -1,4 +1,4 @@
-const { useState, useEffect, useMemo, useRef } = React;
+const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
 // --- UTILS & ICONS ---
 const IconBase = ({ size = 24, className = "", children, onClick, onMouseDown, style }) => (
@@ -11,26 +11,20 @@ const Icons = {
     Music: (props) => <IconBase {...props}><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></IconBase>,
     ListMusic: (props) => <IconBase {...props}><path d="M21 15V6"></path><path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"></path><path d="M12 12H3"></path><path d="M16 6H3"></path><path d="M12 18H3"></path></IconBase>,
     Search: (props) => <IconBase {...props}><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></IconBase>,
-    Menu: (props) => <IconBase {...props}><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></IconBase>,
     Plus: (props) => <IconBase {...props}><path d="M5 12h14"></path><path d="M12 5v14"></path></IconBase>,
     ChevronLeft: (props) => <IconBase {...props}><path d="m15 18-6-6 6-6"></path></IconBase>,
     ChevronRight: (props) => <IconBase {...props}><path d="m9 18 6-6-6-6"></path></IconBase>,
     Trash2: (props) => <IconBase {...props}><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></IconBase>,
     Play: (props) => <IconBase {...props}><polygon points="5 3 19 12 5 21 5 3"></polygon></IconBase>,
-    SidebarLeft: (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><line x1="9" x2="9" y1="3" y2="21"></line></IconBase>,
-    SidebarRight: (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><line x1="15" x2="15" y1="3" y2="21"></line></IconBase>,
     Settings: (props) => <IconBase {...props}><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></IconBase>,
     Book: (props) => <IconBase {...props}><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></IconBase>,
     Info: (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="16" y2="12"></line><line x1="12" x2="12.01" y1="8" y2="8"></line></IconBase>,
-    Save: (props) => <IconBase {...props}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></IconBase>,
     Edit: (props) => <IconBase {...props}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></IconBase>,
     GripVertical: (props) => <IconBase {...props}><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></IconBase>,
     CheckSquare: (props) => <IconBase {...props}><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></IconBase>,
     Square: (props) => <IconBase {...props}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></IconBase>,
     X: (props) => <IconBase {...props}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></IconBase>,
-    ChevronUp: (props) => <IconBase {...props}><path d="m18 15-6-6-6 6"/></IconBase>,
     ChevronDown: (props) => <IconBase {...props}><path d="m6 9 6 6 6-6"/></IconBase>,
-    Star: (props) => <IconBase {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></IconBase>,
     Eye: (props) => <IconBase {...props}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></IconBase>,
     EyeOff: (props) => <IconBase {...props}><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path><line x1="2" x2="22" y1="2" y2="22"></line></IconBase>,
     LayoutBottom: (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><line x1="3" x2="21" y1="15" y2="15" /></IconBase>,
@@ -51,6 +45,116 @@ const parseVerses = (lyrics) => {
     });
 };
 
+// --- TÁROLÁS (localStorage) ---
+const STORAGE_KEYS = { playlists: 'orgonista_playlists', settings: 'orgonista_settings' };
+
+const DEFAULT_SETTINGS = { theme: 'papyrus', showLyrics: true, sidebarSide: 'right', lyricsWidth: '15%', scoreMaxWidth: '100%', bookActive: {}, skipFullscreenPrompt: false };
+
+const loadJSON = (key, fallback) => {
+    try {
+        const value = JSON.parse(localStorage.getItem(key));
+        return value ?? fallback;
+    } catch (e) {
+        return fallback;
+    }
+};
+
+const saveJSON = (key, value) => {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { console.error("Mentési hiba:", e); }
+};
+
+const loadSettings = () => {
+    const stored = loadJSON(STORAGE_KEYS.settings, {});
+    const settings = { ...DEFAULT_SETTINGS, ...(typeof stored === 'object' ? stored : {}) };
+    if (!settings.bookActive || typeof settings.bookActive !== 'object') settings.bookActive = {};
+    return settings;
+};
+
+// Az azonosítók a JSON-ban lehetnek számok vagy szövegek is, ezért mindig szövegként hasonlítunk
+const sameId = (a, b) => a != null && b != null && String(a) === String(b);
+
+const newItemId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+// A listaelem csak az énekszámot tárolja, a címet/szöveget mindig a friss enek.json-ból vesszük.
+// A régi formátumú elemeket ({ hymn: {...} }) is átalakítja.
+const normalizePlaylists = (raw) => (Array.isArray(raw) ? raw : [])
+    .filter(pl => pl && pl.id != null)
+    .map(pl => ({
+        ...pl,
+        name: pl.name || 'Névtelen lista',
+        items: (Array.isArray(pl.items) ? pl.items : [])
+            .map(item => ({
+                id: item.id || newItemId(),
+                hymnNumber: String(item.hymnNumber ?? item.hymn?.number ?? ''),
+                variationId: item.variationId ?? null,
+                preludeId: item.preludeId ?? null,
+                verses: Array.isArray(item.verses) ? item.verses : []
+            }))
+            .filter(item => item.hymnNumber)
+    }));
+
+// Kottakönyv állapota: a felhasználó beállítása, ennek hiányában a JSON "active" mezője
+const isBookActive = (book, bookActive) => {
+    const key = String(book.id);
+    return Object.prototype.hasOwnProperty.call(bookActive, key) ? bookActive[key] : book.active !== false;
+};
+
+// --- KOTTAFÁJLOK ---
+// A "/data/..." alakú útvonalat relatívvá alakítjuk: alútvonalon (pl. GitHub Pages: …github.io/orgonatar/)
+// a perjellel kezdődő útvonal a webhely gyökerére mutatna, és a fájl nem töltődne be.
+const resolveDataUrl = (url) => (typeof url === 'string' && url.startsWith('/') && !url.startsWith('//')) ? url.slice(1) : url;
+
+// A kotta lehet MusicXML (.xml, .musicxml, .mxl), vagy kép (szkennelt/exportált kotta)
+const IMAGE_FILE = /\.(png|jpe?g|gif|webp|svg)([?#].*)?$/i;
+const isImageUrl = (url) => IMAGE_FILE.test(url || '');
+
+// --- TELJES KÉPERNYŐ ---
+// iPhone-on nincs Fullscreen API (ott a hívás hibát dobott), régebbi iPadeken csak webkit előtaggal
+const FULLSCREEN_SUPPORTED = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+const isFullscreen = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+const toggleFullScreen = () => {
+    const el = document.documentElement;
+    try {
+        const action = isFullscreen()
+            ? (document.exitFullscreen || document.webkitExitFullscreen).call(document)
+            : (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+        Promise.resolve(action).catch(err => console.error(err));
+    } catch (err) {
+        console.error(err);
+    }
+};
+
+// --- KERESÉS ---
+// Kisbetűs, ékezet nélküli alak az összehasonlításhoz ("eros var" = "Erős vár")
+const normalizeText = (text) => String(text ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+// Az ékezet nélküli címet és szöveget egyszer számoljuk ki, nem minden billentyűleütésnél
+const buildSearchIndex = (hymns) => hymns.map(h => ({
+    hymn: h,
+    number: String(h.number),
+    title: normalizeText(h.title),
+    lyrics: normalizeText(h.lyrics)
+}));
+
+// Csak számjegyek: az énekszám elejére keres (a pontos egyezés kerül előre), a szövegben nem,
+// mert ott minden éneknél ott vannak a versszakszámok ("1.", "2." ...).
+// Egyébként ékezet nélkül keres a számban, a címben és a szövegben; a címbeli találatok kerülnek előre.
+const searchHymns = (index, query) => {
+    const q = query.trim();
+    if (!q) return index.map(e => e.hymn);
+    if (/^\d+$/.test(q)) {
+        return index
+            .filter(e => e.number.startsWith(q))
+            .sort((a, b) => (b.number === q) - (a.number === q))
+            .map(e => e.hymn);
+    }
+    const nq = normalizeText(q);
+    return index
+        .filter(e => normalizeText(e.number).startsWith(nq) || e.title.includes(nq) || e.lyrics.includes(nq))
+        .sort((a, b) => b.title.includes(nq) - a.title.includes(nq))
+        .map(e => e.hymn);
+};
+
 // --- KOMPONENSEK ---
 
 const NavigationSidebar = ({ activeTab, onTabChange, menuSide, toggleFullScreen }) => (
@@ -62,7 +166,7 @@ const NavigationSidebar = ({ activeTab, onTabChange, menuSide, toggleFullScreen 
 
         </div>
         <div className="sidebar-group">
-            <button onClick={toggleFullScreen} className="nav-btn" title="Teljes képernyő"><Icons.Maximize size={24} /></button>
+            {toggleFullScreen && <button onClick={toggleFullScreen} className="nav-btn" title="Teljes képernyő"><Icons.Maximize size={24} /></button>}
             <button onClick={() => onTabChange('settings')} className={`nav-btn ${activeTab === 'settings' ? 'active' : ''}`} title="Beállítások"><Icons.Settings size={24} /></button>
             <button onClick={() => onTabChange('about')} className={`nav-btn ${activeTab === 'about' ? 'active' : ''}`} title="Névjegy"><Icons.Info size={24} /></button>
         </div>
@@ -77,7 +181,7 @@ const Modal = ({ title, onClose, children, footer, maxWidth }) => (
                 <button onClick={onClose}><Icons.X size={20} className="text-gray-500 hover:text-black"/></button>
             </div>
             <div className="modal-body" style={{padding:'1rem'}}>{children}</div>
-            <div className="modal-footer" style={{padding:'0.75rem 1rem'}}>{footer}</div>
+            {footer && <div className="modal-footer" style={{padding:'0.75rem 1rem'}}>{footer}</div>}
         </div>
     </div>
 );
@@ -92,15 +196,20 @@ const AlertModal = ({ isOpen, onClose, message }) => {
 };
 
 const FullscreenModal = ({ isOpen, onClose, onConfirm }) => {
+    const [dontAsk, setDontAsk] = useState(false);
     if (!isOpen) return null;
     return (
-        <Modal title="Teljes képernyő" onClose={onClose} footer={
+        <Modal title="Teljes képernyő" onClose={() => onClose(dontAsk)} footer={
             <>
-                <button onClick={onClose} className="btn">Mégse</button>
-                <button onClick={onConfirm} className="btn btn-primary">Teljes képernyő</button>
+                <button onClick={() => onClose(dontAsk)} className="btn">Mégse</button>
+                <button onClick={() => onConfirm(dontAsk)} className="btn btn-primary">Teljes képernyő</button>
             </>
         }>
             <p className="text-ink">A jobb élmény érdekében javasoljuk a teljes képernyős mód használatát.</p>
+            <label className="text-sm text-gray-500" style={{display:'flex', alignItems:'center', gap:'0.5rem', marginTop:'0.75rem', cursor:'pointer'}}>
+                <input type="checkbox" checked={dontAsk} onChange={e => setDontAsk(e.target.checked)} />
+                Ne kérdezze újra
+            </label>
         </Modal>
     );
 };
@@ -109,14 +218,15 @@ const HymnSelectorModal = ({ isOpen, onClose, onSelect, hymnBook }) => {
     const [search, setSearch] = useState('');
     const inputRef = useRef(null);
     useEffect(() => { if(isOpen) { setSearch(''); setTimeout(() => inputRef.current?.focus(), 100); } }, [isOpen]);
-    const filtered = useMemo(() => { if (!hymnBook) return []; if (!search) return hymnBook; const lower = search.toLowerCase(); return hymnBook.filter(h => h.number.includes(lower) || h.title.toLowerCase().includes(lower)); }, [search, hymnBook]);
+    const searchIndex = useMemo(() => buildSearchIndex(hymnBook || []), [hymnBook]);
+    const filtered = useMemo(() => searchHymns(searchIndex, search), [searchIndex, search]);
     if (!isOpen) return null;
 
     return (
         <Modal title="Ének választása" onClose={onClose} footer={null}>
             <div className="hymn-selector-search">
                 <Icons.Search className="search-icon" size={18}/>
-                <input ref={inputRef} type="text" className="input" placeholder="Keresés..." value={search} onChange={e => setSearch(e.target.value)} />
+                <input ref={inputRef} type="text" className="input search" placeholder="Keresés számra, címre vagy szövegre..." value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && filtered.length > 0) onSelect(filtered[0]); }} />
             </div>
             <div className="hymn-selector-list">
                 {filtered.map(h => (
@@ -145,7 +255,7 @@ const CreatePlaylistModal = ({ isOpen, onClose, onConfirm }) => {
         }>
             <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Lista neve</label>
-                <input ref={inputRef} type="text" className="input" placeholder="pl. Vasárnapi mise" value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && name && onConfirm(name)} />
+                <input ref={inputRef} type="text" className="input" placeholder="pl. Vasárnapi istentisztelet" value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && name && onConfirm(name)} />
             </div>
         </Modal>
     );
@@ -167,6 +277,7 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, title, message }) => {
 
 const CustomSelect = ({ items, currentId, onChange, labelKey = "name", subLabelKey = "composer", placeholder = "Nincs kiválasztva", emptyText = "Nincs adat", width="180px" }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [alignRight, setAlignRight] = useState(false);
     const dropdownRef = useRef(null);
     const currentItem = items && items.find(v => v.id === currentId);
 
@@ -180,28 +291,32 @@ const CustomSelect = ({ items, currentId, onChange, labelKey = "name", subLabelK
 
     const isEmpty = !items || items.length === 0;
 
+    const toggleOpen = () => {
+        if (isEmpty) return;
+        if (!isOpen && dropdownRef.current) {
+            // A menü jobbra nyílik; ha ott nem férne el (pl. telefonon), a gomb jobb széléhez igazítjuk
+            const rect = dropdownRef.current.getBoundingClientRect();
+            setAlignRight(rect.left + Math.max(rect.width, 240) > window.innerWidth - 8);
+        }
+        setIsOpen(!isOpen);
+    };
+
     return (
-        <div style={{position:'relative'}} ref={dropdownRef}>
-            <button 
-                onClick={() => !isEmpty && setIsOpen(!isOpen)} 
-                className="input" 
-                style={{height:'36px', fontSize:'0.9rem', width:'auto', minWidth: width, textAlign:'left', display:'flex', justifyContent:'space-between', alignItems:'center', cursor: isEmpty ? 'default' : 'pointer', paddingRight:'10px', opacity: isEmpty ? 0.6 : 1, backgroundColor: isEmpty ? 'rgba(0,0,0,0.05)' : 'white'}}
-            >
+        <div className="custom-select" ref={dropdownRef} style={{'--select-min-width': width}}>
+            <button onClick={toggleOpen} className={`input custom-select-btn ${isEmpty ? 'empty' : ''}`}>
                 <span className="truncate">{isEmpty ? emptyText : (currentItem ? currentItem[labelKey] : placeholder)}</span>
-                <Icons.ChevronDown size={16} style={{opacity:0.5}}/>
+                <Icons.ChevronDown size={16} style={{opacity:0.5, flexShrink:0}}/>
             </button>
             
             {isOpen && !isEmpty && (
-                <div style={{position:'absolute', top:'100%', right:0, marginTop:'5px', backgroundColor:'var(--col-papyrus)', border:'1px solid #ccc', borderRadius:'4px', boxShadow:'var(--shadow-xl)', width:'300px', zIndex:100, maxHeight:'300px', overflowY:'auto'}}>
-                    <div onClick={() => { onChange(null); setIsOpen(false); }} style={{padding:'10px', borderBottom:'1px solid #eee', cursor:'pointer', fontStyle:'italic', color:'#666'}} className="hover:bg-gray-100">
+                <div className="custom-select-menu" style={alignRight ? {right:0} : {left:0}}>
+                    <div onClick={() => { onChange(null); setIsOpen(false); }} className="custom-select-option placeholder hover:bg-gray-100">
                         {placeholder}
                     </div>
                     {items.map(v => (
-                        <div key={v.id} onClick={() => { onChange(v.id); setIsOpen(false); }} style={{padding:'10px', borderBottom:'1px solid #eee', cursor:'pointer', backgroundColor: currentId === v.id ? 'rgba(0,0,0,0.05)' : 'transparent'}} className="hover:bg-gray-100">
-                            <div style={{fontWeight:'bold', fontSize:'0.9rem', color:'var(--col-galaxy-blue)'}}>{v[labelKey]}</div>
-                            <div style={{fontSize:'0.75rem', color:'#666', marginTop:'2px'}}>
-                                <span style={{fontStyle:'italic'}}>{v[subLabelKey]}</span>
-                            </div>
+                        <div key={v.id} onClick={() => { onChange(v.id); setIsOpen(false); }} className={`custom-select-option hover:bg-gray-100 ${currentId === v.id ? 'selected' : ''}`}>
+                            <div className="custom-select-option-label">{v[labelKey]}</div>
+                            <div className="custom-select-option-sub">{v[subLabelKey]}</div>
                         </div>
                     ))}
                 </div>
@@ -210,31 +325,46 @@ const CustomSelect = ({ items, currentId, onChange, labelKey = "name", subLabelK
     );
 }
 
-const AddToPlaylistModal = ({ isOpen, onClose, onConfirm, playlists, initialVariationId, initialPreludeId, hymn, variations, preludes, defaultPlaylistId, lockPlaylistId }) => {
-    if (!isOpen) return null;
-    const [selectedPlaylistId, setSelectedPlaylistId] = useState(defaultPlaylistId || (playlists.length > 0 ? playlists[0].id : null));
-    const [selectedVariationId, setSelectedVariationId] = useState(initialVariationId);
-    const [selectedPreludeId, setSelectedPreludeId] = useState(initialPreludeId);
-    const [selectedVerses, setSelectedVerses] = useState([]); 
-    const parsedVerses = useMemo(() => parseVerses(hymn.lyrics), [hymn.lyrics]);
+const NEW_PLAYLIST = '__new__';
 
-    useEffect(() => { 
-        if (isOpen) { 
-            setSelectedVerses(parsedVerses.map(v => v.index)); 
-            if (!initialVariationId && variations && variations.length > 0) setSelectedVariationId(variations[0].id); else setSelectedVariationId(initialVariationId); 
-            setSelectedPreludeId(initialPreludeId || (preludes && preludes.length > 0 ? null : null)); 
-            if (lockPlaylistId) setSelectedPlaylistId(lockPlaylistId); else if (!selectedPlaylistId && playlists.length > 0) setSelectedPlaylistId(playlists[0].id); 
-        } 
-    }, [isOpen]);
+// Csak nyitott állapotban csatoljuk, ezért a kezdőértékeket egyszer, a megnyitáskor számoljuk ki
+const AddToPlaylistModal = ({ onClose, onConfirm, playlists, initialVariationId, initialPreludeId, hymn, variations, preludes, lockPlaylistId }) => {
+    const parsedVerses = useMemo(() => parseVerses(hymn.lyrics), [hymn.lyrics]);
+    const [targetId, setTargetId] = useState(() => lockPlaylistId ?? (playlists.length > 0 ? playlists[0].id : NEW_PLAYLIST));
+    const [newName, setNewName] = useState('');
+    const [selectedVariationId, setSelectedVariationId] = useState(() => variations.some(v => v.id === initialVariationId) ? initialVariationId : (variations.length > 0 ? variations[0].id : null));
+    const [selectedPreludeId, setSelectedPreludeId] = useState(() => preludes.some(p => p.id === initialPreludeId) ? initialPreludeId : null);
+    const [selectedVerses, setSelectedVerses] = useState(() => parsedVerses.map(v => v.index));
+    const newNameRef = useRef(null);
+
+    const isNewList = targetId === NEW_PLAYLIST;
+    const canSave = isNewList ? newName.trim().length > 0 : targetId != null;
+
+    // Ha még nincs lista, vagy az "Új lista" opciót választották, a névmező kapja a fókuszt
+    useEffect(() => { if (isNewList && newNameRef.current) newNameRef.current.focus(); }, [isNewList]);
 
     const toggleVerse = (index) => { if (selectedVerses.includes(index)) setSelectedVerses(selectedVerses.filter(i => i !== index)); else setSelectedVerses([...selectedVerses, index].sort((a, b) => a - b)); };
-    const handleConfirm = () => { if (!selectedPlaylistId) return; onConfirm({ playlistId: selectedPlaylistId, variationId: selectedVariationId, preludeId: selectedPreludeId, verses: selectedVerses }); };
+    const handleConfirm = () => {
+        if (!canSave) return;
+        onConfirm({
+            playlistId: isNewList ? null : targetId,
+            newPlaylistName: isNewList ? newName.trim() : null,
+            variationId: selectedVariationId,
+            preludeId: selectedPreludeId,
+            verses: selectedVerses
+        });
+    };
+    const handleTargetChange = (value) => {
+        if (value === NEW_PLAYLIST) { setTargetId(NEW_PLAYLIST); return; }
+        const pl = playlists.find(p => String(p.id) === value);
+        setTargetId(pl ? pl.id : null);
+    };
 
     return (
         <Modal title="Hozzáadás" onClose={onClose} maxWidth="600px" footer={
             <>
                 <button onClick={onClose} className="btn">Mégse</button>
-                <button onClick={handleConfirm} className="btn btn-primary">Mentés</button>
+                <button onClick={handleConfirm} disabled={!canSave} className="btn btn-primary">Mentés</button>
             </>
         }>
             <div className="text-center pb-2 border-b border-gray-200 mb-4">
@@ -243,21 +373,29 @@ const AddToPlaylistModal = ({ isOpen, onClose, onConfirm, playlists, initialVari
             </div>
             
             <div className="flex flex-col gap-4">
-                {!lockPlaylistId && (
+                {lockPlaylistId == null && (
                     <div>
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Cél lista</label>
-                        <select className="input" value={selectedPlaylistId || ''} onChange={(e) => setSelectedPlaylistId(Number(e.target.value))}>
-                            {playlists.map(pl => <option key={pl.id} value={pl.id}>{pl.name}</option>)}
-                        </select>
+                        {playlists.length > 0 && (
+                            <select className="input" value={isNewList ? NEW_PLAYLIST : String(targetId)} onChange={(e) => handleTargetChange(e.target.value)}>
+                                {playlists.map(pl => <option key={pl.id} value={String(pl.id)}>{pl.name}</option>)}
+                                <option value={NEW_PLAYLIST}>+ Új lista…</option>
+                            </select>
+                        )}
+                        {isNewList && (
+                            <input ref={newNameRef} type="text" className="input" style={playlists.length > 0 ? {marginTop:'0.5rem'} : undefined}
+                                placeholder="Új lista neve, pl. Vasárnapi istentisztelet" value={newName}
+                                onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleConfirm()} />
+                        )}
                     </div>
                 )}
                 
                 <div style={{display:'flex', gap:'1rem'}}>
-                    <div style={{flex:1}}>
+                    <div style={{flex:1, minWidth:0}}>
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Előjáték</label>
                         <CustomSelect items={preludes} currentId={selectedPreludeId} onChange={setSelectedPreludeId} placeholder="Nincs kiválasztva" emptyText="Nincs előjáték" width="100%" />
                     </div>
-                    <div style={{flex:1}}>
+                    <div style={{flex:1, minWidth:0}}>
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Változat</label>
                         <CustomSelect items={variations} currentId={selectedVariationId} onChange={setSelectedVariationId} placeholder="Változat választása" width="100%" />
                     </div>
@@ -267,7 +405,7 @@ const AddToPlaylistModal = ({ isOpen, onClose, onConfirm, playlists, initialVari
                     <div className="flex justify-between items-end mb-1">
                         <label className="block text-xs font-bold text-gray-500 uppercase">Versszakok</label>
                         <button onClick={() => setSelectedVerses(selectedVerses.length === parsedVerses.length ? [] : parsedVerses.map(v => v.index))} className="text-xs text-accent hover:underline">
-                            {selectedVerses.length === parsedVerses.length ? "Mégse" : "Mind"}
+                            {selectedVerses.length === parsedVerses.length ? "Egyik sem" : "Mind"}
                         </button>
                     </div>
                     <div style={{maxHeight:'150px', overflowY:'auto', border:'1px solid #ddd', borderRadius:'4px'}}>
@@ -291,40 +429,40 @@ const SettingsView = ({ settings, onUpdateSettings }) => (
         </div>
         
         <div className="main-content" style={{padding:'2rem', overflowY:'auto'}}>
-            <div style={{maxWidth:'800px', margin:'0 auto', display:'flex', flexDirection:'column', gap:'10px'}}>
+            <div style={{width:'100%', maxWidth:'800px', margin:'0 auto', display:'flex', flexDirection:'column', gap:'10px'}}>
                 
                 {/* Kártyák a beállításoknak */}
                 <div className="card card-row">
                     <div className="card-decoration"></div>
-                    <div style={{width: '600px', minWidth: '200px'}}>
+                    <div className="setting-label">
                         <div className="font-bold text-ink">Háttér téma</div>
                         <div className="text-xs text-gray-500">Válassz megjelenítési módot</div>
                     </div>
                     <select className="input" style={{width:'auto', minWidth:'150px'}} value={settings.theme} onChange={(e) => onUpdateSettings({...settings, theme: e.target.value})}>
                         <option value="papyrus">Papirusz</option>
-                        <option value="dark-papyrus">Sötét Pergamen</option>
+                        <option value="dark-papyrus">Sötét pergamen</option>
                         <option value="white">Törtfehér</option>
                     </select>
                 </div>
 
                 <div className="card card-row">
                     <div className="card-decoration"></div>
-                    <div style={{width: '600px', minWidth: '200px'}}>
+                    <div className="setting-label">
                         <div className="font-bold text-ink">Szövegpanel megjelenítése</div>
                         <div className="text-xs text-gray-500">Kotta mellett a szöveg láthatósága</div>
                     </div>
-                    <button onClick={() => onUpdateSettings({...settings, showLyrics: !settings.showLyrics})} className="btn-ghost" style={{color: settings.showLyrics ? 'var(--col-accent)' : '#ccc'}}>
+                    <button onClick={() => onUpdateSettings({...settings, showLyrics: !settings.showLyrics})} className="btn-ghost" style={{color: settings.showLyrics ? 'var(--col-accent-text)' : '#999'}}>
                         {settings.showLyrics ? <Icons.Eye size={24}/> : <Icons.EyeOff size={24}/>}
                     </button>
                 </div>
 
                 <div className="card card-row">
                     <div className="card-decoration"></div>
-                    <div style={{width: '600px', minWidth: '200px'}}>
+                    <div className="setting-label">
                         <div className="font-bold text-ink">Oldalsáv szélessége</div>
                         <div className="text-xs text-gray-500">Ha oldalt van a szöveg</div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                          <button onClick={() => onUpdateSettings({...settings, lyricsWidth: '15%'})} className={`btn ${settings.lyricsWidth === '15%' ? 'btn-primary' : 'btn-ghost'}`}>15%</button>
                          <button onClick={() => onUpdateSettings({...settings, lyricsWidth: '20%'})} className={`btn ${settings.lyricsWidth === '20%' ? 'btn-primary' : 'btn-ghost'}`}>20%</button>
                          <button onClick={() => onUpdateSettings({...settings, lyricsWidth: '25%'})} className={`btn ${settings.lyricsWidth === '25%' ? 'btn-primary' : 'btn-ghost'}`}>25%</button>
@@ -334,7 +472,7 @@ const SettingsView = ({ settings, onUpdateSettings }) => (
 
                 <div className="card card-row">
                     <div className="card-decoration"></div>
-                    <div style={{width: '600px', minWidth: '200px'}}>
+                    <div className="setting-label">
                         <div className="font-bold text-ink">Kotta szélessége</div>
                         <div className="text-xs text-gray-500">Maximális szélesség</div>
                     </div>
@@ -350,11 +488,11 @@ const SettingsView = ({ settings, onUpdateSettings }) => (
 
                 <div className="card card-row">
                     <div className="card-decoration"></div>
-                    <div style={{width: '600px', minWidth: '200px'}}>
+                    <div className="setting-label">
                          <div className="font-bold text-ink">Oldalmenü helye</div>
                          <div className="text-xs text-gray-500">Bal vagy jobb oldalon legyen a menü</div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                          <button onClick={() => onUpdateSettings({...settings, sidebarSide: 'left'})} className={`btn ${settings.sidebarSide === 'left' ? 'btn-primary' : 'btn-ghost'}`}>Bal</button>
                          <button onClick={() => onUpdateSettings({...settings, sidebarSide: 'right'})} className={`btn ${settings.sidebarSide === 'right' ? 'btn-primary' : 'btn-ghost'}`}>Jobb</button>
                     </div>
@@ -366,176 +504,229 @@ const SettingsView = ({ settings, onUpdateSettings }) => (
 );
 
 // --- OSMD KOTTA RENDERELŐ KOMPONENS ---
+const OSMD_OPTIONS = {
+    autoResize: false, // Mi magunk kezeljük a ResizeObserverrel
+    backend: "svg",
+    drawTitle: false,
+    drawSubtitle: false,
+    drawComposer: false,
+    drawLyricist: false,
+    drawPartNames: false,
+    drawPartAbbreviations: false
+};
+
+// Az OSMD-nek nincs "engravingRules" opciója: a szabályokat a példány EngravingRules objektumán kell beállítani.
+// (Vízszintes térközhöz a VoiceSpacingMultiplierVexflow használható, alapértéke 0.85.)
+const OSMD_ENGRAVING_RULES = {
+    MinNoteDistance: 6, // Minimum térköz a kottafejek között (az OSMD alapértéke 2)
+    PageTopMargin: 10,  // alapérték: 5
+    PageBottomMargin: 10
+};
+
 const OsmdViewer = ({ fileUrl, zoom = 1.0 }) => {
     const containerRef = useRef(null);
     const osmdRef = useRef(null);
-    const [status, setStatus] = useState('Betöltésre vár...');
-    const resizeObserverRef = useRef(null);
-    const renderTimeoutRef = useRef(null);
+    const zoomRef = useRef(zoom);
+    const readyRef = useRef(false);          // az aktuális fájl betöltve, rajzolható
+    const renderedWidthRef = useRef(0);
+    const loadIdRef = useRef(0);
+    const loadQueueRef = useRef(Promise.resolve());
+    const [status, setStatus] = useState({ kind: 'loading', text: 'Betöltésre vár...' });
 
-    // 1. Fájl betöltése és kezdeti inicializálás
+    const renderScore = () => {
+        const osmd = osmdRef.current;
+        if (!osmd || !readyRef.current || !containerRef.current) return;
+        try {
+            osmd.Zoom = zoomRef.current; // a Zoom setter a gerendákat is újraszámolja
+            osmd.render();
+            renderedWidthRef.current = containerRef.current.clientWidth;
+        } catch (err) {
+            console.error("Kotta rajzolási hiba:", err);
+            setStatus({ kind: 'error', text: `Hiba történt: ${err.message}` });
+        }
+    };
+
+    // 1. OSMD példány és méretfigyelő: egyszer, a komponens teljes élettartamára
     useEffect(() => {
-        if (!containerRef.current) return;
-        let isMounted = true;
+        const osmd = new window.opensheetmusicdisplay.OpenSheetMusicDisplay(containerRef.current, OSMD_OPTIONS);
+        Object.assign(osmd.EngravingRules, OSMD_ENGRAVING_RULES);
+        osmdRef.current = osmd;
 
-        if (!osmdRef.current) {
-            osmdRef.current = new window.opensheetmusicdisplay.OpenSheetMusicDisplay(containerRef.current, {
-                autoResize: false, // Mi magunk kezeljük a ResizeObserverrel
-                backend: "svg",
-                drawTitle: false,
-                drawSubtitle: false,
-                drawComposer: false, 
-                drawLyricist: false,
-                drawPartNames: false,
-                drawPartAbbreviations: false,
-                engravingRules: {
-                    MinNoteDistance: 6, // Minimum térköz a kottafejek között (alapértelmezettnél kicsit nagyobb)
-                    VoiceSpacingMultiplierNormal: 1.5, // Általános vízszintes szorzó a szellősebb megjelenésért
-                    VoiceSpacingMultiplierVocal: 1.2,
-                    DistanceBetweenBarlineAndFirstNote: 2.5, // Távolság az ütemvonal és az első hang között
-                    DistanceBetweenLastNoteAndBarline: 15.0,  // Távolság az utolsó hang és az ütemvonal között
-                    PageBottomMargin: 10,
-                    PageTopMargin: 10
-                }
-            });
-        }
+        let resizeTimeout = null;
+        const observer = new ResizeObserver(() => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                // Csak szélességváltozásra rajzolunk újra (ablakméret, tablet elforgatása, szövegpanel áthelyezése)
+                if (containerRef.current && containerRef.current.clientWidth !== renderedWidthRef.current) renderScore();
+            }, 300);
+        });
+        observer.observe(containerRef.current);
 
-        if (fileUrl) {
-            setStatus('Fájl letöltése és feldolgozása...');
-            osmdRef.current.load(fileUrl)
-                .then(() => {
-                    if (!isMounted) return;
-                    setStatus('Renderelés...');
-                    
-                    // Kezdeti zoom beállítása a renderelés előtt
-                    osmdRef.current.zoom = zoom; 
-                    osmdRef.current.render();
-                    setStatus('');
-
-                    // ResizeObserver: Figyeli a tároló méretváltozását
-                    if (!resizeObserverRef.current) {
-                        resizeObserverRef.current = new ResizeObserver(() => {
-                            if (!isMounted || !osmdRef.current) return;
-                            
-                            clearTimeout(renderTimeoutRef.current);
-                            renderTimeoutRef.current = setTimeout(() => {
-                                osmdRef.current.render();
-                            }, 300); 
-                        });
-                        resizeObserverRef.current.observe(containerRef.current);
-                    }
-                })
-                .catch(err => {
-                    if (!isMounted) return;
-                    setStatus(`Hiba történt: ${err.message}`);
-                });
-        }
-
-        return () => { 
-            isMounted = false; 
-            if (resizeObserverRef.current) {
-                resizeObserverRef.current.disconnect();
-            }
-            clearTimeout(renderTimeoutRef.current);
+        return () => {
+            observer.disconnect();
+            clearTimeout(resizeTimeout);
+            loadIdRef.current++; // a még futó betöltés eredményét eldobjuk
+            osmdRef.current = null;
         };
-    }, [fileUrl]); // Csak a fájl megváltozásakor fut le ez a drága folyamat
+    }, []);
 
-    // 2. Gyors újra-renderelés csak a ZOOM változásakor
+    // 2. Fájl betöltése. A betöltések sorban futnak, és csak a legutolsó kérés rajzolódik ki,
+    //    így gyors lapozásnál sem kerülhet a képernyőre egy korábbi ének kottája.
     useEffect(() => {
-        if (osmdRef.current && !status) {
-            osmdRef.current.zoom = zoom;
-            osmdRef.current.render();
-        }
+        if (!fileUrl) return;
+        const loadId = ++loadIdRef.current;
+        readyRef.current = false;
+        setStatus({ kind: 'loading', text: 'Fájl letöltése és feldolgozása...' });
+
+        loadQueueRef.current = loadQueueRef.current
+            .then(() => {
+                const osmd = osmdRef.current;
+                if (!osmd || loadId !== loadIdRef.current) return; // közben újabb kérés jött
+                return osmd.load(fileUrl).then(() => {
+                    if (loadId !== loadIdRef.current) return;
+                    readyRef.current = true;
+                    renderScore();
+                    setStatus(null);
+                });
+            })
+            .catch(err => {
+                if (loadId !== loadIdRef.current) return;
+                if (osmdRef.current) osmdRef.current.clear(); // ne maradjon kint az előző ének kottája
+                setStatus({ kind: 'error', text: `A kotta nem tölthető be (${fileUrl}): ${err.message}` });
+            });
+    }, [fileUrl]);
+
+    // 3. Zoom változásakor újrarajzolás (betöltés közben a betöltés végén érvényesül)
+    useEffect(() => {
+        zoomRef.current = zoom;
+        renderScore();
     }, [zoom]);
 
     return (
-        <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {status && (
-                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: 'rgba(255,255,255,0.95)', padding: '10px 20px', borderRadius: '8px', border: '1px solid #ccc', color: '#333', zIndex: 10, fontWeight: 'bold', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
-                    ⏳ {status}
-                </div>
-            )}
-            <div ref={containerRef} style={{ flex: 1, width: '100%', height: '100%', overflow: 'auto', mixBlendMode: 'multiply' }}></div>
+        <div className="osmd-viewer">
+            {status && <div className="osmd-status">{status.kind === 'error' ? '⚠️' : '⏳'} {status.text}</div>}
+            <div ref={containerRef} className="osmd-container"></div>
         </div>
     );
 };
 
+// Képként tárolt kotta (PNG, JPG, SVG). A zoom a kép szélességét állítja, széles képnél vízszintesen görgethető.
+const ScoreImage = ({ src, alt, zoom = 1.0 }) => {
+    const [failed, setFailed] = useState(false);
+    useEffect(() => setFailed(false), [src]);
+    if (failed) return <div className="score-missing">⚠️ A kotta nem tölthető be ({src})</div>;
+    return (
+        <div className="score-image-wrap">
+            <img src={src} alt={alt} className="score-image" style={{width: `${Math.round(zoom * 100)}%`}} onError={() => setFailed(true)} />
+        </div>
+    );
+};
+
+const PAGE_FORWARD_KEYS = ['PageDown', 'ArrowDown', 'ArrowRight'];
+const PAGE_BACK_KEYS = ['PageUp', 'ArrowUp', 'ArrowLeft'];
 
 const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyricsWidth, scoreMaxWidth, onNext, onPrev }) => {
     const [textPosition, setTextPosition] = useState('bottom'); 
     const [textLayout, setTextLayout] = useState('columns');
     const [zoom, setZoom] = useState(1.0);
-    
-    if (!score || !score.variations || score.variations.length === 0) return (
+    const scrollerRef = useRef(null);
+    const navRef = useRef({});
+    navRef.current = { onNext, onPrev };
+
+    const variations = (score && score.variations) || [];
+    const variation = variations.find(v => v.id === variationId) || variations[0] || null;
+    const prelude = (score && score.preludes && score.preludes.find(p => p.id === preludeId)) || null;
+
+    // Másik ének vagy változat mindig a kotta tetejéről induljon
+    useEffect(() => {
+        if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
+    }, [variation && variation.id, prelude && prelude.id]);
+
+    // Lapozás billentyűzettel vagy Bluetooth lapozópedállal (ezek nyíl- vagy PageUp/PageDown billentyűt küldenek).
+    // Előre: ha a kottából van még lent, egy képernyőnyit görget, különben a következő ének jön. Hátra ugyanígy.
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+            if (document.querySelector('.modal-overlay')) return;
+            if (e.target.closest && e.target.closest('input, select, textarea, [contenteditable="true"]')) return;
+            const forward = PAGE_FORWARD_KEYS.includes(e.key);
+            if (!forward && !PAGE_BACK_KEYS.includes(e.key)) return;
+
+            const el = scrollerRef.current;
+            const step = el ? el.clientHeight * 0.85 : 0;
+            const { onNext, onPrev } = navRef.current;
+            if (forward) {
+                if (el && el.scrollTop + el.clientHeight < el.scrollHeight - 2) el.scrollBy({ top: step, behavior: 'smooth' });
+                else if (onNext) onNext();
+                else return;
+            } else {
+                if (el && el.scrollTop > 2) el.scrollBy({ top: -step, behavior: 'smooth' });
+                else if (onPrev) onPrev();
+                else return;
+            }
+            e.preventDefault();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    if (!variation && !prelude) return (
         <div style={{display:'flex', height:'100%', alignItems:'center', justifyContent:'center', flexDirection:'column', opacity:0.5}}>
             <Icons.Music size={64}/>
             <p>Nincs elérhető kotta</p>
         </div>
     );
 
-    const variation = score.variations && score.variations.length > 0 
-        ? (score.variations.find(v => v.id === variationId) || score.variations[0]) 
-        : score; 
-        
-    const prelude = score.preludes ? score.preludes.find(p => p.id === preludeId) : null;
-
-    if (!variation) return null;
-
     const isSide = textPosition === 'right';
 
     return (
         <div style={{display:'flex', height:'100%', flexDirection: isSide ? 'row' : 'column'}}>
-            {/* Kotta rész */}
-            <div style={{flex:1, position:'relative', overflow:'hidden', display:'flex', flexDirection:'column', minHeight:0, backgroundColor:'transparent'}}>
-                <div style={{width:'100%', height:'100%', display:'flex', flexDirection:'column', alignItems:'center', overflow:'auto', paddingTop:'10px', paddingBottom:'20px', paddingLeft:'20px', paddingRight:'20px'}}>
+            {/* Kotta rész: egyetlen görgethető terület az előjátéknak és a kottának */}
+            <div className="score-pane">
+                <div ref={scrollerRef} className="score-scroller">
                     
                     {/* Előjáték */}
                     {prelude && (
-                        <div style={{width:'100%', maxWidth: scoreMaxWidth || '100%', display:'flex', flexDirection:'column', alignItems:'center', marginBottom:'1rem', paddingBottom:'1rem', borderBottom:'1px dashed #ccc'}}>
-                            <div style={{fontSize:'12px', fontWeight:'bold', color:'var(--col-accent)', marginBottom:'4px', textTransform:'uppercase'}}>Előjáték: {prelude.name}</div>
-                            {prelude.xmlUrl ? (
-                                <div style={{ width: '100%', minHeight: '150px' }}>
-                                    <OsmdViewer fileUrl={prelude.xmlUrl} zoom={zoom} />
-                                </div>
-                            ) : prelude.xmlUrl ? (
-                                <img src={prelude.xmlUrl} alt={prelude.name} className="score-image" style={{width:'auto', maxWidth:'100%', maxHeight:'40vh', objectFit:'contain', boxShadow:'var(--shadow-lg)'}} />
+                        <div className="score-block prelude-block" style={{maxWidth: scoreMaxWidth || '100%'}}>
+                            <div className="prelude-label">Előjáték: {prelude.name}</div>
+                            {prelude.xmlUrl ? (isImageUrl(prelude.xmlUrl)
+                                ? <ScoreImage src={prelude.xmlUrl} alt={`Előjáték: ${prelude.name}`} zoom={zoom} />
+                                : <OsmdViewer fileUrl={prelude.xmlUrl} zoom={zoom} />
                             ) : (
-                                <div style={{padding:'20px', border:'1px solid #ccc', borderRadius:'4px', backgroundColor:'rgba(0,0,0,0.05)'}}>Előjáték Kotta Helye</div>
+                                <div className="score-missing">Előjáték kotta helye</div>
                             )}
                         </div>
                     )}
 
                     {/* Fő Kotta / Variáció */}
-                    {variation.xmlUrl ? (
-                        <div style={{ width: '100%', maxWidth: scoreMaxWidth || '100%', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '300px' }}>
-                            <OsmdViewer fileUrl={variation.xmlUrl} zoom={zoom} />
-                        </div>
-                    ) : variation.xmlUrl ? (
-                        <div style={{width:'100%', maxWidth: scoreMaxWidth || '100%', display:'flex', justifyContent:'center', alignItems:'flex-start'}}>
-                            <img src={variation.xmlUrl} alt={variation.name || 'Kotta'} className="score-image" style={{width:'100%', height:'auto', objectFit:'contain', boxShadow:'var(--shadow-lg)'}} />
+                    {variation && (variation.xmlUrl ? (
+                        <div className="score-block" style={{maxWidth: scoreMaxWidth || '100%'}}>
+                            {isImageUrl(variation.xmlUrl)
+                                ? <ScoreImage src={variation.xmlUrl} alt={variation.name || 'Kotta'} zoom={zoom} />
+                                : <OsmdViewer fileUrl={variation.xmlUrl} zoom={zoom} />}
                         </div>
                     ) : (
-                        <div style={{opacity:0.2, display:'flex', flexDirection:'column', alignItems:'center'}}>
+                        <div className="score-placeholder">
                             <Icons.Music size={80} className="text-ink"/>
                             <p className="font-serif mt-4">Kotta helye</p>
                         </div>
-                    )}
+                    ))}
                 </div>
                  
-                 <div style={{position:'absolute', bottom:'5px', right:'10px', fontSize:'12px', color:'#999', pointerEvents:'none'}}>
-                     {variation.year} {variation.voiceCount && ` • ${variation.voiceCount} szólam`}
-                 </div>
-                {/* ÚJ: Lebegő Zoom és Navigációs Sáv a kotta alján */}
-                <div style={{ position: 'absolute', bottom: '1rem', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.95)', padding: '0.5rem 1rem', borderRadius: '30px', boxShadow: '0 4px 15px rgba(0,0,0,0.15)', zIndex: 30, alignItems: 'center', border: '1px solid #eee' }}>
-                     <button onClick={() => setZoom(z => Math.max(0.4, z - 0.1))} style={{border:'none', background:'transparent', fontSize:'1.5rem', cursor:'pointer', fontWeight:'bold', color:'var(--col-galaxy-blue)', width:'30px', height:'30px', display:'flex', alignItems:'center', justifyContent:'center'}} title="Kicsinyítés">-</button>
-                     <span style={{ fontSize: '0.9rem', fontWeight: 'bold', width: '50px', textAlign: 'center', color:'var(--col-galaxy-blue)' }}>
-                         {Math.round(zoom * 100)}%
-                     </span>
-                     <button onClick={() => setZoom(z => Math.min(2.5, z + 0.1))} style={{border:'none', background:'transparent', fontSize:'1.5rem', cursor:'pointer', fontWeight:'bold', color:'var(--col-galaxy-blue)', width:'30px', height:'30px', display:'flex', alignItems:'center', justifyContent:'center'}} title="Nagyítás">+</button>
-                 </div>
-                 {/* Lapozó gombok (overlay) */}
-                 {onPrev && <div onClick={onPrev} style={{position:'absolute', top:0, left:0, width:'15%', height:'100%', cursor:'w-resize', zIndex:10}} title="Előző"></div>}
-                 {onNext && <div onClick={onNext} style={{position:'absolute', top:0, right:0, width:'15%', height:'100%', cursor:'e-resize', zIndex:10}} title="Következő"></div>}
+                {variation && (
+                    <div className="score-info">
+                        {variation.year} {variation.voiceCount && ` • ${variation.voiceCount} szólam`}
+                    </div>
+                )}
+                {/* Lebegő zoom sáv a kotta alján */}
+                <div className="zoom-bar">
+                    <button onClick={() => setZoom(z => Math.max(0.4, z - 0.1))} title="Kicsinyítés">-</button>
+                    <span>{Math.round(zoom * 100)}%</span>
+                    <button onClick={() => setZoom(z => Math.min(2.5, z + 0.1))} title="Nagyítás">+</button>
+                </div>
+                {/* Lapozó gombok: láthatóak, és nem takarják el a kotta szélét */}
+                {onPrev && <button onClick={onPrev} className="page-turn-btn prev" title="Előző ének" aria-label="Előző ének"><Icons.ChevronLeft size={32}/></button>}
+                {onNext && <button onClick={onNext} className="page-turn-btn next" title="Következő ének" aria-label="Következő ének"><Icons.ChevronRight size={32}/></button>}
             </div>
             
             {showLyrics && (
@@ -582,6 +773,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
                                     borderLeft: '3px solid #eee', 
                                     fontFamily: 'var(--font-serif)', 
                                     lineHeight: '1.4',
+                                    whiteSpace: 'pre-line', // a versszakon belüli sortörések megmaradnak
                                     breakInside: 'avoid-column',
                                     flex: (!isSide && textLayout === 'columns') ? '0 0 auto' : 'auto',
                                     width: (!isSide && textLayout === 'columns') ? '300px' : 'auto'
@@ -597,7 +789,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
     );
 };
 
-const PlaylistEditor = ({ playlist, onClose, onRemoveItem, onAddItem, onPlay, onReorder, getScoreInfo }) => {
+const PlaylistEditor = ({ playlist, onRemoveItem, onAddItem, onPlay, onReorder, getScoreInfo }) => {
     const [dragItem, setDragItem] = useState(null);
     const [dragOverItem, setDragOverItem] = useState(null);
     const handleDragStart = (e, index) => { setDragItem(index); e.dataTransfer.effectAllowed = "move"; };
@@ -634,12 +826,12 @@ const PlaylistEditor = ({ playlist, onClose, onRemoveItem, onAddItem, onPlay, on
                              const { variationName, preludeName } = getScoreInfo(item.hymn.scoreId, item.variationId, item.preludeId);
                              
                              return (
-                                <div key={idx} draggable onDragStart={(e) => handleDragStart(e, idx)} onDragEnter={(e) => handleDragEnter(e, idx)} onDragEnd={handleDragEnd} onDragOver={(e) => e.preventDefault()} 
+                                <div key={item.id} draggable onDragStart={(e) => handleDragStart(e, idx)} onDragEnter={(e) => handleDragEnter(e, idx)} onDragEnd={handleDragEnd} onDragOver={(e) => e.preventDefault()} 
                                      className="playlist-editor-item"
-                                     style={{opacity: isDragging ? 0.5 : 1, borderTop: isDragOver && !isDragging ? '2px solid #B58900' : '1px solid #ddd'}}>
+                                     style={{opacity: isDragging ? 0.5 : 1, borderTop: isDragOver && !isDragging ? '2px solid var(--col-accent)' : '1px solid #ddd'}}>
                                     <div style={{display:'flex', alignItems:'center', gap:'1rem'}}>
                                         <div style={{cursor:'move', color:'#ccc'}}><Icons.GripVertical size={20} /></div>
-                                        <div style={{fontWeight:'bold', color:'#ccc', width:'20px'}}>{idx + 1}.</div>
+                                        <div style={{fontWeight:'bold', color:'#6b7280', width:'20px'}}>{idx + 1}.</div>
                                         <div>
                                             <div><span className="text-accent font-bold">#{item.hymn.number}</span> <span className="font-bold text-ink">{item.hymn.title}</span></div>
                                             <div style={{fontSize:'12px', color:'#666', marginTop:'2px'}}>
@@ -648,7 +840,7 @@ const PlaylistEditor = ({ playlist, onClose, onRemoveItem, onAddItem, onPlay, on
                                             </div>
                                         </div>
                                     </div>
-                                    <button onClick={() => onRemoveItem(idx)} className="btn-danger"><Icons.Trash2 size={20} /></button>
+                                    <button onClick={() => onRemoveItem(item.id)} className="btn-danger"><Icons.Trash2 size={20} /></button>
                                 </div>
                              );
                          })}
@@ -666,26 +858,25 @@ const PlaylistEditor = ({ playlist, onClose, onRemoveItem, onAddItem, onPlay, on
 
 // --- FŐ ALKALMAZÁS ---
 function OrganistApp() {
-    const [activeTab, setActiveTab] = useState('library'); 
-    const [selectedHymn, setSelectedHymn] = useState(null);
-    const [selectedPlaylist, setSelectedPlaylist] = useState(null);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [playerQueue, setPlayerQueue] = useState([]);
+    // NAVIGÁCIÓS ÁLLAPOT: csak azonosítók, az objektumokat mindig a friss adatokból számoljuk
+    const [activeTab, setActiveTab] = useState('library');
+    const [selectedHymnNumber, setSelectedHymnNumber] = useState(null);
+    const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
+    const [playingPlaylistId, setPlayingPlaylistId] = useState(null);
     const [playerIndex, setPlayerIndex] = useState(0);
-    const [currentView, setCurrentView] = useState('app');
+    const [searchQuery, setSearchQuery] = useState('');
     const [scorebooks, setScorebooks] = useState([]);
-    
+
     // Selection States
     const [currentVariationId, setCurrentVariationId] = useState(null);
     const [currentPreludeId, setCurrentPreludeId] = useState(null);
-    
-    // STORAGE STATE
-    const [playlists, setPlaylists] = useState([]);
-    const [settings, setSettings] = useState({ theme: 'papyrus', showLyrics: true, sidebarSide: 'right', lyricsWidth: '15%', scoreMaxWidth: '100%' });
+
+    // STORAGE STATE (induláskor a localStorage-ból töltjük)
+    const [playlists, setPlaylists] = useState(() => normalizePlaylists(loadJSON(STORAGE_KEYS.playlists, [])));
+    const [settings, setSettings] = useState(loadSettings);
 
     // DATA STATE
     const [hymnBook, setHymnBook] = useState([]);
-    const [scores, setScores] = useState([]);
     const [loading, setLoading] = useState(true);
 
     // MODAL STATES
@@ -697,84 +888,87 @@ function OrganistApp() {
     const [itemToDelete, setItemToDelete] = useState(null);
     const [playlistToDelete, setPlaylistToDelete] = useState(null);
     const [alertMessage, setAlertMessage] = useState(null);
-    const [isFullscreenModalOpen, setIsFullscreenModalOpen] = useState(true);
+    const [isFullscreenModalOpen, setIsFullscreenModalOpen] = useState(() => FULLSCREEN_SUPPORTED && !isFullscreen() && !settings.skipFullscreenPrompt);
 
     // LOAD DATA & PERSISTENCE
     useEffect(() => {
         setLoading(true);
-        const idobelyeg = new Date().getTime();
-        
-        Promise.all([
-            fetch(`./data/enek.json?t=${idobelyeg}`).then(res => res.ok ? res.json() : []),
-            fetch(`./data/kottakonyvek.json?t=${idobelyeg}`).then(res => res.ok ? res.json() : [])  
-        ])
-        .then(eredmenyek => {
-            setHymnBook(eredmenyek[0]);
-            setScorebooks(eredmenyek[1]); // <-- setScores helyett most már a könyveket mentjük
-            setLoading(false);
-        })
-        .catch(err => {
-            console.error("Adatbetöltési hiba:", err);
-            setAlertMessage("Hiba a JSON fájlok betöltésekor.");
-            setLoading(false);
-        });
+        const errors = [];
+        // no-cache: a böngésző mindig rákérdez a szerverre, de változatlan fájlnál nem tölti le újra (304)
+        const loadJSONFile = (url) => fetch(url, { cache: 'no-cache' })
+            .then(res => {
+                if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+                return res.json();
+            })
+            .then(data => Array.isArray(data) ? data : [])
+            .catch(err => {
+                console.error("Adatbetöltési hiba:", err);
+                errors.push(err.message);
+                return [];
+            });
+
+        Promise.all([loadJSONFile('./data/enek.json'), loadJSONFile('./data/kottakonyvek.json')])
+            .then(([hymns, books]) => {
+                setHymnBook(hymns);
+                setScorebooks(books);
+                if (errors.length) setAlertMessage(`Hiba az adatfájlok betöltésekor: ${errors.join(', ')}`);
+                setLoading(false);
+            });
     }, []);
 
-    // back button
-    useEffect(() => {
-        const handlePopState = (event) => {
-            const state = event.state || { view: 'splash' };
-            
-            setCurrentView(state.view);
+    // NAVIGÁCIÓ: minden nézetváltás egy history-bejegyzés, a vissza gomb ezt állítja vissza.
+    // A bejegyzés csak azonosítókat tárol, ezért a kezelőnek nincs szüksége a friss adatokra.
+    const applyNavState = useCallback((state) => {
+        const s = state || {};
+        setActiveTab(s.activeTab || 'library');
+        setSelectedHymnNumber(s.selectedHymnNumber ?? null);
+        setSelectedPlaylistId(s.selectedPlaylistId ?? null);
+        setPlayingPlaylistId(s.playingPlaylistId ?? null);
+        setPlayerIndex(s.playerIndex || 0);
+    }, []);
 
-            if (state.view === 'app') {
-                setActiveTab(state.activeTab || 'library');
-
-                const hymn = state.selectedHymnNumber ? hymnBook.find(h => h.number === state.selectedHymnNumber) : null;
-                setSelectedHymn(hymn);
-
-                const playlist = state.selectedPlaylistId ? playlists.find(p => p.id === state.selectedPlaylistId) : null;
-                setSelectedPlaylist(playlist);
-
-                if (state.playingPlaylistId) {
-                    const pl = playlists.find(p => p.id === state.playingPlaylistId);
-                    setPlayerQueue(pl ? pl.items : []);
-                    setPlayerIndex(0);
-                } else {
-                    setPlayerQueue([]);
-                }
-            } else {
-                setSelectedHymn(null);
-                setSelectedPlaylist(null);
-                setPlayerQueue([]);
-            }
-        };
-
-        window.addEventListener('popstate', handlePopState);
-        window.history.replaceState({ view: 'splash' }, '');
-        
-        return () => window.removeEventListener('popstate', handlePopState);
-    }, [hymnBook, playlists]);
-
-    const toggleFullScreen = () => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(err => console.error(err));
-        } else {
-            if (document.exitFullscreen) document.exitFullscreen();
-        }
+    const navigate = (state) => {
+        window.history.pushState(state, '');
+        applyNavState(state);
     };
-    //
-    const toggleBookActive = (bookId) => {
-        setScorebooks(prev => prev.map(book => 
-            book.id === bookId ? { ...book, active: book.active === false ? true : false } : book
-        ));
+
+    useEffect(() => {
+        // Újratöltéskor a böngésző megőrzi a history.state-et, így ugyanoda térünk vissza
+        if (window.history.state && window.history.state.activeTab) applyNavState(window.history.state);
+        else window.history.replaceState({ activeTab: 'library' }, '');
+
+        const handlePopState = (event) => applyNavState(event.state);
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [applyNavState]);
+
+    const goToPlayerIndex = (index) => {
+        setPlayerIndex(index);
+        window.history.replaceState({ ...window.history.state, playerIndex: index }, '');
+    };
+
+    // A kottakönyvek ki-/bekapcsolását a beállításokban tároljuk, így újratöltés után is megmarad
+    const toggleBookActive = (book) => {
+        setSettings(prev => ({
+            ...prev,
+            bookActive: { ...prev.bookActive, [String(book.id)]: !isBookActive(book, prev.bookActive) }
+        }));
     };
 
     const activeScores = useMemo(() => {
         const grouped = {};
-        
+        // Egy könyvben ugyanahhoz az énekhez több letét is tartozhat azonos "id"-vel (pl. két változat a 7. zsoltárhoz);
+        // az azonosítókat egyedivé tesszük, különben a második változat nem választható ki.
+        const usedIds = new Set();
+        const uniqueId = (base) => {
+            let id = base;
+            for (let n = 2; usedIds.has(id); n++) id = `${base}_${n}`;
+            usedIds.add(id);
+            return id;
+        };
+
         // Csak azokat a könyveket nézzük, amik nincsenek kikapcsolva
-        scorebooks.filter(b => b.active !== false).forEach(book => {
+        scorebooks.filter(b => isBookActive(b, settings.bookActive)).forEach(book => {
             (book.scores || []).forEach(score => {
                 const linkId = (score.scoreId || score.hymnId || score.id || "").toString();
                 if (!linkId) return;
@@ -791,9 +985,9 @@ function OrganistApp() {
                 const details = `${composerName} ${score.voiceCount ? `• ${score.voiceCount} szólam` : ''} ${score.year ? `• ${score.year}` : ''}`.trim();
 
                 const variation = {
-                    id: `${book.id}_${score.id}`,
+                    id: uniqueId(`${book.id}_${score.id}`),
                     name: score.name || book.title,
-                    xmlUrl: score.xmlUrl,
+                    xmlUrl: resolveDataUrl(score.xmlUrl),
                     voiceCount: score.voiceCount,
                     composer: details,
                     year: score.year || book.year
@@ -808,7 +1002,8 @@ function OrganistApp() {
                 if (score.preludes && Array.isArray(score.preludes)) {
                      grouped[linkId].preludes.push(...score.preludes.map(p => ({
                          ...p,
-                         id: `${book.id}_${score.id}_pre_${p.id}`,
+                         id: uniqueId(`${book.id}_${score.id}_pre_${p.id}`),
+                         xmlUrl: resolveDataUrl(p.xmlUrl),
                          composer: p.composer || details
                      })));
                 }
@@ -830,9 +1025,9 @@ function OrganistApp() {
                 const details = `${composerName} ${prelude.year ? `• ${prelude.year}` : ''}`.trim();
 
                 const preludeItem = {
-                    id: `${book.id}_pre_${prelude.id}`,
+                    id: uniqueId(`${book.id}_pre_${prelude.id}`),
                     name: prelude.name || book.title,
-                    xmlUrl: prelude.xmlUrl,
+                    xmlUrl: resolveDataUrl(prelude.xmlUrl),
                     composer: details,
                     year: prelude.year || book.year
                 };
@@ -842,28 +1037,52 @@ function OrganistApp() {
         });
         
         return Object.values(grouped);
-    }, [scorebooks]);
-    // Save persistence
-    useEffect(() => { localStorage.setItem('orgonista_playlists', JSON.stringify(playlists)); }, [playlists]);
-    useEffect(() => { localStorage.setItem('orgonista_settings', JSON.stringify(settings)); }, [settings]);
+    }, [scorebooks, settings.bookActive]);
+
+    // Save persistence (a kezdőállapot már a tárolt adat, így nem írunk felül semmit)
+    useEffect(() => { saveJSON(STORAGE_KEYS.playlists, playlists); }, [playlists]);
+    useEffect(() => { saveJSON(STORAGE_KEYS.settings, settings); }, [settings]);
+
+    // Származtatott adatok
+    const hymnByNumber = useMemo(() => new Map(hymnBook.map(h => [String(h.number), h])), [hymnBook]);
+    const selectedHymn = selectedHymnNumber != null ? hymnByNumber.get(String(selectedHymnNumber)) || null : null;
+
+    const resolveItem = (item) => ({
+        ...item,
+        hymn: hymnByNumber.get(String(item.hymnNumber)) || { number: item.hymnNumber, title: 'Ismeretlen ének', lyrics: '', scoreId: null }
+    });
+
+    const selectedPlaylist = useMemo(() => {
+        const pl = playlists.find(p => sameId(p.id, selectedPlaylistId));
+        return pl ? { ...pl, items: pl.items.map(resolveItem) } : null;
+    }, [playlists, selectedPlaylistId, hymnByNumber]);
+
+    const playerQueue = useMemo(() => {
+        const pl = playlists.find(p => sameId(p.id, playingPlaylistId));
+        return pl ? pl.items.map(resolveItem) : [];
+    }, [playlists, playingPlaylistId, hymnByNumber]);
+    const currentPlayerIndex = Math.min(playerIndex, Math.max(playerQueue.length - 1, 0));
+    const playerItem = playerQueue[currentPlayerIndex] || null;
+
+    // Ha egy nézethez hiányzik az adat (pl. törölt lista), üres képernyő helyett a listákra esünk vissza
+    let view = activeTab;
+    if (view === 'playlist_editor' && !selectedPlaylist) view = 'playlists';
+    if (view === 'player' && playerQueue.length === 0) view = 'playlists';
 
     // Apply Themes
     const themeColors = {
-        'papyrus': { bg: '#FDF6E3', text: '#2a2a2a', sidebar: '#002B36', accent: '#B58900' },
-        'dark-papyrus': { bg: '#d4cebc', text: '#1a1a1a', sidebar: '#001e26', accent: '#8a6800' },
-        'white': { bg: '#f9fafb', text: '#111827', sidebar: '#1f2937', accent: '#2563eb' }
+        'papyrus': { bg: '#FDF6E3', text: '#2a2a2a', sidebar: '#002B36', accent: '#B58900', accentText: '#8a6800' },
+        'dark-papyrus': { bg: '#d4cebc', text: '#1a1a1a', sidebar: '#001e26', accent: '#8a6800', accentText: '#6b5000' },
+        'white': { bg: '#f9fafb', text: '#111827', sidebar: '#1f2937', accent: '#2563eb', accentText: '#2563eb' }
     };
     const currentTheme = themeColors[settings.theme] || themeColors['papyrus'];
 
     // Update Selection when Hymn Changes
     useEffect(() => {
-        if (selectedHymn && activeScores.length > 0) {
-            const score = activeScores.find(s => s.id === selectedHymn.scoreId);
-            if (score) {
-                setCurrentVariationId(score.variations && score.variations.length > 0 ? score.variations[0].id : null);
-                setCurrentPreludeId(null); // Reset prelude on song change
-            }
-        }
+        if (!selectedHymn) return;
+        const score = getScoreById(selectedHymn.scoreId);
+        setCurrentVariationId(score && score.variations.length > 0 ? score.variations[0].id : null);
+        setCurrentPreludeId(null); // Reset prelude on song change
     }, [selectedHymn, activeScores]);
 
     const getScoreById = (scoreId) => {
@@ -872,94 +1091,84 @@ function OrganistApp() {
     };
     const getScoreInfo = (scoreId, varId, preId) => {
         const score = getScoreById(scoreId);
-        if(!score) return { scoreName: '?', variationName: '?', variationComposer: '?', preludeName: null };
+        if(!score) return { variationName: '?', variationComposer: '?', preludeName: null };
         const variation = score.variations ? score.variations.find(v => v.id === varId) : null;
         const prelude = score.preludes ? score.preludes.find(p => p.id === preId) : null;
         return { 
-            scoreName: score.name, 
             variationName: variation ? variation.name : '?', 
             variationComposer: variation?.composer,
             preludeName: prelude ? prelude.name : null
         };
     }
     
-    const filteredHymns = useMemo(() => {
-        if (!searchQuery) return hymnBook;
-        const lower = searchQuery.toLowerCase();
-        return hymnBook.filter(h => h.number.includes(lower) || h.title.toLowerCase().includes(lower) || (h.lyrics && h.lyrics.toLowerCase().includes(lower)));
-    }, [searchQuery, hymnBook]);
+    const searchIndex = useMemo(() => buildSearchIndex(hymnBook), [hymnBook]);
+    const filteredHymns = useMemo(() => searchHymns(searchIndex, searchQuery), [searchIndex, searchQuery]);
 
-    // Handlers
-    const handleCreatePlaylist = (name) => {
-        const newList = { id: Date.now(), name, items: [] };
-        setPlaylists([...playlists, newList]);
-        setIsCreateListModalOpen(false);
-        if (selectedHymn && isAddModalOpen === false) { setTargetPlaylistId(newList.id); setTimeout(() => setIsAddModalOpen(true), 100); }
+    const closeFullscreenModal = (dontAsk) => {
+        setIsFullscreenModalOpen(false);
+        if (dontAsk) setSettings(prev => ({ ...prev, skipFullscreenPrompt: true }));
     };
-    
-    const handleAddToPlaylist = (data) => {
-        const { playlistId, variationId, preludeId, verses } = data;
-        setPlaylists(playlists.map(p => { 
-            if (p.id === playlistId) { 
-                return { ...p, items: [...p.items, { hymn: pendingHymnToAdd || selectedHymn, variationId, preludeId, verses }] }; 
-            } return p; 
-        }));
+
+    // Handlers (minden módosítás csak a playlists állapotot írja, a nézetek ebből számolnak)
+    const handleCreatePlaylist = (name) => {
+        setPlaylists(prev => [...prev, { id: Date.now(), name, items: [] }]);
+        setIsCreateListModalOpen(false);
+    };
+
+    const handleAddToPlaylist = ({ playlistId, newPlaylistName, variationId, preludeId, verses }) => {
+        const hymn = pendingHymnToAdd || selectedHymn;
+        if (!hymn) return;
+        const item = { id: newItemId(), hymnNumber: String(hymn.number), variationId, preludeId, verses };
+        if (newPlaylistName) setPlaylists(prev => [...prev, { id: Date.now(), name: newPlaylistName, items: [item] }]);
+        else setPlaylists(prev => prev.map(p => sameId(p.id, playlistId) ? { ...p, items: [...p.items, item] } : p));
         setIsAddModalOpen(false);
         setPendingHymnToAdd(null);
-        if (activeTab === 'playlist_editor' && selectedPlaylist && selectedPlaylist.id === playlistId) { 
-            setSelectedPlaylist(prev => ({ ...prev, items: [...prev.items, { hymn: pendingHymnToAdd, variationId, preludeId, verses }] })); 
-        }
     };
 
     const confirmDeleteItem = () => {
         if (!itemToDelete) return;
-        const { playlistId, index } = itemToDelete;
-        const updatedPlaylists = playlists.map(p => { if (p.id === playlistId) { const newItems = [...p.items]; newItems.splice(index, 1); return { ...p, items: newItems }; } return p; });
-        setPlaylists(updatedPlaylists);
-        if (selectedPlaylist && selectedPlaylist.id === playlistId) { const newItems = [...selectedPlaylist.items]; newItems.splice(index, 1); setSelectedPlaylist({ ...selectedPlaylist, items: newItems }); }
+        const { playlistId, itemId } = itemToDelete;
+        setPlaylists(prev => prev.map(p => sameId(p.id, playlistId) ? { ...p, items: p.items.filter(it => it.id !== itemId) } : p));
         setItemToDelete(null);
     };
 
-    const confirmDeletePlaylist = () => { if (!playlistToDelete) return; setPlaylists(playlists.filter(p => p.id !== playlistToDelete.id)); setPlaylistToDelete(null); }
-    const handleRemoveItemRequest = (playlistId, index) => { setItemToDelete({ playlistId, index }); };
+    const confirmDeletePlaylist = () => { if (!playlistToDelete) return; setPlaylists(prev => prev.filter(p => !sameId(p.id, playlistToDelete.id))); setPlaylistToDelete(null); }
+    const handleRemoveItemRequest = (playlistId, itemId) => { setItemToDelete({ playlistId, itemId }); };
     const handleRemovePlaylistRequest = (playlist) => { setPlaylistToDelete(playlist); }
-    const handleReorderPlaylist = (fromIndex, toIndex) => { if (!selectedPlaylist) return; const newItems = [...selectedPlaylist.items]; const [movedItem] = newItems.splice(fromIndex, 1); newItems.splice(toIndex, 0, movedItem); const updatedPlaylist = { ...selectedPlaylist, items: newItems }; setSelectedPlaylist(updatedPlaylist); setPlaylists(playlists.map(p => p.id === selectedPlaylist.id ? updatedPlaylist : p)); };
-    
-    const startPlaylist = (pl) => { 
-        if(!pl.items.length) { setAlertMessage("Ez a lista üres, nem lehet elindítani."); return; }
-        window.history.pushState({ view: 'app', activeTab: 'player', playingPlaylistId: pl.id }, ''); 
-        setPlayerQueue(pl.items); setPlayerIndex(0); setActiveTab('player'); 
-    };
-    
-    const openPlaylistEditor = (pl) => { window.history.pushState({ view: 'app', activeTab: 'playlist_editor', selectedPlaylistId: pl.id }, ''); setSelectedPlaylist(pl); setActiveTab('playlist_editor'); };
-    const handleAddHymnToEditor = () => { setIsHymnSelectorOpen(true); };
-    const handleHymnSelected = (hymn) => { 
-        setIsHymnSelectorOpen(false); 
-        setPendingHymnToAdd(hymn); 
-        setTargetPlaylistId(selectedPlaylist.id); 
-        const score = getScoreById(hymn.scoreId); 
-        if(score) {
-            setCurrentVariationId(score.variations && score.variations.length > 0 ? score.variations[0].id : null);
-            setCurrentPreludeId(null);
-        }
-        setTimeout(() => setIsAddModalOpen(true), 100); 
+    const handleReorderPlaylist = (fromIndex, toIndex) => {
+        setPlaylists(prev => prev.map(p => {
+            if (!sameId(p.id, selectedPlaylistId)) return p;
+            const items = [...p.items];
+            const [movedItem] = items.splice(fromIndex, 1);
+            items.splice(toIndex, 0, movedItem);
+            return { ...p, items };
+        }));
     };
 
-    if (loading) return <div style={{height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:'white'}}>Betöltés...</div>;
+    const startPlaylist = (pl) => {
+        if(!pl.items.length) { setAlertMessage("Ez a lista üres, nem lehet elindítani."); return; }
+        navigate({ activeTab: 'player', playingPlaylistId: pl.id, playerIndex: 0 });
+    };
+
+    const openPlaylistEditor = (pl) => navigate({ activeTab: 'playlist_editor', selectedPlaylistId: pl.id });
+    const handleAddHymnToEditor = () => { setIsHymnSelectorOpen(true); };
+    const handleHymnSelected = (hymn) => {
+        setIsHymnSelectorOpen(false);
+        setPendingHymnToAdd(hymn);
+        setTargetPlaylistId(selectedPlaylistId);
+        setTimeout(() => setIsAddModalOpen(true), 100);
+    };
+
+    if (loading) return <div className="loading-screen">Betöltés...</div>;
     
     // --- RENDER ---
     return (
-        <div className="app-root" style={{ '--col-papyrus': currentTheme.bg, '--col-ink': currentTheme.text, '--col-galaxy-blue': currentTheme.sidebar, '--col-accent': currentTheme.accent }}>
-            <NavigationSidebar 
-                activeTab={activeTab} 
-                onTabChange={(t) => { 
-                    window.history.pushState({ view: 'app', activeTab: t }, '');
-                    setActiveTab(t);
-                    setSelectedHymn(null);
-                    setSelectedPlaylist(null);
-                }} 
+        <div className="app-root" style={{ '--col-papyrus': currentTheme.bg, '--col-ink': currentTheme.text, '--col-galaxy-blue': currentTheme.sidebar, '--col-accent': currentTheme.accent, '--col-accent-text': currentTheme.accentText }}>
+            <NavigationSidebar
+                activeTab={view}
+                onTabChange={(t) => navigate({ activeTab: t })}
                 menuSide={settings.sidebarSide}
-                toggleFullScreen={toggleFullScreen} 
+                toggleFullScreen={FULLSCREEN_SUPPORTED ? toggleFullScreen : null} 
             />
             
             <div className="main-content">
@@ -967,10 +1176,10 @@ function OrganistApp() {
                 <AlertModal isOpen={!!alertMessage} onClose={() => setAlertMessage(null)} message={alertMessage} />
                 <FullscreenModal 
                     isOpen={isFullscreenModalOpen} 
-                    onClose={() => setIsFullscreenModalOpen(false)} 
-                    onConfirm={() => {
+                    onClose={closeFullscreenModal} 
+                    onConfirm={(dontAsk) => {
                         toggleFullScreen();
-                        setIsFullscreenModalOpen(false);
+                        closeFullscreenModal(dontAsk);
                     }} 
                 />
                 <CreatePlaylistModal isOpen={isCreateListModalOpen} onClose={() => setIsCreateListModalOpen(false)} onConfirm={handleCreatePlaylist} />
@@ -980,14 +1189,12 @@ function OrganistApp() {
                 
                 {isAddModalOpen && (pendingHymnToAdd || selectedHymn) && (
                     <AddToPlaylistModal 
-                        isOpen={isAddModalOpen} 
                         onClose={() => setIsAddModalOpen(false)} 
                         onConfirm={handleAddToPlaylist} 
-                        playlists={playlists} 
-                        initialVariationId={currentVariationId}
-                        initialPreludeId={currentPreludeId}
+                        playlists={playlists}
+                        initialVariationId={pendingHymnToAdd ? null : currentVariationId}
+                        initialPreludeId={pendingHymnToAdd ? null : currentPreludeId}
                         lockPlaylistId={targetPlaylistId} 
-                        defaultPlaylistId={targetPlaylistId} 
                         hymn={pendingHymnToAdd || selectedHymn} 
                         variations={getScoreById((pendingHymnToAdd || selectedHymn).scoreId)?.variations || []}
                         preludes={getScoreById((pendingHymnToAdd || selectedHymn).scoreId)?.preludes || []}
@@ -995,9 +1202,9 @@ function OrganistApp() {
                 )}
 
                 {/* Content Views */}
-                {activeTab === 'settings' && <SettingsView settings={settings} onUpdateSettings={setSettings} />}
-                
-                {activeTab === 'about' && (
+                {view === 'settings' && <SettingsView settings={settings} onUpdateSettings={setSettings} />}
+
+                {view === 'about' && (
                     <div className="about-view">
                         <div className="icon-container"><Icons.Music size={40}/></div>
                         <h1 className="font-serif font-bold text-3xl text-galaxy mb-2">Református Kottagyűjtemény</h1>
@@ -1008,22 +1215,22 @@ function OrganistApp() {
                     </div>
                 )}
 
-                {activeTab === 'playlist_editor' && selectedPlaylist && <PlaylistEditor playlist={selectedPlaylist} onClose={() => setActiveTab('playlists')} onRemoveItem={(idx) => handleRemoveItemRequest(selectedPlaylist.id, idx)} onAddItem={handleAddHymnToEditor} onPlay={startPlaylist} onReorder={handleReorderPlaylist} getScoreInfo={getScoreInfo} />}
-                
-                {activeTab === 'library' && (selectedHymn ? (
+                {view === 'playlist_editor' && <PlaylistEditor playlist={selectedPlaylist} onRemoveItem={(itemId) => handleRemoveItemRequest(selectedPlaylist.id, itemId)} onAddItem={handleAddHymnToEditor} onPlay={startPlaylist} onReorder={handleReorderPlaylist} getScoreInfo={getScoreInfo} />}
+
+                {view === 'library' && (selectedHymn ? (
                     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
-                        <div className="header">
+                        <div className="header hymn-header">
                             {/* Left: Number + Title */}
-                            <div style={{display:'flex', alignItems:'center', gap:'12px', flex:1}}>
-                                <button onClick={() => window.history.back()} style={{color: 'rgba(255,255,255,0.8)'}}><Icons.ChevronLeft size={24}/></button>
-                                <div style={{display:'flex', alignItems:'baseline', gap:'8px'}}>
+                            <div className="hymn-header-title">
+                                <button onClick={() => window.history.back()} className="header-back" title="Vissza"><Icons.ChevronLeft size={24}/></button>
+                                <div className="hymn-header-text">
                                     <h2 className="font-serif font-bold text-2xl text-accent">{selectedHymn.number}</h2>
-                                    <h3 className="font-bold text-lg text-ink truncate">{selectedHymn.title}</h3>
+                                    <h3 className="font-bold text-lg truncate">{selectedHymn.title}</h3>
                                 </div>
                             </div>
                             
                             {/* Right: Selectors */}
-                            <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                            <div className="hymn-header-actions">
                                 {(() => { 
                                     const score = getScoreById(selectedHymn.scoreId); 
                                     if(!score) return null;
@@ -1049,12 +1256,12 @@ function OrganistApp() {
                         <div style={{padding:'0.5rem 1rem', borderBottom:'1px solid #ddd', backgroundColor:'rgba(0,0,0,0.02)'}}>
                             <div style={{position:'relative', width:'100%', maxWidth:'600px', margin:'0 auto'}}>
                                 <Icons.Search style={{position:'absolute', top:'10px', left:'12px', color:'#999', pointerEvents:'none'}} size={20}/>
-                                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Keresés..." className="input" style={{paddingLeft:'40px', width:'100%', height:'40px'}}/>
+                                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && filteredHymns.length > 0) navigate({ activeTab: 'library', selectedHymnNumber: filteredHymns[0].number }); }} placeholder="Keresés számra, címre vagy szövegre..." className="input" style={{paddingLeft:'40px', width:'100%', height:'40px'}}/>
                             </div>
                         </div>
                         <div style={{flex:1, overflowY:'auto', padding:'1rem'}}>
                             {filteredHymns.map(h => (
-                                <div key={h.number} onClick={() => { window.history.pushState({ view: 'app', activeTab: 'library', selectedHymnNumber: h.number }, ''); setSelectedHymn(h); }} className="card list-item">
+                                <div key={h.number} onClick={() => navigate({ activeTab: 'library', selectedHymnNumber: h.number })} className="card list-item">
                                     <div className="card-decoration"></div>
                                     <div style={{flex:1, display: 'flex', alignItems: 'center'}}>
                                         <span className="text-accent font-bold text-lg" style={{minWidth: '3.5rem', textAlign: 'right', marginRight: '1.5rem'}}>{h.number}</span>
@@ -1067,11 +1274,11 @@ function OrganistApp() {
                     </div>
                 ))}
 
-                {activeTab === 'playlists' && (
+                {view === 'playlists' && (
                     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
                         <div className="header">
                             <div style={{flex:1}}></div>
-                            <h1 className="header-title main">Liturgikus Listák</h1>
+                            <h1 className="header-title main">Liturgikus listák</h1>
                             <div style={{flex:1, display:'flex', justifyContent:'flex-end'}}>
                                 <button onClick={() => setIsCreateListModalOpen(true)} className="btn btn-primary"><Icons.Plus size={20}/> Új lista</button>
                             </div>
@@ -1083,7 +1290,7 @@ function OrganistApp() {
                                 <button onClick={() => setIsCreateListModalOpen(true)} className="text-accent font-bold hover:underline mt-2">Hozz létre egyet!</button>
                             </div>
                         ) : (
-                            <div style={{flex:1, overflowY:'auto', padding:'2rem', display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))', gap:'1.5rem'}}>
+                            <div className="playlist-grid">
                                 {playlists.map(pl => (
                                     <div key={pl.id} onClick={() => openPlaylistEditor(pl)} className="card clickable">
                                         <div className="card-decoration"></div>
@@ -1095,7 +1302,7 @@ function OrganistApp() {
                                             </div>
                                         </div>
                                         <div style={{flex:1, overflowY:'auto', padding:'0.5rem'}}>
-                                            {pl.items.map((it, idx) => (<div key={idx} className="playlist-card-item"><span className="text-accent font-bold">{idx+1}.</span><span>{it.hymn.number}</span> <span>{it.hymn.title}</span></div>))}
+                                            {pl.items.map(resolveItem).map((it, idx) => (<div key={it.id} className="playlist-card-item"><span className="text-accent font-bold">{idx+1}.</span><span>{it.hymn.number}</span> <span>{it.hymn.title}</span></div>))}
                                         </div>
                                         <div style={{padding:'1rem', borderTop:'1px solid #ddd'}}>
                                             <button onClick={(e) => { e.stopPropagation(); startPlaylist(pl); }} className="btn playlist-card-start-btn"><Icons.Play /> INDÍTÁS</button>
@@ -1107,14 +1314,14 @@ function OrganistApp() {
                     </div>
                 )}
 
-                {activeTab === 'scorebooks' && (
+                {view === 'scorebooks' && (
                     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
                         <div className="header centered">
                             <h1 className="header-title main">Kottakönyvek</h1>
                         </div>
 
                         <div className="main-content" style={{padding:'1rem', overflowY:'auto'}}>
-                            <p textAlign="center">
+                            <p className="text-center">
                                 Kapcsold ki azokat a könyveket, amiknek a kottáit nem szeretnéd látni.
                             </p>
 
@@ -1132,7 +1339,7 @@ function OrganistApp() {
                             {/* KÖNYVEK LISTÁZÁSA */}
                             <div className="scorebook-list">
                             {scorebooks.map(book => {
-                                const isActive = book.active !== false;
+                                const isActive = isBookActive(book, settings.bookActive);
                                 return (
                                     <div key={book.id} className={`card list-item scorebook-item ${!isActive ? 'inactive' : ''}`}>
                                         <div className="card-decoration"></div>
@@ -1144,7 +1351,7 @@ function OrganistApp() {
                                                     <input 
                                                         type="checkbox" 
                                                         checked={isActive} 
-                                                        onChange={() => toggleBookActive(book.id)} 
+                                                        onChange={() => toggleBookActive(book)}
                                                     />
                                                     <span className="slider"></span>
                                                 </label>
@@ -1168,17 +1375,17 @@ function OrganistApp() {
                 )}
 
                 
-                {activeTab === 'player' && playerQueue.length > 0 && (
+                {view === 'player' && playerItem && (
                     <div className="player-view">
                         <div className="header">
                             <div style={{display:'flex', alignItems:'center', gap:'12px', flex:1}}>
                                 <button onClick={() => window.history.back()} className="btn-ghost" style={{color:'var(--col-ink)', padding:0}}><Icons.ChevronLeft size={24} /></button>
                                 <div style={{display:'flex', alignItems:'baseline', gap:'8px', flexWrap: 'wrap'}}>
-                                    <h2 className="font-serif font-bold text-2xl text-accent">{playerQueue[playerIndex].hymn.number}</h2>
-                                    <h3 className="font-bold text-lg truncate">{playerQueue[playerIndex].hymn.title}</h3>
+                                    <h2 className="font-serif font-bold text-2xl text-accent">{playerItem.hymn.number}</h2>
+                                    <h3 className="font-bold text-lg truncate">{playerItem.hymn.title}</h3>
                                     {/* Header Info: Aligned center vertically now */}
                                     {(() => {
-                                        const { variationName, variationComposer, preludeName } = getScoreInfo(playerQueue[playerIndex].hymn.scoreId, playerQueue[playerIndex].variationId, playerQueue[playerIndex].preludeId);
+                                        const { variationName, variationComposer, preludeName } = getScoreInfo(playerItem.hymn.scoreId, playerItem.variationId, playerItem.preludeId);
                                         return <div className="text-xs opacity-70 border-l border-gray-500 pl-3 ml-2" style={{display:'flex', gap:'5px', alignItems:'baseline'}}>
                                             {preludeName && <span className="font-bold text-accent">[{preludeName}]</span>}
                                             <span>{variationName}</span>
@@ -1189,26 +1396,25 @@ function OrganistApp() {
                             </div>
                             
                             <div style={{textAlign:'right', minWidth:'50px'}}>
-                                <div className="text-sm opacity-50 mt-1">{playerIndex+1} / {playerQueue.length}</div>
+                                <div className="text-sm opacity-50 mt-1">{currentPlayerIndex+1} / {playerQueue.length}</div>
                             </div>
                         </div>
 
                         <div style={{flex:1, overflow:'hidden', position:'relative'}}>
-                            <ScoreViewer 
-                                score={getScoreById(playerQueue[playerIndex].hymn.scoreId)} 
-                                variationId={playerQueue[playerIndex].variationId} 
-                                preludeId={playerQueue[playerIndex].preludeId}
+                            <ScoreViewer
+                                score={getScoreById(playerItem.hymn.scoreId)}
+                                variationId={playerItem.variationId}
+                                preludeId={playerItem.preludeId}
                                 lyrics={(() => {
-                                    const item = playerQueue[playerIndex];
-                                    const allV = parseVerses(item.hymn.lyrics);
-                                    if(item.verses.length === 0) return item.hymn.lyrics;
-                                    return allV.filter(v => item.verses.includes(v.index)).map(v => v.fullText).join('\n\n');
-                                })()} 
+                                    const allV = parseVerses(playerItem.hymn.lyrics);
+                                    if(playerItem.verses.length === 0) return playerItem.hymn.lyrics;
+                                    return allV.filter(v => playerItem.verses.includes(v.index)).map(v => v.fullText).join('\n\n');
+                                })()}
                                 showLyrics={settings.showLyrics}
                                 lyricsWidth={settings.lyricsWidth}
                                 scoreMaxWidth={settings.scoreMaxWidth}
-                                onNext={playerIndex < playerQueue.length - 1 ? () => setPlayerIndex(playerIndex + 1) : null}
-                                onPrev={playerIndex > 0 ? () => setPlayerIndex(playerIndex - 1) : null}
+                                onNext={currentPlayerIndex < playerQueue.length - 1 ? () => goToPlayerIndex(currentPlayerIndex + 1) : null}
+                                onPrev={currentPlayerIndex > 0 ? () => goToPlayerIndex(currentPlayerIndex - 1) : null}
                             />
                         </div>
                     </div>
