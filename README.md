@@ -55,6 +55,15 @@ nyilvánossá kell tenni.
   `composer`, `year`. Az `xmlUrl` az `index.html`-hez képest relatív útvonal
   (`data/...`); a `/data/...` alakot a program automatikusan relatívvá alakítja.
 
+## Témák
+
+A beállításokban választható: **Pergamen** (alapértelmezett), Papirusz, Sötét pergamen, Törtfehér.
+
+- A Pergamen színei a `style.css` elején, a `--pergamen-*` változókban vannak; a színek
+  szerepét (kártya, keret, kiemelés stb.) a `.theme-pergamen` blokk rendeli hozzájuk.
+- A `:root` `--col-*` értékei a Papirusz téma színei. A háttér, a szöveg, az oldalsáv és
+  az akcentus színét témánként az `app.js` (`themeColors`) állítja be.
+
 ## Tárolás
 
 A listák és a beállítások a böngésző localStorage-ában vannak
