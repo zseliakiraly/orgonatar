@@ -69,11 +69,20 @@ A beállításokban választható: **Pergamen** (alapértelmezett), Papirusz, S�
 A listák és a beállítások a böngésző localStorage-ában vannak
 (`orgonista_playlists`, `orgonista_settings`), tehát eszközönként külön.
 
-## Lejátszó
+## Kottanézet és lejátszó
 
-- Lapozás: koppintás a kotta bal vagy jobb szélére (a szélső 15%-ra) az előző / következő énekre lapoz.
-  A széleken is lehet görgetni; csak a koppintás lapoz.
-- Billentyűzet vagy Bluetooth lapozópedál:
+- A kottaterület nem görgethető: az oldal (előjáték + kotta) mindig egészben látszik. Ha a beállított
+  méretben nem férne ki, a program kisebb nagyítással újratördeli (több ütem kerül egy sorba), így a
+  lehető legnagyobb, még kiférő méretben jelenik meg. Ablakméret-változáskor, a tablet elforgatásakor
+  és a szövegpanel áthelyezésekor újra igazodik.
+- Hosszú kottánál az első megjelenítés tovább tarthat, mert a program több méretet kipróbál;
+  visszalapozáskor a megtalált méretet már megjegyezte.
+- A +/− gomb a legnagyobb méretet állítja 10%-os lépésekben, a felirat a ténylegesen látott méretet
+  mutatja. A + nem használható, ha a kotta nagyobban már nem férne ki (képes kottánál: ha elérte a
+  teljes szélességet).
+- Lapozás a lejátszóban: koppintás a kottaterület bal vagy jobb szélére (a szélső 15%-ra) az előző /
+  következő énekre lapoz.
+- Billentyűzet vagy Bluetooth lapozópedál: mindig egész éneket lapoz.
   - előre: PageDown, lefelé nyíl, jobbra nyíl;
   - hátra: PageUp, felfelé nyíl, balra nyíl.
-- Hosszú kottánál előbb képernyőnyit görget, és csak a kotta végén lapoz a következő énekre.
+  - A lenyomva tartott billentyű (pedál) csak egyet lapoz.
