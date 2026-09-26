@@ -57,7 +57,7 @@ nyilvánossá kell tenni.
 
 ## Témák
 
-A beállításokban választható: **Pergamen** (alapértelmezett), Papirusz, Sötét pergamen, Törtfehér.
+A beállításokban választható: **Pergamen** (alapértelmezett), Papirusz, Sötét papirusz, Törtfehér.
 
 - A Pergamen színei a `style.css` elején, a `--pergamen-*` változókban vannak; a színek
   szerepét (kártya, keret, kiemelés stb.) a `.theme-pergamen` blokk rendeli hozzájuk.

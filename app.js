@@ -447,7 +447,7 @@ const SettingsView = ({ settings, onUpdateSettings }) => (
                     <select className="input" style={{width:'auto', minWidth:'150px'}} value={settings.theme} onChange={(e) => onUpdateSettings({...settings, theme: e.target.value})}>
                         <option value="pergamen">Pergamen</option>
                         <option value="papyrus">Papirusz</option>
-                        <option value="dark-papyrus">Sötét pergamen</option>
+                        <option value="dark-papyrus">Sötét papirusz</option>
                         <option value="white">Törtfehér</option>
                     </select>
                 </div>
