@@ -48,7 +48,9 @@ const parseVerses = (lyrics) => {
 // --- TÁROLÁS (localStorage) ---
 const STORAGE_KEYS = { playlists: 'orgonista_playlists', settings: 'orgonista_settings' };
 
-const DEFAULT_SETTINGS = { theme: 'papyrus', showLyrics: true, sidebarSide: 'right', lyricsWidth: '15%', scoreMaxWidth: '100%', bookActive: {}, skipFullscreenPrompt: false };
+const SETTINGS_VERSION = 2;
+
+const DEFAULT_SETTINGS = { theme: 'pergamen', showLyrics: true, sidebarSide: 'right', lyricsWidth: '15%', scoreMaxWidth: '100%', bookActive: {}, skipFullscreenPrompt: false, settingsVersion: SETTINGS_VERSION };
 
 const loadJSON = (key, fallback) => {
     try {
@@ -67,6 +69,10 @@ const loadSettings = () => {
     const stored = loadJSON(STORAGE_KEYS.settings, {});
     const settings = { ...DEFAULT_SETTINGS, ...(typeof stored === 'object' ? stored : {}) };
     if (!settings.bookActive || typeof settings.bookActive !== 'object') settings.bookActive = {};
+    // 2. verzió: a Pergamen lett az alapértelmezett téma. A korábbi alapértéket ("papyrus"), amelyet az oldal
+    // magától elmentett, egyszer átállítjuk (addig Pergament nem is lehetett választani).
+    if ((stored.settingsVersion || 1) < 2 && settings.theme === 'papyrus') settings.theme = 'pergamen';
+    settings.settingsVersion = SETTINGS_VERSION;
     return settings;
 };
 
@@ -408,7 +414,7 @@ const AddToPlaylistModal = ({ onClose, onConfirm, playlists, initialVariationId,
                             {selectedVerses.length === parsedVerses.length ? "Egyik sem" : "Mind"}
                         </button>
                     </div>
-                    <div style={{maxHeight:'150px', overflowY:'auto', border:'1px solid #ddd', borderRadius:'4px'}}>
+                    <div style={{maxHeight:'150px', overflowY:'auto', border:'1px solid var(--col-border, #ddd)', borderRadius:'4px'}}>
                         {parsedVerses.map(verse => (
                             <div key={verse.index} onClick={() => toggleVerse(verse.index)} className={`verse-item ${selectedVerses.includes(verse.index) ? 'selected' : ''}`}>
                                 <div className="text-accent">{selectedVerses.includes(verse.index) ? <Icons.CheckSquare size={20} /> : <Icons.Square size={20} />}</div>
@@ -439,6 +445,7 @@ const SettingsView = ({ settings, onUpdateSettings }) => (
                         <div className="text-xs text-gray-500">Válassz megjelenítési módot</div>
                     </div>
                     <select className="input" style={{width:'auto', minWidth:'150px'}} value={settings.theme} onChange={(e) => onUpdateSettings({...settings, theme: e.target.value})}>
+                        <option value="pergamen">Pergamen</option>
                         <option value="papyrus">Papirusz</option>
                         <option value="dark-papyrus">Sötét pergamen</option>
                         <option value="white">Törtfehér</option>
@@ -451,7 +458,7 @@ const SettingsView = ({ settings, onUpdateSettings }) => (
                         <div className="font-bold text-ink">Szövegpanel megjelenítése</div>
                         <div className="text-xs text-gray-500">Kotta mellett a szöveg láthatósága</div>
                     </div>
-                    <button onClick={() => onUpdateSettings({...settings, showLyrics: !settings.showLyrics})} className="btn-ghost" style={{color: settings.showLyrics ? 'var(--col-accent-text)' : '#999'}}>
+                    <button onClick={() => onUpdateSettings({...settings, showLyrics: !settings.showLyrics})} className="btn-ghost" style={{color: settings.showLyrics ? 'var(--col-accent-text)' : 'var(--col-ink-muted, #999)'}}>
                         {settings.showLyrics ? <Icons.Eye size={24}/> : <Icons.EyeOff size={24}/>}
                     </button>
                 </div>
@@ -738,14 +745,14 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
                     maxHeight: isSide ? '100%' : '50%',
                     display:'flex', 
                     flexDirection:'column', 
-                    borderLeft: isSide ? '1px solid #ddd' : 'none', 
-                    borderTop: !isSide ? '1px solid #ddd' : 'none',
+                    borderLeft: isSide ? '1px solid var(--col-border, #ddd)' : 'none', 
+                    borderTop: !isSide ? '1px solid var(--col-border, #ddd)' : 'none',
                     backgroundColor:'var(--col-papyrus)', 
                     zIndex:20, 
                     boxShadow: isSide ? '-5px 0 15px rgba(0,0,0,0.1)' : '0 -5px 15px rgba(0,0,0,0.1)'
                 }}>
                     {/* Toolbar */}
-                    <div style={{display:'flex', justifyContent:'flex-end', padding:'4px', borderBottom:'1px dashed #eee', gap:'4px'}}>
+                    <div style={{display:'flex', justifyContent:'flex-end', padding:'4px', borderBottom:'1px dashed var(--col-border, #eee)', gap:'4px'}}>
                          <button onClick={() => setTextPosition(textPosition === 'right' ? 'bottom' : 'right')} className="btn-ghost p-1" title={textPosition === 'right' ? "Lentre tesz" : "Oldalra tesz"}>
                              {textPosition === 'right' ? <Icons.LayoutBottom size={16}/> : <Icons.LayoutSidebar size={16}/>}
                          </button>
@@ -770,7 +777,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
                                 <div key={v.index} style={{
                                     marginBottom: '1rem', 
                                     paddingLeft: '10px', 
-                                    borderLeft: '3px solid #eee', 
+                                    borderLeft: '3px solid var(--col-border, #eee)', 
                                     fontFamily: 'var(--font-serif)', 
                                     lineHeight: '1.4',
                                     whiteSpace: 'pre-line', // a versszakon belüli sortörések megmaradnak
@@ -828,13 +835,13 @@ const PlaylistEditor = ({ playlist, onRemoveItem, onAddItem, onPlay, onReorder, 
                              return (
                                 <div key={item.id} draggable onDragStart={(e) => handleDragStart(e, idx)} onDragEnter={(e) => handleDragEnter(e, idx)} onDragEnd={handleDragEnd} onDragOver={(e) => e.preventDefault()} 
                                      className="playlist-editor-item"
-                                     style={{opacity: isDragging ? 0.5 : 1, borderTop: isDragOver && !isDragging ? '2px solid var(--col-accent)' : '1px solid #ddd'}}>
+                                     style={{opacity: isDragging ? 0.5 : 1, borderTop: isDragOver && !isDragging ? '2px solid var(--col-accent)' : '1px solid var(--col-border, #ddd)'}}>
                                     <div style={{display:'flex', alignItems:'center', gap:'1rem'}}>
-                                        <div style={{cursor:'move', color:'#ccc'}}><Icons.GripVertical size={20} /></div>
-                                        <div style={{fontWeight:'bold', color:'#6b7280', width:'20px'}}>{idx + 1}.</div>
+                                        <div style={{cursor:'move', color:'var(--col-border-dark, #ccc)'}}><Icons.GripVertical size={20} /></div>
+                                        <div style={{fontWeight:'bold', color:'var(--col-ink-muted, #6b7280)', width:'20px'}}>{idx + 1}.</div>
                                         <div>
                                             <div><span className="text-accent font-bold">#{item.hymn.number}</span> <span className="font-bold text-ink">{item.hymn.title}</span></div>
-                                            <div style={{fontSize:'12px', color:'#666', marginTop:'2px'}}>
+                                            <div style={{fontSize:'12px', color:'var(--col-ink-muted, #666)', marginTop:'2px'}}>
                                                 {preludeName ? <span className="text-accent">Előjáték: {preludeName} + </span> : ''}
                                                 Változat: {variationName} • {item.verses.length} versszak
                                             </div>
@@ -1070,12 +1077,18 @@ function OrganistApp() {
     if (view === 'player' && playerQueue.length === 0) view = 'playlists';
 
     // Apply Themes
+    // A Pergamen színei a style.css-ben vannak (--pergamen-*), a további szerepeit a .theme-pergamen osztály adja
     const themeColors = {
+        'pergamen': { bg: 'var(--pergamen-bg)', text: 'var(--pergamen-ink)', sidebar: 'var(--pergamen-teal-dark)', accent: 'var(--pergamen-gold)', accentText: 'var(--pergamen-gold-text)' },
         'papyrus': { bg: '#FDF6E3', text: '#2a2a2a', sidebar: '#002B36', accent: '#B58900', accentText: '#8a6800' },
         'dark-papyrus': { bg: '#d4cebc', text: '#1a1a1a', sidebar: '#001e26', accent: '#8a6800', accentText: '#6b5000' },
         'white': { bg: '#f9fafb', text: '#111827', sidebar: '#1f2937', accent: '#2563eb', accentText: '#2563eb' }
     };
-    const currentTheme = themeColors[settings.theme] || themeColors['papyrus'];
+    const themeName = themeColors[settings.theme] ? settings.theme : 'pergamen';
+    const currentTheme = themeColors[themeName];
+
+    // A betöltő képernyő és a böngésző „túlgörgetett” széle is a téma színét kapja
+    useEffect(() => { document.body.style.backgroundColor = currentTheme.sidebar; }, [currentTheme.sidebar]);
 
     // Update Selection when Hymn Changes
     useEffect(() => {
@@ -1159,11 +1172,11 @@ function OrganistApp() {
         setTimeout(() => setIsAddModalOpen(true), 100);
     };
 
-    if (loading) return <div className="loading-screen">Betöltés...</div>;
+    if (loading) return <div className="loading-screen" style={{backgroundColor: currentTheme.sidebar}}>Betöltés...</div>;
     
     // --- RENDER ---
     return (
-        <div className="app-root" style={{ '--col-papyrus': currentTheme.bg, '--col-ink': currentTheme.text, '--col-galaxy-blue': currentTheme.sidebar, '--col-accent': currentTheme.accent, '--col-accent-text': currentTheme.accentText }}>
+        <div className={`app-root theme-${themeName}`} style={{ '--col-papyrus': currentTheme.bg, '--col-ink': currentTheme.text, '--col-galaxy-blue': currentTheme.sidebar, '--col-accent': currentTheme.accent, '--col-accent-text': currentTheme.accentText }}>
             <NavigationSidebar
                 activeTab={view}
                 onTabChange={(t) => navigate({ activeTab: t })}
@@ -1253,9 +1266,9 @@ function OrganistApp() {
                         <div className="header centered">
                             <h1 className="header-title main">Református Kottagyűjtemény</h1>
                         </div>
-                        <div style={{padding:'0.5rem 1rem', borderBottom:'1px solid #ddd', backgroundColor:'rgba(0,0,0,0.02)'}}>
+                        <div style={{padding:'0.5rem 1rem', borderBottom:'1px solid var(--col-border, #ddd)', backgroundColor:'var(--col-search-bar, rgba(0,0,0,0.02))'}}>
                             <div style={{position:'relative', width:'100%', maxWidth:'600px', margin:'0 auto'}}>
-                                <Icons.Search style={{position:'absolute', top:'10px', left:'12px', color:'#999', pointerEvents:'none'}} size={20}/>
+                                <Icons.Search style={{position:'absolute', top:'10px', left:'12px', color:'var(--col-ink-muted, #999)', pointerEvents:'none'}} size={20}/>
                                 <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && filteredHymns.length > 0) navigate({ activeTab: 'library', selectedHymnNumber: filteredHymns[0].number }); }} placeholder="Keresés számra, címre vagy szövegre..." className="input" style={{paddingLeft:'40px', width:'100%', height:'40px'}}/>
                             </div>
                         </div>
@@ -1267,7 +1280,7 @@ function OrganistApp() {
                                         <span className="text-accent font-bold text-lg" style={{minWidth: '3.5rem', textAlign: 'right', marginRight: '1.5rem'}}>{h.number}</span>
                                         <span className="font-bold text-ink">{h.title}</span>
                                     </div>
-                                    <Icons.ChevronRight style={{color:'#ccc'}}/>
+                                    <Icons.ChevronRight style={{color:'var(--col-border-dark, #ccc)'}}/>
                                 </div>
                             ))}
                         </div>
@@ -1304,7 +1317,7 @@ function OrganistApp() {
                                         <div style={{flex:1, overflowY:'auto', padding:'0.5rem'}}>
                                             {pl.items.map(resolveItem).map((it, idx) => (<div key={it.id} className="playlist-card-item"><span className="text-accent font-bold">{idx+1}.</span><span>{it.hymn.number}</span> <span>{it.hymn.title}</span></div>))}
                                         </div>
-                                        <div style={{padding:'1rem', borderTop:'1px solid #ddd'}}>
+                                        <div style={{padding:'1rem', borderTop:'1px solid var(--col-border, #ddd)'}}>
                                             <button onClick={(e) => { e.stopPropagation(); startPlaylist(pl); }} className="btn playlist-card-start-btn"><Icons.Play /> INDÍTÁS</button>
                                         </div>
                                     </div>

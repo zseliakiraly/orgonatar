@@ -1,12 +1,12 @@
 /* --- Változók (Téma) --- */
 :root {
-    --col-galaxy-blue: #194C5C;
-    --col-galaxy-light: #267188;
-    --col-papyrus: #F7F4EB;
-    --col-papyrus-dark: #F3EEDB;
+    --col-galaxy-blue: #002B36;
+    --col-galaxy-light: #073642;
+    --col-papyrus: #FDF6E3;
+    --col-papyrus-dark: #EEE8D5;
     --col-accent: #B58900;
     --col-accent-text: #8a6800; /* akcentus szín szövegre világos háttéren (4.5:1 kontraszt) */
-    --col-ink: #221C18;
+    --col-ink: #2a2a2a;
     --col-white: #ffffff;
     --col-red: #dc2626;
     
@@ -16,6 +16,47 @@
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* --- Pergamen téma (alapértelmezett) --- */
+:root {
+    --pergamen-bg: #F7F4EB;
+    --pergamen-surface: #F3EEDB;
+    --pergamen-card: #FAF7F0;
+    --pergamen-border: #D8CEB7;
+    --pergamen-border-dark: #B5A88B;
+    --pergamen-ink: #221C18;
+    --pergamen-ink-muted: #574B40;
+    --pergamen-teal-dark: #123540;
+    --pergamen-teal: #194C5C;
+    --pergamen-teal-light: #267188;
+    --pergamen-teal-wash: #E5EFF2;
+    --pergamen-gold: #9E7B3B;
+    --pergamen-gold-text: #826531; /* az arany sötétebb árnyalata kis betűs szövegre (4,5:1 kontraszt) */
+}
+
+/* A háttér, a szöveg, az oldalsáv és az akcentus színét az app.js állítja be témánként;
+   itt a pergamen téma további szerepei. A többi témában ezek a változók nincsenek megadva,
+   ott a szabályok második (eredeti) értéke érvényes. */
+.theme-pergamen {
+    --col-galaxy-light: var(--pergamen-teal);
+    --col-papyrus-dark: var(--pergamen-surface);
+    --col-card: var(--pergamen-card);
+    --col-card-raised: var(--pergamen-card);
+    --col-card-header: var(--pergamen-surface);
+    --col-border: var(--pergamen-border);
+    --col-border-dark: var(--pergamen-border-dark);
+    --col-ink-muted: var(--pergamen-ink-muted);
+    --col-wash: var(--pergamen-teal-wash);
+    --col-focus: var(--pergamen-teal-light);
+    --col-input-focus-bg: var(--pergamen-card);
+    --col-nav-icon: rgba(229, 239, 242, 0.7); /* halvány türkiz a sötét oldalsávon */
+    --col-modal-tint: var(--pergamen-surface);
+    --col-modal-tint-soft: var(--pergamen-surface);
+    --col-search-bar: var(--pergamen-surface);
+    --col-float-bg: var(--pergamen-card);
+    --col-success: var(--pergamen-teal-light); /* a sötét türkiz fejlécen is jól elváljon */
+    --col-success-hover: var(--pergamen-teal);
 }
 
 /* --- Alapok --- */
@@ -70,7 +111,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .nav-btn {
     padding: 10px;
     border-radius: 8px;
-    color: #9ca3af;
+    color: var(--col-nav-icon, #9ca3af);
     transition: all 0.2s;
 }
 .nav-btn:hover { color: var(--col-white); background-color: var(--col-galaxy-light); }
@@ -87,9 +128,9 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 }
 .btn-primary { background-color: var(--col-accent); color: var(--col-white); }
 .btn-primary:hover { filter: brightness(1.12); }
-.btn-ghost { color: #666; }
+.btn-ghost { color: var(--col-ink-muted, #666); }
 .btn-ghost:hover { background-color: rgba(0,0,0,0.05); color: var(--col-ink); }
-.btn-danger { color: #999; }
+.btn-danger { color: var(--col-ink-muted, #999); }
 .btn-danger:hover { color: var(--col-red); }
 
 /* Header */
@@ -110,8 +151,8 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 
 /* Kártyák (Listákhoz) */
 .card {
-    background-color: var(--col-papyrus);
-    border: 1px solid #d1d5db;
+    background-color: var(--col-card, var(--col-papyrus));
+    border: 1px solid var(--col-border, #d1d5db);
     border-radius: 0.5rem;
     box-shadow: var(--shadow-md);
     overflow: hidden;
@@ -145,15 +186,15 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 }
 .modal-header {
     padding: 1rem;
-    background-color: rgba(238, 232, 213, 0.5);
-    border-bottom: 1px solid #d1d5db;
+    background-color: var(--col-modal-tint, rgba(238, 232, 213, 0.5));
+    border-bottom: 1px solid var(--col-border, #d1d5db);
     display: flex; justify-content: space-between; align-items: center;
 }
 .modal-body { padding: 1.5rem; overflow-y: auto; }
 .modal-footer {
     padding: 1rem;
-    background-color: rgba(238, 232, 213, 0.3);
-    border-top: 1px solid #d1d5db;
+    background-color: var(--col-modal-tint-soft, rgba(238, 232, 213, 0.3));
+    border-top: 1px solid var(--col-border, #d1d5db);
     display: flex; justify-content: flex-end; gap: 0.75rem;
 }
 
@@ -177,14 +218,14 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .prelude-block {
     display: flex; flex-direction: column; align-items: center;
     margin-bottom: 1rem; padding-bottom: 1rem;
-    border-bottom: 1px dashed #ccc;
+    border-bottom: 1px dashed var(--col-border-dark, #ccc);
 }
 .prelude-label {
     font-size: 12px; font-weight: bold; text-transform: uppercase;
     color: var(--col-accent-text, var(--col-accent));
     margin-bottom: 4px;
 }
-.score-missing { padding: 20px; border: 1px solid #ccc; border-radius: 4px; background-color: rgba(0,0,0,0.05); }
+.score-missing { padding: 20px; border: 1px solid var(--col-border-dark, #ccc); border-radius: 4px; background-color: rgba(0,0,0,0.05); }
 .score-placeholder { opacity: 0.2; display: flex; flex-direction: column; align-items: center; }
 .osmd-viewer { position: relative; width: 100%; min-height: 150px; }
 /* Képként tárolt kotta: a fehér háttér beleolvad a papír színébe */
@@ -199,12 +240,12 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     z-index: 10;
 }
-.score-info { position: absolute; bottom: 5px; right: 24px; font-size: 12px; color: #666; pointer-events: none; }
+.score-info { position: absolute; bottom: 5px; right: 24px; font-size: 12px; color: var(--col-ink-muted, #666); pointer-events: none; }
 .zoom-bar {
     position: absolute; bottom: 1rem; left: 50%; transform: translateX(-50%);
     display: flex; align-items: center; gap: 0.5rem;
-    background: rgba(255,255,255,0.95);
-    padding: 0.5rem 1rem; border-radius: 30px; border: 1px solid #eee;
+    background: var(--col-float-bg, rgba(255,255,255,0.95));
+    padding: 0.5rem 1rem; border-radius: 30px; border: 1px solid var(--col-border, #eee);
     box-shadow: 0 4px 15px rgba(0,0,0,0.15);
     z-index: 30;
 }
@@ -219,7 +260,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     position: absolute; top: 50%; transform: translateY(-50%);
     width: 44px; height: 88px;
     display: flex; align-items: center; justify-content: center;
-    background-color: rgba(255,255,255,0.8);
+    background-color: var(--col-float-bg, rgba(255,255,255,0.8));
     color: var(--col-galaxy-blue);
     border: 1px solid rgba(0,0,0,0.1);
     box-shadow: var(--shadow-md);
@@ -235,13 +276,13 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .input {
     width: 100%; padding: 0.75rem 1rem;
     background-color: var(--col-papyrus-dark);
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--col-border, #d1d5db);
     border-radius: 0.5rem;
     font-size: 1rem;
     outline: none;
     color: var(--col-ink);
 }
-.input:focus { background-color: var(--col-white); border-color: var(--col-accent); }
+.input:focus { background-color: var(--col-input-focus-bg, var(--col-white)); border-color: var(--col-focus, var(--col-accent)); }
 .input.search {
     padding-left: 2.5rem;
 }
@@ -275,7 +316,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     position: absolute;
     cursor: pointer;
     top: 0; left: 0; right: 0; bottom: 0;
-    background-color: #ccc;
+    background-color: var(--col-border-dark, #ccc);
     transition: .3s;
     border-radius: 24px;
 }
@@ -330,11 +371,11 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 }
 
 .btn-success {
-    background-color: #16a34a;
+    background-color: var(--col-success, #16a34a);
     color: white;
 }
 .btn-success:hover {
-    background-color: #15803d;
+    background-color: var(--col-success-hover, #15803d);
 }
 
 /* Header variations */
@@ -345,7 +386,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .player-view .header {
     background-color: var(--col-papyrus);
     color: var(--col-ink);
-    border-bottom-color: #aaa;
+    border-bottom-color: var(--col-border-dark, #aaa);
 }
 
 .player-view {
@@ -380,10 +421,10 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 }
 
 .playlist-editor-item {
-    background-color: white;
+    background-color: var(--col-card-raised, white);
     padding: 1rem;
     border-radius: 8px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--col-border, #ddd);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -409,7 +450,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     max-width: 600px;
     margin: 0 auto;
     padding: 2rem;
-    background-color: white;
+    background-color: var(--col-card-raised, white);
     border-radius: 8px;
     box-shadow: var(--shadow-md);
     text-align: left;
@@ -422,24 +463,24 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 /* Verse item in AddToPlaylistModal */
 .verse-item {
     padding: 8px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--col-border, #eee);
     cursor: pointer;
     display: flex;
     gap: 10px;
     align-items: center;
-    background-color: white;
+    background-color: var(--col-card-raised, white);
 }
 .verse-item:last-child {
     border-bottom: none;
 }
 .verse-item.selected {
-    background-color: #e6f4f1;
+    background-color: var(--col-wash, #e6f4f1);
 }
 
 /* HymnSelectorModal */
 .hymn-selector-search {
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid var(--col-border, #ddd);
     margin-bottom: 0.5rem;
     position: relative;
 }
@@ -447,28 +488,28 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     position: absolute;
     top: 10px;
     left: 10px;
-    color: #999;
+    color: var(--col-ink-muted, #999);
 }
 .hymn-selector-list {
     display: flex;
     flex-direction: column;
 }
 .hymn-selector-list .icon-plus {
-    color: #ccc;
+    color: var(--col-border-dark, #ccc);
 }
 
 .hymn-selector-item {
     width: 100%;
     text-align: left;
     padding: 0.5rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--col-border, #eee);
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-radius: 0.25rem;
 }
 .hymn-selector-item:hover {
-    background-color: #f3f4f6; /* gray-100 */
+    background-color: var(--col-wash, #f3f4f6); /* gray-100 */
 }
 .hymn-selector-item:last-child {
     border-bottom: none;
@@ -488,7 +529,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .playlist-editor-empty {
     text-align: center;
     margin-top: 3rem;
-    color: #999;
+    color: var(--col-ink-muted, #999);
 }
 .playlist-editor-empty .icon {
     opacity: 0.2;
@@ -499,8 +540,8 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     margin-top: 1rem;
 }
 .playlist-editor-add-btn {
-    border: 2px dashed #ccc;
-    color: #666;
+    border: 2px dashed var(--col-border-dark, #ccc);
+    color: var(--col-ink-muted, #666);
     width: 100%;
     max-width: 400px;
     justify-content: center;
@@ -509,8 +550,8 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 /* Playlist card */
 .playlist-card-header {
     padding: 1rem;
-    border-bottom: 1px solid #ddd;
-    background-color: rgba(0,0,0,0.03);
+    border-bottom: 1px solid var(--col-border, #ddd);
+    background-color: var(--col-card-header, rgba(0,0,0,0.03));
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -518,7 +559,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .playlist-card-item {
     padding: 5px 1rem;
     font-size: 13px;
-    border-bottom: 1px dashed #eee;
+    border-bottom: 1px dashed var(--col-border, #eee);
     display: flex;
     gap: 5px;
     white-space: nowrap;
@@ -529,7 +570,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     border-bottom: none;
 }
 .playlist-card-item span:last-child {
-    color: #666;
+    color: var(--col-ink-muted, #666);
     font-style: italic;
 }
 .playlist-card-start-btn {
@@ -596,12 +637,12 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 
 .scorebook-details {
     font-size: 0.8rem;
-    color: #666;
+    color: var(--col-ink-muted, #666);
 }
 
 .scorebook-description {
     font-size: 0.75rem;
-    color: #888;
+    color: var(--col-ink-muted, #888);
     line-height: 1.2;
 }
 
@@ -627,23 +668,25 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     display: flex; justify-content: space-between; align-items: center; gap: 4px;
     padding-right: 10px;
     font-size: 0.9rem; text-align: left;
-    background-color: var(--col-white);
+    background-color: var(--col-card-raised, var(--col-white));
 }
 .custom-select-btn.empty { cursor: default; opacity: 0.6; background-color: rgba(0,0,0,0.05); }
+/* Üres választó a sötét fejlécen: világos, halvány felirat (különben sötét szöveg sötét háttéren) */
+.header .custom-select-btn.empty { opacity: 1; color: rgba(255,255,255,0.6); background-color: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); }
 .custom-select-menu {
     position: absolute; top: 100%; margin-top: 5px;
     width: max(100%, 240px); max-width: calc(100vw - 1rem);
     max-height: 300px; overflow-y: auto;
-    background-color: var(--col-papyrus);
-    border: 1px solid #ccc; border-radius: 4px;
+    background-color: var(--col-card, var(--col-papyrus));
+    border: 1px solid var(--col-border, #ccc); border-radius: 4px;
     box-shadow: var(--shadow-xl);
     z-index: 100;
 }
-.custom-select-option { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
-.custom-select-option.placeholder { font-style: italic; color: #666; }
-.custom-select-option.selected { background-color: rgba(0,0,0,0.05); }
+.custom-select-option { padding: 10px; border-bottom: 1px solid var(--col-border, #eee); cursor: pointer; }
+.custom-select-option.placeholder { font-style: italic; color: var(--col-ink-muted, #666); }
+.custom-select-option.selected { background-color: var(--col-wash, rgba(0,0,0,0.05)); }
 .custom-select-option-label { font-weight: bold; font-size: 0.9rem; color: var(--col-galaxy-blue); }
-.custom-select-option-sub { font-size: 0.75rem; color: #666; margin-top: 2px; font-style: italic; }
+.custom-select-option-sub { font-size: 0.75rem; color: var(--col-ink-muted, #666); margin-top: 2px; font-style: italic; }
 
 /* --- Listák rácsa --- */
 .playlist-grid {
@@ -691,13 +734,13 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .tracking-widest { letter-spacing: 0.1em; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .text-ink { color: var(--col-ink); }
-.text-gray-500 { color: #6b7280; }
+.text-gray-500 { color: var(--col-ink-muted, #6b7280); }
 .opacity-50 { opacity: 0.5; }
 .opacity-70 { opacity: 0.7; }
-.border-b { border-bottom: 1px solid #e5e7eb; }
-.border-l { border-left: 1px solid #e5e7eb; }
-.border-gray-200 { border-color: #e5e7eb; }
-.border-gray-500 { border-color: #6b7280; }
+.border-b { border-bottom: 1px solid var(--col-border, #e5e7eb); }
+.border-l { border-left: 1px solid var(--col-border, #e5e7eb); }
+.border-gray-200 { border-color: var(--col-border, #e5e7eb); }
+.border-gray-500 { border-color: var(--col-border-dark, #6b7280); }
 .p-1 { padding: 0.25rem; }
 .pb-2 { padding-bottom: 0.5rem; }
 .pl-3 { padding-left: 0.75rem; }
@@ -709,6 +752,6 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .mt-2 { margin-top: 0.5rem; }
 .mt-4 { margin-top: 1rem; }
 .ml-2 { margin-left: 0.5rem; }
-.hover\:bg-gray-100:hover { background-color: #f3f4f6; }
+.hover\:bg-gray-100:hover { background-color: var(--col-wash, #f3f4f6); }
 .hover\:text-black:hover { color: #000; }
 .hover\:underline:hover { text-decoration: underline; }
