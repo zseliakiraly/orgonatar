@@ -1,0 +1,69 @@
+# A weboldal közzététele GitHub Pages-en.
+# Minden main ágra feltöltés után lefordítja az app.js-t (npm run build), és közzéteszi az oldalt,
+# így az app.js módosítása után nem kell helyben buildelni.
+#
+# Egyszeri beállítás: Settings → Pages → Build and deployment → Source: "GitHub Actions".
+# Amíg ez nincs beállítva, a munkafolyamat csak figyelmeztet, és nem tesz közzé semmit.
+name: Weboldal közzététele
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: GitHub Pages beállítás ellenőrzése
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.pages.outputs.enabled }}
+    steps:
+      - id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          build_type=$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq .build_type 2>/dev/null || true)
+          if [ "$build_type" = "workflow" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=A GitHub Pages nincs beállítva::Settings → Pages → Build and deployment → Source: GitHub Actions. Utána: Actions fül → Weboldal közzététele → Run workflow."
+          fi
+
+  deploy:
+    name: Build és közzététel
+    needs: check
+    if: needs.check.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: A weboldal fájljainak összegyűjtése
+        run: |
+          mkdir _site
+          git archive HEAD | tar -x -C _site
+          cp app.min.js _site/app.min.js
+          rm -rf _site/.github
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v5

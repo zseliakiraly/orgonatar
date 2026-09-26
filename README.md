@@ -21,14 +21,28 @@ npm install
 npm run build
 ```
 
-Az `app.js` módosítása után élesítés előtt futtasd újra az `npm run build`-et,
-különben az `index.html` a régi változatot mutatja.
+A GitHub Pages-en közzétett oldalt a munkafolyamat automatikusan lefordítja (lásd lent).
+Helyi kipróbáláskor az `app.js` módosítása után futtasd újra az `npm run build`-et,
+vagy használd a `dev.html`-t, különben az `index.html` a régi változatot mutatja.
 
-## A repóban nem szereplő mappák
+## Közzététel (GitHub Pages)
+
+A `.github/workflows/pages.yml` munkafolyamat minden `main` ágra feltöltés után
+lefordítja az `app.js`-t, és közzéteszi az oldalt. Egyszeri beállítás:
+
+1. Settings → Pages → Build and deployment → Source: **GitHub Actions**.
+2. Actions fül → **Weboldal közzététele** → **Run workflow**.
+
+Az oldal címe: `https://zseliakiraly.github.io/orgonatar/`. Privát repóból a
+GitHub Pages csak fizetős (Pro) előfizetéssel érhető el; ingyenes fiókkal a repót
+nyilvánossá kell tenni.
+
+## Adatok és könyvtárak
 
 - `libs/`: `react.js` és `react-dom.js` (React 18 UMD build),
   `opensheetmusicdisplay.min.js`; a `babel.js` csak a `dev.html`-hez kell.
-- `data/`: `enek.json`, `kottakonyvek.json` és a bennük hivatkozott MusicXML fájlok.
+- `data/`: `enek.json`, `kottakonyvek.json` és a bennük hivatkozott kottafájlok
+  (MusicXML: `.xml`, `.musicxml`, `.mxl`; vagy kép: `.png`, `.jpg`, `.svg`).
 
 ### Adatformátum (amit a kód használ)
 
@@ -36,8 +50,10 @@ különben az `index.html` a régi változatot mutatja.
   A versszakokat üres sor választja el, és mindegyik `1.`, `2.` … számmal kezdődik.
 - `kottakonyvek.json`: kottakönyvek listája: `id`, `title`, `author`, `year`,
   `description`, `active` (`false` = alapból kikapcsolva), `scores` és `preludes`.
-  A letét és az előjáték `scoreId` mezője köti az éneket (`enek.json` → `scoreId`)
-  a kottához. További mezők: `name`, `xmlUrl`, `voiceCount`, `composer`, `year`.
+  A letét és az előjáték `scoreId` mezője (ennek hiányában az `id`) köti a kottát az
+  énekhez (`enek.json` → `scoreId`). További mezők: `name`, `xmlUrl`, `voiceCount`,
+  `composer`, `year`. Az `xmlUrl` az `index.html`-hez képest relatív útvonal
+  (`data/...`); a `/data/...` alakot a program automatikusan relatívvá alakítja.
 
 ## Tárolás
 
