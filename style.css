@@ -187,6 +187,9 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .score-missing { padding: 20px; border: 1px solid #ccc; border-radius: 4px; background-color: rgba(0,0,0,0.05); }
 .score-placeholder { opacity: 0.2; display: flex; flex-direction: column; align-items: center; }
 .osmd-viewer { position: relative; width: 100%; min-height: 150px; }
+/* Képként tárolt kotta: a fehér háttér beleolvad a papír színébe */
+.score-image-wrap { width: 100%; overflow-x: auto; }
+.score-image { display: block; margin: 0 auto; max-width: none; height: auto; mix-blend-mode: multiply; }
 .osmd-container { width: 100%; mix-blend-mode: multiply; }
 .osmd-status {
     position: absolute; top: 60px; left: 50%; transform: translateX(-50%);

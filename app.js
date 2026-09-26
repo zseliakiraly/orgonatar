@@ -99,6 +99,15 @@ const isBookActive = (book, bookActive) => {
     return Object.prototype.hasOwnProperty.call(bookActive, key) ? bookActive[key] : book.active !== false;
 };
 
+// --- KOTTAFÁJLOK ---
+// A "/data/..." alakú útvonalat relatívvá alakítjuk: alútvonalon (pl. GitHub Pages: …github.io/orgonatar/)
+// a perjellel kezdődő útvonal a webhely gyökerére mutatna, és a fájl nem töltődne be.
+const resolveDataUrl = (url) => (typeof url === 'string' && url.startsWith('/') && !url.startsWith('//')) ? url.slice(1) : url;
+
+// A kotta lehet MusicXML (.xml, .musicxml, .mxl), vagy kép (szkennelt/exportált kotta)
+const IMAGE_FILE = /\.(png|jpe?g|gif|webp|svg)([?#].*)?$/i;
+const isImageUrl = (url) => IMAGE_FILE.test(url || '');
+
 // --- TELJES KÉPERNYŐ ---
 // iPhone-on nincs Fullscreen API (ott a hívás hibát dobott), régebbi iPadeken csak webkit előtaggal
 const FULLSCREEN_SUPPORTED = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
@@ -583,7 +592,7 @@ const OsmdViewer = ({ fileUrl, zoom = 1.0 }) => {
             .catch(err => {
                 if (loadId !== loadIdRef.current) return;
                 if (osmdRef.current) osmdRef.current.clear(); // ne maradjon kint az előző ének kottája
-                setStatus({ kind: 'error', text: `Hiba történt: ${err.message}` });
+                setStatus({ kind: 'error', text: `A kotta nem tölthető be (${fileUrl}): ${err.message}` });
             });
     }, [fileUrl]);
 
@@ -597,6 +606,18 @@ const OsmdViewer = ({ fileUrl, zoom = 1.0 }) => {
         <div className="osmd-viewer">
             {status && <div className="osmd-status">{status.kind === 'error' ? '⚠️' : '⏳'} {status.text}</div>}
             <div ref={containerRef} className="osmd-container"></div>
+        </div>
+    );
+};
+
+// Képként tárolt kotta (PNG, JPG, SVG). A zoom a kép szélességét állítja, széles képnél vízszintesen görgethető.
+const ScoreImage = ({ src, alt, zoom = 1.0 }) => {
+    const [failed, setFailed] = useState(false);
+    useEffect(() => setFailed(false), [src]);
+    if (failed) return <div className="score-missing">⚠️ A kotta nem tölthető be ({src})</div>;
+    return (
+        <div className="score-image-wrap">
+            <img src={src} alt={alt} className="score-image" style={{width: `${Math.round(zoom * 100)}%`}} onError={() => setFailed(true)} />
         </div>
     );
 };
@@ -668,8 +689,9 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
                     {prelude && (
                         <div className="score-block prelude-block" style={{maxWidth: scoreMaxWidth || '100%'}}>
                             <div className="prelude-label">Előjáték: {prelude.name}</div>
-                            {prelude.xmlUrl ? (
-                                <OsmdViewer fileUrl={prelude.xmlUrl} zoom={zoom} />
+                            {prelude.xmlUrl ? (isImageUrl(prelude.xmlUrl)
+                                ? <ScoreImage src={prelude.xmlUrl} alt={`Előjáték: ${prelude.name}`} zoom={zoom} />
+                                : <OsmdViewer fileUrl={prelude.xmlUrl} zoom={zoom} />
                             ) : (
                                 <div className="score-missing">Előjáték kotta helye</div>
                             )}
@@ -679,7 +701,9 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
                     {/* Fő Kotta / Variáció */}
                     {variation && (variation.xmlUrl ? (
                         <div className="score-block" style={{maxWidth: scoreMaxWidth || '100%'}}>
-                            <OsmdViewer fileUrl={variation.xmlUrl} zoom={zoom} />
+                            {isImageUrl(variation.xmlUrl)
+                                ? <ScoreImage src={variation.xmlUrl} alt={variation.name || 'Kotta'} zoom={zoom} />
+                                : <OsmdViewer fileUrl={variation.xmlUrl} zoom={zoom} />}
                         </div>
                     ) : (
                         <div className="score-placeholder">
@@ -933,6 +957,15 @@ function OrganistApp() {
 
     const activeScores = useMemo(() => {
         const grouped = {};
+        // Egy könyvben ugyanahhoz az énekhez több letét is tartozhat azonos "id"-vel (pl. két változat a 7. zsoltárhoz);
+        // az azonosítókat egyedivé tesszük, különben a második változat nem választható ki.
+        const usedIds = new Set();
+        const uniqueId = (base) => {
+            let id = base;
+            for (let n = 2; usedIds.has(id); n++) id = `${base}_${n}`;
+            usedIds.add(id);
+            return id;
+        };
 
         // Csak azokat a könyveket nézzük, amik nincsenek kikapcsolva
         scorebooks.filter(b => isBookActive(b, settings.bookActive)).forEach(book => {
@@ -952,9 +985,9 @@ function OrganistApp() {
                 const details = `${composerName} ${score.voiceCount ? `• ${score.voiceCount} szólam` : ''} ${score.year ? `• ${score.year}` : ''}`.trim();
 
                 const variation = {
-                    id: `${book.id}_${score.id}`,
+                    id: uniqueId(`${book.id}_${score.id}`),
                     name: score.name || book.title,
-                    xmlUrl: score.xmlUrl,
+                    xmlUrl: resolveDataUrl(score.xmlUrl),
                     voiceCount: score.voiceCount,
                     composer: details,
                     year: score.year || book.year
@@ -969,7 +1002,8 @@ function OrganistApp() {
                 if (score.preludes && Array.isArray(score.preludes)) {
                      grouped[linkId].preludes.push(...score.preludes.map(p => ({
                          ...p,
-                         id: `${book.id}_${score.id}_pre_${p.id}`,
+                         id: uniqueId(`${book.id}_${score.id}_pre_${p.id}`),
+                         xmlUrl: resolveDataUrl(p.xmlUrl),
                          composer: p.composer || details
                      })));
                 }
@@ -991,9 +1025,9 @@ function OrganistApp() {
                 const details = `${composerName} ${prelude.year ? `• ${prelude.year}` : ''}`.trim();
 
                 const preludeItem = {
-                    id: `${book.id}_pre_${prelude.id}`,
+                    id: uniqueId(`${book.id}_pre_${prelude.id}`),
                     name: prelude.name || book.title,
-                    xmlUrl: prelude.xmlUrl,
+                    xmlUrl: resolveDataUrl(prelude.xmlUrl),
                     composer: details,
                     year: prelude.year || book.year
                 };
