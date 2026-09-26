@@ -632,6 +632,20 @@ const ScoreImage = ({ src, alt, zoom = 1.0 }) => {
 const PAGE_FORWARD_KEYS = ['PageDown', 'ArrowDown', 'ArrowRight'];
 const PAGE_BACK_KEYS = ['PageUp', 'ArrowUp', 'ArrowLeft'];
 
+// Lapozó hotspotok a lejátszóban: a kotta bal és jobb szélső sávja (15%, keskeny kijelzőn legalább 48 px).
+// Nem teszünk átlátszó réteget a kotta fölé, mert az a széleken elvenné a görgetést: a kottaterületre
+// koppintás helyét nézzük. Húzás (görgetés) után a böngésző nem küld kattintást, így az nem lapoz.
+const HOTSPOT_RATIO = 0.15;
+const HOTSPOT_MIN_PX = 48;
+const hotspotAt = (el, clientX) => {
+    const rect = el.getBoundingClientRect();
+    const zone = Math.max(rect.width * HOTSPOT_RATIO, HOTSPOT_MIN_PX);
+    const x = clientX - rect.left;
+    if (x < zone) return 'prev';
+    if (x > rect.width - zone) return 'next';
+    return null;
+};
+
 const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyricsWidth, scoreMaxWidth, onNext, onPrev }) => {
     const [textPosition, setTextPosition] = useState('bottom'); 
     const [textLayout, setTextLayout] = useState('columns');
@@ -677,6 +691,25 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
+    // Koppintás a kotta bal/jobb szélére: előző / következő ének
+    const handleScoreClick = (e) => {
+        const { onNext, onPrev } = navRef.current;
+        if (!onNext && !onPrev) return;
+        const selection = window.getSelection && window.getSelection();
+        if (selection && !selection.isCollapsed && e.currentTarget.contains(selection.anchorNode)) return; // kijelölés ne lapozzon
+        const spot = hotspotAt(e.currentTarget, e.clientX);
+        if (spot === 'prev' && onPrev) onPrev();
+        else if (spot === 'next' && onNext) onNext();
+    };
+
+    // Egérrel a lapozó sáv fölött nyíl alakú kurzor jelzi, merre lapoz
+    const handleScoreMouseMove = (e) => {
+        const { onNext, onPrev } = navRef.current;
+        const spot = (onNext || onPrev) ? hotspotAt(e.currentTarget, e.clientX) : null;
+        const cursor = spot === 'prev' && onPrev ? 'w-resize' : spot === 'next' && onNext ? 'e-resize' : '';
+        if (e.currentTarget.style.cursor !== cursor) e.currentTarget.style.cursor = cursor;
+    };
+
     if (!variation && !prelude) return (
         <div style={{display:'flex', height:'100%', alignItems:'center', justifyContent:'center', flexDirection:'column', opacity:0.5}}>
             <Icons.Music size={64}/>
@@ -690,7 +723,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
         <div style={{display:'flex', height:'100%', flexDirection: isSide ? 'row' : 'column'}}>
             {/* Kotta rész: egyetlen görgethető terület az előjátéknak és a kottának */}
             <div className="score-pane">
-                <div ref={scrollerRef} className="score-scroller">
+                <div ref={scrollerRef} className="score-scroller" onClick={handleScoreClick} onMouseMove={handleScoreMouseMove}>
                     
                     {/* Előjáték */}
                     {prelude && (
@@ -731,9 +764,6 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
                     <span>{Math.round(zoom * 100)}%</span>
                     <button onClick={() => setZoom(z => Math.min(2.5, z + 0.1))} title="Nagyítás">+</button>
                 </div>
-                {/* Lapozó gombok: láthatóak, és nem takarják el a kotta szélét */}
-                {onPrev && <button onClick={onPrev} className="page-turn-btn prev" title="Előző ének" aria-label="Előző ének"><Icons.ChevronLeft size={32}/></button>}
-                {onNext && <button onClick={onNext} className="page-turn-btn next" title="Következő ének" aria-label="Következő ének"><Icons.ChevronRight size={32}/></button>}
             </div>
             
             {showLyrics && (

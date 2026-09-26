@@ -71,7 +71,8 @@ A listák és a beállítások a böngésző localStorage-ában vannak
 
 ## Lejátszó
 
-- Lapozás: az előző/következő gombok a kotta két szélén.
+- Lapozás: koppintás a kotta bal vagy jobb szélére (a szélső 15%-ra) az előző / következő énekre lapoz.
+  A széleken is lehet görgetni; csak a koppintás lapoz.
 - Billentyűzet vagy Bluetooth lapozópedál:
   - előre: PageDown, lefelé nyíl, jobbra nyíl;
   - hátra: PageUp, felfelé nyíl, balra nyíl.
