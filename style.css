@@ -1,12 +1,12 @@
 /* --- Változók (Téma) --- */
 :root {
-    --col-galaxy-blue: #002B36;
-    --col-galaxy-light: #073642;
-    --col-papyrus: #FDF6E3;
-    --col-papyrus-dark: #EEE8D5;
+    --col-galaxy-blue: #194C5C;
+    --col-galaxy-light: #267188;
+    --col-papyrus: #F7F4EB;
+    --col-papyrus-dark: #F3EEDB;
     --col-accent: #B58900;
     --col-accent-text: #8a6800; /* akcentus szín szövegre világos háttéren (4.5:1 kontraszt) */
-    --col-ink: #2a2a2a;
+    --col-ink: #221C18;
     --col-white: #ffffff;
     --col-red: #dc2626;
     
