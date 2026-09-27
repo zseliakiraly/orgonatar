@@ -98,7 +98,8 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
   után a mentett változat jön.
 - **Frissítés:** ha a szerveren megváltozik egy letöltött könyv `index.json`-ja, a kártyán
   „Frissítés” gomb jelenik meg. Ilyenkor csak az új és a megváltozott fájlok töltődnek le.
-  A szerveren hiányzó fájlokat a letöltés kihagyja, és a kártyán jelzi a számukat.
+  A szerveren hiányzó fájlokat a letöltés kihagyja, és a kártyán jelzi a számukat. Ha ezek
+  később felkerülnek, a program a következő megnyitáskor magától letölti őket (csak ezeket).
 - **iPad, iPhone:** a Safari törölheti a weboldalak tárolt adatait (a letöltött könyveket és a
   listákat is), ha az oldalt kb. egy hétig nem nyitod meg. Megbízhatóbb, ha az oldalt a
   Megosztás → „Főképernyőhöz adás” menüvel a kezdőképernyőre teszed, és onnan indítod. Az

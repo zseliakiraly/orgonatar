@@ -242,58 +242,67 @@ const readDownloadedBooks = async () => {
     return result;
 };
 
-// Könyv letöltése vagy frissítése új tárba. A korábbi letöltés fájljait feltételes kéréssel ellenőrizzük (304 =
-// változatlan, átvesszük), így frissítéskor csak az új és a megváltozott kották jönnek le. A szerveren hiányzó
-// fájlokat kihagyjuk (a letöltés adatlapja felsorolja őket); hálózati hibánál a letöltés megszakad.
+// Feldolgozás néhány párhuzamos szálon. A megszakítás (signal) vagy az első hiba mindegyik szálat leállítja;
+// a feldolgozó a közös leállító jelet kapja.
+const runPool = async (items, worker, signal) => {
+    const stop = new AbortController();
+    if (signal) {
+        if (signal.aborted) stop.abort();
+        signal.addEventListener('abort', () => stop.abort());
+    }
+    const queue = items.slice();
+    await Promise.all(Array.from({ length: Math.min(DOWNLOAD_CONCURRENCY, queue.length) }, async () => {
+        try {
+            while (queue.length) {
+                if (stop.signal.aborted) throw new DOMException('A letöltés megszakítva', 'AbortError');
+                await worker(queue.shift(), stop.signal);
+            }
+        } catch (err) {
+            stop.abort();
+            throw err;
+        }
+    }));
+};
+
+// Egy kottafájl letöltése a tárba. old: a korábbi letöltés példánya; ha van, feltételes kéréssel ellenőrizzük
+// (304 = változatlan, átvesszük). Eredmény: a tárolt bájtok száma, vagy null, ha a fájl nincs a szerveren.
+const fetchIntoCache = async (cache, url, old, signal) => {
+    const headers = {};
+    if (old && old.headers.get('ETag')) headers['If-None-Match'] = old.headers.get('ETag');
+    if (old && old.headers.get('Last-Modified')) headers['If-Modified-Since'] = old.headers.get('Last-Modified');
+    let res;
+    try {
+        res = await fetchFromServer(url, { cache: 'no-store', headers, signal });
+    } catch (err) {
+        if (signal.aborted || isSameOrigin(url)) throw err;
+        return null; // más webhely fájlja, amelyet a böngésző nem enged elmenteni
+    }
+    const source = res.status === 304 && old ? old : res.ok ? res : null;
+    if (!source) {
+        if (res.status === 404 || res.status === 410) return null;
+        throw new Error(`${url}: HTTP ${res.status}`);
+    }
+    const blob = await source.blob();
+    await cache.put(url, new Response(blob, { headers: keepHeaders(source.headers) }));
+    return blob.size;
+};
+
+// Könyv letöltése vagy frissítése új tárba. Frissítéskor a korábbi letöltés változatlan fájljait átvesszük, így csak
+// az új és a megváltozott kották jönnek le. A szerveren hiányzó fájlokat kihagyjuk (a letöltés adatlapja
+// felsorolja őket); hálózati hibánál a letöltés megszakad.
 const downloadBook = async ({ folder, remote, previous, onProgress, signal }) => {
     const cacheName = `${bookCachePrefix(folder)}${Date.now()}`;
     const cache = await caches.open(cacheName);
     const oldCache = previous ? await caches.open(previous.cacheName) : null;
     const files = bookFiles(remote.index);
-    const queue = files.slice();
     const missing = [];
     let done = 0, bytes = 0;
-    // belső megszakítás: a felhasználó (Mégse) vagy az első hiba leállítja a párhuzamos letöltéseket
-    const stop = new AbortController();
-    if (signal) signal.addEventListener('abort', () => stop.abort());
-
-    const store = async (url, response) => {
-        const blob = await response.blob();
-        await cache.put(url, new Response(blob, { headers: keepHeaders(response.headers) }));
-        bytes += blob.size;
-    };
-    const fetchFile = async (url) => {
-        const old = oldCache && await oldCache.match(url);
-        const headers = {};
-        if (old && old.headers.get('ETag')) headers['If-None-Match'] = old.headers.get('ETag');
-        if (old && old.headers.get('Last-Modified')) headers['If-Modified-Since'] = old.headers.get('Last-Modified');
-        let res;
-        try {
-            res = await fetchFromServer(url, { cache: 'no-store', headers, signal: stop.signal });
-        } catch (err) {
-            if (stop.signal.aborted || isSameOrigin(url)) throw err;
-            missing.push(url); // más webhely fájlja, amelyet a böngésző nem enged elmenteni
-            return;
-        }
-        if (res.status === 304 && old) await store(url, old);
-        else if (res.ok) await store(url, res);
-        else if (res.status === 404 || res.status === 410) missing.push(url);
-        else throw new Error(`${url}: HTTP ${res.status}`);
-    };
-
     try {
-        await Promise.all(Array.from({ length: Math.min(DOWNLOAD_CONCURRENCY, queue.length) }, async () => {
-            try {
-                while (queue.length) {
-                    if (stop.signal.aborted) throw new DOMException('A letöltés megszakítva', 'AbortError');
-                    await fetchFile(queue.shift());
-                    onProgress(++done, files.length);
-                }
-            } catch (err) {
-                stop.abort();
-                throw err;
-            }
-        }));
+        await runPool(files, async (url, stop) => {
+            const size = await fetchIntoCache(cache, url, oldCache && await oldCache.match(url), stop);
+            if (size === null) missing.push(url); else bytes += size;
+            onProgress(++done, files.length);
+        }, signal);
         const info = { date: new Date().toISOString(), files: files.length, bytes, missing };
         await cache.put(bookIndexUrl(folder), new Response(remote.text, { headers: { 'Content-Type': 'application/json' } }));
         await cache.put(downloadInfoUrl(folder), new Response(JSON.stringify(info), { headers: { 'Content-Type': 'application/json' } }));
@@ -303,6 +312,21 @@ const downloadBook = async ({ folder, remote, previous, onProgress, signal }) =>
         await caches.delete(cacheName);
         throw err;
     }
+};
+
+// A letöltéskor hiányzó fájlok pótlása, ha azóta felkerültek a szerverre (csak ezeket kérjük le újra)
+const retryMissingFiles = async ({ folder, local, signal }) => {
+    const cache = await caches.open(local.cacheName);
+    const missing = [];
+    let bytes = local.bytes, added = 0;
+    await runPool(local.missing, async (url, stop) => {
+        const size = await fetchIntoCache(cache, url, null, stop);
+        if (size === null) missing.push(url); else { bytes += size; added++; }
+    }, signal);
+    if (!added) return local;
+    const info = { date: new Date().toISOString(), files: local.files, bytes, missing };
+    await cache.put(downloadInfoUrl(folder), new Response(JSON.stringify(info), { headers: { 'Content-Type': 'application/json' } }));
+    return { ...local, ...info };
 };
 
 const deleteDownloadedBook = async (folder) => {
@@ -1421,6 +1445,7 @@ function OrganistApp() {
     const booksRef = useRef(books);
     booksRef.current = books;
     const downloadControllersRef = useRef({});
+    const fillControllersRef = useRef({});   // háttérben futó pótlások (hiányzó kották)
     const autoSyncedRef = useRef(new Set());
 
     // MODAL STATES
@@ -1494,6 +1519,7 @@ function OrganistApp() {
     const startDownload = (folder) => {
         const book = booksRef.current.find(b => b.folder === folder);
         if (!OFFLINE_SUPPORTED || !book || !book.remote || downloadControllersRef.current[folder]) return;
+        stopFillingMissing(folder);
         const controller = new AbortController();
         downloadControllersRef.current[folder] = controller;
         setDownloads(d => ({ ...d, [folder]: { done: 0, total: bookFiles(book.remote.index).length } }));
@@ -1505,6 +1531,7 @@ function OrganistApp() {
             onProgress: (done, total) => setDownloads(d => d[folder] ? { ...d, [folder]: { done, total } } : d)
         })
             .then(local => {
+                autoSyncedRef.current.add(missingFilesKey(folder, local.cacheName)); // most derült ki, mi hiányzik
                 setBooks(bs => bs.map(b => b.folder === folder ? { ...b, local } : b));
                 setDownloads(withoutFolder);
             })
@@ -1518,6 +1545,29 @@ function OrganistApp() {
             .finally(() => { delete downloadControllersRef.current[folder]; });
     };
 
+    // A letöltéskor hiányzó kották pótlása a háttérben, ha azóta felkerültek a szerverre
+    const fillMissingFiles = (folder) => {
+        const book = booksRef.current.find(b => b.folder === folder);
+        if (!book || !book.local || downloadControllersRef.current[folder] || fillControllersRef.current[folder]) return;
+        const controller = new AbortController();
+        fillControllersRef.current[folder] = controller;
+        retryMissingFiles({ folder, local: book.local, signal: controller.signal })
+            .then(local => {
+                if (controller.signal.aborted || local === book.local) return;
+                // csak ha közben nem törölték vagy töltötték le újra
+                setBooks(bs => bs.map(b => b.folder === folder && b.local && b.local.cacheName === local.cacheName ? { ...b, local } : b));
+            })
+            .catch(err => { if (!controller.signal.aborted) console.info(`Hiányzó kották pótlása (${folder}):`, err.message); })
+            .finally(() => { if (fillControllersRef.current[folder] === controller) delete fillControllersRef.current[folder]; });
+    };
+
+    const missingFilesKey = (folder, cacheName) => `${folder}\nhiányzó\n${cacheName}`;
+
+    const stopFillingMissing = (folder) => {
+        const controller = fillControllersRef.current[folder];
+        if (controller) { controller.abort(); delete fillControllersRef.current[folder]; }
+    };
+
     const cancelDownload = (folder) => {
         const controller = downloadControllersRef.current[folder];
         if (controller) controller.abort();
@@ -1527,6 +1577,7 @@ function OrganistApp() {
         if (!bookToDelete) return;
         const { folder } = bookToDelete;
         setBookToDelete(null);
+        stopFillingMissing(folder);
         deleteDownloadedBook(folder)
             .then(() => setBooks(bs => bs.filter(b => !(b.folder === folder && b.orphan)).map(b => b.folder === folder ? { ...b, local: null } : b)))
             .catch(err => setAlertMessage(`A könyv törlése nem sikerült: ${err.message}`));
@@ -1543,6 +1594,17 @@ function OrganistApp() {
             if (autoSyncedRef.current.has(key)) return;
             autoSyncedRef.current.add(key);
             startDownload(book.folder);
+        });
+        // Letöltött könyvekben a letöltéskor hiányzó kották: ha azóta felkerültek a szerverre, pótoljuk (a program
+        // minden megnyitásakor egyszer próbáljuk). Ha az index.json is változott, ezt a frissítés intézi.
+        books.forEach(book => {
+            const local = book.local;
+            if (!local || !book.remote || !local.missing || !local.missing.length || downloads[book.folder]) return;
+            if (!sameBookText(local.text, book.remote.text)) return;
+            const key = missingFilesKey(book.folder, local.cacheName);
+            if (autoSyncedRef.current.has(key)) return;
+            autoSyncedRef.current.add(key);
+            fillMissingFiles(book.folder);
         });
     }, [books, downloads]);
 
