@@ -387,6 +387,25 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     border-bottom-color: var(--col-border-dark, #aaa);
 }
 
+/* Lejátszó fejléce: bal oldalon a lista sorszáma (1/4), jobb oldalon az óra */
+.player-heading { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; min-width: 0; }
+.player-heading-main { display: flex; align-items: baseline; gap: 8px; flex: 0 1 auto; min-width: 0; max-width: 100%; }
+.player-heading-main > * { flex-shrink: 0; }
+.player-heading-main > h3 { flex-shrink: 1; min-width: 0; }
+.player-heading-info { flex: 0 1 auto; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.player-position { font-weight: 600; color: var(--col-ink-muted, #666); white-space: nowrap; }
+.player-position-sep { color: var(--col-ink-muted, #666); opacity: 0.6; }
+.player-clock {
+    position: relative; flex-shrink: 0; margin-left: 0.75rem;
+    padding: 0.15rem 0.65rem; border-radius: 0.5rem;
+    font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap;
+    color: var(--col-ink);
+}
+/* minimálisan eltérő háttér: a szöveg színe halványan, így minden színsémához illik */
+.player-clock::before {
+    content: ''; position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+    border-radius: inherit; background-color: currentColor; opacity: 0.08; pointer-events: none;
+}
 .player-view {
     position: fixed;
     inset: 0;

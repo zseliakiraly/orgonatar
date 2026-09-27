@@ -50,7 +50,7 @@ const STORAGE_KEYS = { playlists: 'orgonista_playlists', settings: 'orgonista_se
 
 const SETTINGS_VERSION = 2;
 
-const DEFAULT_SETTINGS = { theme: 'pergamen', showLyrics: true, sidebarSide: 'right', lyricsWidth: '15%', scoreMaxWidth: '100%', bookActive: {}, skipFullscreenPrompt: false, settingsVersion: SETTINGS_VERSION };
+const DEFAULT_SETTINGS = { theme: 'pergamen', showLyrics: true, showClock: true, sidebarSide: 'right', lyricsWidth: '15%', scoreMaxWidth: '100%', bookActive: {}, skipFullscreenPrompt: false, settingsVersion: SETTINGS_VERSION };
 
 const loadJSON = (key, fallback) => {
     try {
@@ -693,6 +693,17 @@ const SettingsView = ({ settings, onUpdateSettings }) => (
                 <div className="card card-row">
                     <div className="card-decoration"></div>
                     <div className="setting-label">
+                        <div className="font-bold text-ink">Óra a lejátszóban</div>
+                        <div className="text-xs text-gray-500">A lejátszó jobb felső sarkában</div>
+                    </div>
+                    <button onClick={() => onUpdateSettings({...settings, showClock: !settings.showClock})} className="btn-ghost" title={settings.showClock ? 'Óra elrejtése' : 'Óra megjelenítése'} style={{color: settings.showClock ? 'var(--col-accent-text)' : 'var(--col-ink-muted, #999)'}}>
+                        {settings.showClock ? <Icons.Eye size={24}/> : <Icons.EyeOff size={24}/>}
+                    </button>
+                </div>
+
+                <div className="card card-row">
+                    <div className="card-decoration"></div>
+                    <div className="setting-label">
                         <div className="font-bold text-ink">Oldalsáv szélessége</div>
                         <div className="text-xs text-gray-500">Ha oldalt van a szöveg</div>
                     </div>
@@ -1223,6 +1234,22 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
             )}
         </div>
     );
+};
+
+// Óra a lejátszó fejlécében (óra:perc). Percváltáskor frissül; ha a tablet alvásból ébred, rögtön.
+// Külön komponens, hogy percenként csak az óra rajzolódjon újra, ne az egész lejátszó.
+const PlayerClock = () => {
+    const [now, setNow] = useState(() => new Date());
+    useEffect(() => {
+        let timer = null;
+        const schedule = () => { timer = setTimeout(tick, 60000 - Date.now() % 60000 + 50); };
+        const tick = () => { setNow(new Date()); schedule(); };
+        const onVisible = () => { if (!document.hidden) { clearTimeout(timer); tick(); } };
+        schedule();
+        document.addEventListener('visibilitychange', onVisible);
+        return () => { clearTimeout(timer); document.removeEventListener('visibilitychange', onVisible); };
+    }, []);
+    return <div className="player-clock" title="Pontos idő">{now.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' })}</div>;
 };
 
 // --- KOTTAKÖNYVEK OLDAL ---
@@ -2043,26 +2070,30 @@ function OrganistApp() {
                 {view === 'player' && playerItem && (
                     <div className="player-view">
                         <div className="header">
-                            <div style={{display:'flex', alignItems:'center', gap:'12px', flex:1}}>
+                            <div style={{display:'flex', alignItems:'center', gap:'12px', flex:1, minWidth:0}}>
                                 <button onClick={() => window.history.back()} className="btn-ghost" style={{color:'var(--col-ink)', padding:0}}><Icons.ChevronLeft size={24} /></button>
-                                <div style={{display:'flex', alignItems:'baseline', gap:'8px', flexWrap: 'wrap'}}>
-                                    <h2 className="font-serif font-bold text-2xl text-accent">{playerItem.hymn.number}</h2>
-                                    <h3 className="font-bold text-lg truncate">{playerItem.hymn.title}</h3>
-                                    {/* Header Info: Aligned center vertically now */}
+                                <div className="player-heading">
+                                    {/* sorszám, énekszám és cím egy sorban (a cím szükség esetén rövidül); a változat adatai
+                                        keskeny kijelzőn a második sorba kerülnek */}
+                                    <div className="player-heading-main">
+                                        <span className="player-position" title="Hányadik ének a listában">{currentPlayerIndex+1}/{playerQueue.length}</span>
+                                        <span className="player-position-sep">–</span>
+                                        <h2 className="font-serif font-bold text-2xl text-accent">{playerItem.hymn.number}</h2>
+                                        <h3 className="font-bold text-lg truncate">{playerItem.hymn.title}</h3>
+                                    </div>
+                                    {/* A változat adatai (szükség esetén rövidülnek) */}
                                     {(() => {
                                         const { variationName, variationComposer, preludeName } = getScoreInfo(playerItem.hymn.scoreId, playerItem.variationId, playerItem.preludeId);
-                                        return <div className="text-xs opacity-70 border-l border-gray-500 pl-3 ml-2" style={{display:'flex', gap:'5px', alignItems:'baseline'}}>
-                                            {preludeName && <span className="font-bold text-accent">[{preludeName}]</span>}
+                                        return <div className="player-heading-info text-xs opacity-70 border-l border-gray-500 pl-3 ml-2">
+                                            {preludeName && <><span className="font-bold text-accent">[{preludeName}]</span>{' '}</>}
                                             <span>{variationName}</span>
                                             <span style={{fontStyle:'italic'}}> - {variationComposer}</span>
                                         </div>;
                                     })()}
                                 </div>
                             </div>
-                            
-                            <div style={{textAlign:'right', minWidth:'50px'}}>
-                                <div className="text-sm opacity-50 mt-1">{currentPlayerIndex+1} / {playerQueue.length}</div>
-                            </div>
+
+                            {settings.showClock && <PlayerClock />}
                         </div>
 
                         <div style={{flex:1, overflow:'hidden', position:'relative'}}>
