@@ -105,10 +105,213 @@ const isBookActive = (book, bookActive) => {
     return Object.prototype.hasOwnProperty.call(bookActive, key) ? bookActive[key] : book.active !== false;
 };
 
-// --- KOTTAFÁJLOK ---
-// A "/data/..." alakú útvonalat relatívvá alakítjuk: alútvonalon (pl. GitHub Pages: …github.io/orgonatar/)
-// a perjellel kezdődő útvonal a webhely gyökerére mutatna, és a fájl nem töltődne be.
-const resolveDataUrl = (url) => (typeof url === 'string' && url.startsWith('/') && !url.startsWith('//')) ? url.slice(1) : url;
+// --- KOTTAKÖNYVEK ---
+// A könyvek listája (data/kottakonyvek.json) csak a mappákat sorolja fel, pl.
+//   [{ "folder": "enekeskonyv2021", "builtin": true }, { "folder": "genfi" }]
+// Minden könyv a saját mappájában van: data/<mappa>/index.json (a könyv adatai és kottái), mellette a kottafájlok.
+// A beépített könyv mindig elérhető (és magától mentődik a készülékre); a többit a Kottakönyvek oldalon lehet
+// letölteni, és csak a letöltött könyvek kottái jelennek meg.
+const CATALOG_URL = 'data/kottakonyvek.json';
+const bookIndexUrl = (folder) => `data/${folder}/index.json`;
+
+const normalizeCatalog = (data) => {
+    const seen = new Set();
+    return (Array.isArray(data) ? data : [])
+        .map(entry => typeof entry === 'string' ? { folder: entry } : entry)
+        .filter(entry => {
+            const folder = entry && entry.folder;
+            const valid = typeof folder === 'string' && folder !== '' && folder !== '.' && folder !== '..' && !/[\/\\]/.test(folder);
+            if (!valid) console.warn('Hibás bejegyzés a kottakonyvek.json-ban:', entry);
+            if (!valid || seen.has(folder)) return false;
+            seen.add(folder);
+            return true;
+        })
+        .map(entry => ({ folder: entry.folder, builtin: entry.builtin === true }));
+};
+
+// Egy könyv index.json-ja: { id, title, author, description, copyright, scores: [...], preludes: [...] }
+const normalizeBook = (data, folder) => {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('az index.json nem egy kottakönyv leírása');
+    return {
+        ...data,
+        id: String(data.id ?? folder),
+        folder,
+        scores: Array.isArray(data.scores) ? data.scores : [],
+        preludes: Array.isArray(data.preludes) ? data.preludes : []
+    };
+};
+
+// A kottafájl útvonala a könyv mappájához képest értendő ("165fm-3k-2017.svg", "../genfi/001-bm-3k-2010.mxl").
+// A régi, az oldal gyökeréhez képest megadott alak ("/data/genfi/…", "./data/genfi/…") és a teljes cím (https://…)
+// is használható. (Perjellel kezdődő útvonal alútvonalon, pl. …github.io/orgonatar/, a webhely gyökerére mutatna.)
+const resolveBookUrl = (url, folder) => {
+    if (typeof url !== 'string' || !url) return url;
+    if (/^([a-z][a-z0-9+.-]*:|\/\/)/i.test(url)) return url;
+    const rooted = url.replace(/^\.?\//, '');
+    if (rooted.startsWith('data/')) return rooted;
+    const parts = ['data', folder];
+    for (const segment of url.split('/')) {
+        if (segment === '..') parts.pop();
+        else if (segment && segment !== '.') parts.push(segment);
+    }
+    return parts.join('/');
+};
+
+// A könyv összes kottafájlja (ezeket kell letölteni)
+const bookFiles = (book) => {
+    const urls = new Set();
+    const add = (item) => { if (item && item.xmlUrl) urls.add(resolveBookUrl(item.xmlUrl, book.folder)); };
+    book.scores.forEach(score => { add(score); if (Array.isArray(score.preludes)) score.preludes.forEach(add); });
+    book.preludes.forEach(add);
+    return [...urls];
+};
+
+// Két index.json tartalma ugyanaz-e (a szóközök, sortörések nem számítanak)
+const sameBookText = (a, b) => {
+    try { return JSON.stringify(JSON.parse(a)) === JSON.stringify(JSON.parse(b)); } catch (e) { return a === b; }
+};
+
+// --- LETÖLTÖTT KOTTAKÖNYVEK (a böngésző Cache Storage tárolójában) ---
+// Minden letöltés külön tárba kerül ("orgonatar-konyv:<mappa>:<időbélyeg>"); utolsóként a letöltés adatlapja.
+// Ha az adatlap hiányzik, a letöltés félbemaradt, és a tárat töröljük. Így egy megszakadt frissítés sem rontja
+// el a korábban letöltött könyvet. A tárból a service worker (sw.js) szolgálja ki a kottákat internet nélkül is.
+const BOOK_CACHE_PREFIX = 'orgonatar-konyv:';
+const DOWNLOAD_HEADER = 'X-Letoltes';   // az ilyen kérést a service worker mindig a hálózatra engedi
+const DOWNLOAD_CONCURRENCY = 4;
+const REMOTE_TIMEOUT = 10000;           // ms; rossz hálózaton se várjunk a végtelenségig
+const NO_CONNECTION = 'nincs internetkapcsolat';
+const OFFLINE_SUPPORTED = typeof window.caches !== 'undefined' && window.isSecureContext === true;
+const downloadInfoUrl = (folder) => `data/${folder}/.letoltes.json`;
+const bookCachePrefix = (folder) => `${BOOK_CACHE_PREFIX}${folder}:`;
+
+const isSameOrigin = (url) => { try { return new URL(url, location.href).origin === location.origin; } catch (e) { return false; } };
+
+// Csak a tároláshoz szükséges fejlécek (a tömörítés fejléceit nem visszük át a már kicsomagolt tartalomhoz)
+const keepHeaders = (headers) => {
+    const kept = new Headers();
+    ['Content-Type', 'ETag', 'Last-Modified'].forEach(name => { const value = headers.get(name); if (value) kept.set(name, value); });
+    return kept;
+};
+
+// Hálózati kérés időkorláttal, a service worker megkerülésével (a friss, szerveren lévő változat kell)
+const fetchFromServer = (url, options = {}) => {
+    const controller = new AbortController();
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; controller.abort(); }, REMOTE_TIMEOUT);
+    if (options.signal) options.signal.addEventListener('abort', () => controller.abort());
+    const headers = isSameOrigin(url) ? { [DOWNLOAD_HEADER]: '1', ...(options.headers || {}) } : (options.headers || {});
+    return fetch(url, { ...options, headers, signal: controller.signal })
+        .catch(err => { throw timedOut ? new Error('a szerver nem válaszolt időben') : err; })
+        .finally(() => clearTimeout(timer));
+};
+
+// A könyv szerveren lévő változata: { text, index }
+const fetchRemoteBook = async (folder) => {
+    const res = await fetchFromServer(bookIndexUrl(folder), { cache: 'no-cache' });
+    if (!res.ok) throw new Error(res.status === 404 ? 'az index.json nem található' : `HTTP ${res.status}`);
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch (err) { throw new Error(`hibás index.json (${err.message})`); }
+    return { text, index: normalizeBook(data, folder) };
+};
+
+// A készülékre letöltött könyvek: { [mappa]: { cacheName, text, index, date, files, bytes, missing } }
+const readDownloadedBooks = async () => {
+    if (!OFFLINE_SUPPORTED) return {};
+    const result = {};
+    for (const name of await caches.keys()) {
+        if (!name.startsWith(BOOK_CACHE_PREFIX)) continue;
+        const rest = name.slice(BOOK_CACHE_PREFIX.length);
+        const folder = rest.slice(0, rest.lastIndexOf(':'));
+        try {
+            const cache = await caches.open(name);
+            const infoRes = await cache.match(downloadInfoUrl(folder));
+            const indexRes = infoRes && await cache.match(bookIndexUrl(folder));
+            if (!infoRes || !indexRes) throw new Error('félbemaradt letöltés');
+            const info = await infoRes.json();
+            const text = await indexRes.text();
+            const book = { cacheName: name, text, index: normalizeBook(JSON.parse(text), folder), ...info };
+            const previous = result[folder];
+            if (previous && previous.cacheName > name) { await caches.delete(name); continue; } // régebbi letöltés
+            if (previous) await caches.delete(previous.cacheName);
+            result[folder] = book;
+        } catch (err) {
+            await caches.delete(name);
+        }
+    }
+    return result;
+};
+
+// Könyv letöltése vagy frissítése új tárba. A korábbi letöltés fájljait feltételes kéréssel ellenőrizzük (304 =
+// változatlan, átvesszük), így frissítéskor csak az új és a megváltozott kották jönnek le. A szerveren hiányzó
+// fájlokat kihagyjuk (a letöltés adatlapja felsorolja őket); hálózati hibánál a letöltés megszakad.
+const downloadBook = async ({ folder, remote, previous, onProgress, signal }) => {
+    const cacheName = `${bookCachePrefix(folder)}${Date.now()}`;
+    const cache = await caches.open(cacheName);
+    const oldCache = previous ? await caches.open(previous.cacheName) : null;
+    const files = bookFiles(remote.index);
+    const queue = files.slice();
+    const missing = [];
+    let done = 0, bytes = 0;
+    // belső megszakítás: a felhasználó (Mégse) vagy az első hiba leállítja a párhuzamos letöltéseket
+    const stop = new AbortController();
+    if (signal) signal.addEventListener('abort', () => stop.abort());
+
+    const store = async (url, response) => {
+        const blob = await response.blob();
+        await cache.put(url, new Response(blob, { headers: keepHeaders(response.headers) }));
+        bytes += blob.size;
+    };
+    const fetchFile = async (url) => {
+        const old = oldCache && await oldCache.match(url);
+        const headers = {};
+        if (old && old.headers.get('ETag')) headers['If-None-Match'] = old.headers.get('ETag');
+        if (old && old.headers.get('Last-Modified')) headers['If-Modified-Since'] = old.headers.get('Last-Modified');
+        let res;
+        try {
+            res = await fetchFromServer(url, { cache: 'no-store', headers, signal: stop.signal });
+        } catch (err) {
+            if (stop.signal.aborted || isSameOrigin(url)) throw err;
+            missing.push(url); // más webhely fájlja, amelyet a böngésző nem enged elmenteni
+            return;
+        }
+        if (res.status === 304 && old) await store(url, old);
+        else if (res.ok) await store(url, res);
+        else if (res.status === 404 || res.status === 410) missing.push(url);
+        else throw new Error(`${url}: HTTP ${res.status}`);
+    };
+
+    try {
+        await Promise.all(Array.from({ length: Math.min(DOWNLOAD_CONCURRENCY, queue.length) }, async () => {
+            try {
+                while (queue.length) {
+                    if (stop.signal.aborted) throw new DOMException('A letöltés megszakítva', 'AbortError');
+                    await fetchFile(queue.shift());
+                    onProgress(++done, files.length);
+                }
+            } catch (err) {
+                stop.abort();
+                throw err;
+            }
+        }));
+        const info = { date: new Date().toISOString(), files: files.length, bytes, missing };
+        await cache.put(bookIndexUrl(folder), new Response(remote.text, { headers: { 'Content-Type': 'application/json' } }));
+        await cache.put(downloadInfoUrl(folder), new Response(JSON.stringify(info), { headers: { 'Content-Type': 'application/json' } }));
+        for (const name of await caches.keys()) if (name.startsWith(bookCachePrefix(folder)) && name !== cacheName) await caches.delete(name);
+        return { cacheName, text: remote.text, index: remote.index, ...info };
+    } catch (err) {
+        await caches.delete(cacheName);
+        throw err;
+    }
+};
+
+const deleteDownloadedBook = async (folder) => {
+    for (const name of await caches.keys()) if (name.startsWith(bookCachePrefix(folder))) await caches.delete(name);
+};
+
+const formatBytes = (bytes) => bytes >= 1048576
+    ? `${(bytes / 1048576).toLocaleString('hu-HU', { maximumFractionDigits: 1 })} MB`
+    : `${bytes > 0 ? Math.max(1, Math.round(bytes / 1024)) : 0} kB`;
 
 // A kotta lehet MusicXML (.xml, .musicxml, .mxl), vagy kép (szkennelt/exportált kotta)
 const IMAGE_FILE = /\.(png|jpe?g|gif|webp|svg)([?#].*)?$/i;
@@ -874,6 +1077,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
         <div style={{display:'flex', height:'100%', alignItems:'center', justifyContent:'center', flexDirection:'column', opacity:0.5}}>
             <Icons.Music size={64}/>
             <p>Nincs elérhető kotta</p>
+            <p className="text-sm">További kottákat a Kottakönyvek oldalon tölthetsz le.</p>
         </div>
     );
 
@@ -997,6 +1201,129 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
     );
 };
 
+// --- KOTTAKÖNYVEK OLDAL ---
+// Egy könyv kártyája: a beépített mindig elérhető, a többit le lehet tölteni, frissíteni és törölni.
+const ScorebookCard = ({ book, download, active, onToggle, onDownload, onCancel, onDelete }) => {
+    const data = book.remote ? book.remote.index : book.local ? book.local.index : null;
+    const title = (data && data.title) || book.folder;
+    const usable = book.builtin || !OFFLINE_SUPPORTED ? !!data : !!book.local;
+    const progress = download && download.total != null ? download : null;
+    const failed = download && download.error;
+    const hasUpdate = !!(book.local && book.remote && !sameBookText(book.local.text, book.remote.text));
+    const serverProblem = book.remoteError && book.remoteError !== NO_CONNECTION ? book.remoteError : null;
+    const local = book.local;
+    const savedText = local && [
+        `${formatBytes(local.bytes)}`,
+        local.missing && local.missing.length ? `${local.missing.length} kotta hiányzik a szerverről` : null
+    ].filter(Boolean).join(' • ');
+
+    let status = null, actions = null;
+    if (progress) {
+        status = `${book.builtin ? 'Mentés a készülékre' : 'Letöltés'}: ${progress.done} / ${progress.total}`;
+        if (!book.builtin) actions = <button onClick={() => onCancel(book.folder)} className="btn btn-ghost">Mégse</button>;
+    } else if (book.builtin) {
+        if (local) status = `Internet nélkül is elérhető • ${savedText}`;
+        else if (!OFFLINE_SUPPORTED) status = 'Csak internettel érhető el (ez a böngésző nem tud menteni)';
+        else if (!data) status = `Nem érhető el: ${book.remoteError || 'betöltés...'}`;
+        else if (!failed) status = 'Mentés a készülékre...';
+        if (failed && data) actions = <button onClick={() => onDownload(book.folder)} className="btn btn-ghost">Újra</button>;
+    } else if (!OFFLINE_SUPPORTED) {
+        status = data ? 'Csak internettel érhető el (ez a böngésző nem tud menteni)' : `Nem érhető el: ${book.remoteError || 'betöltés...'}`;
+    } else if (book.orphan) {
+        status = 'Ez a könyv már nem szerepel a kottakönyvek listájában.';
+        actions = <button onClick={() => onDelete({ folder: book.folder, title })} className="btn btn-ghost btn-danger">Törlés</button>;
+    } else if (local) {
+        status = `Letöltve ${new Date(local.date).toLocaleDateString('hu-HU')} • ${savedText}`;
+        actions = <>
+            {hasUpdate && <button onClick={() => onDownload(book.folder)} className="btn btn-primary" title="Új vagy megváltozott kották vannak a szerveren">Frissítés</button>}
+            <button onClick={() => onDelete({ folder: book.folder, title })} className="btn btn-ghost btn-danger">Törlés</button>
+        </>;
+    } else if (data) {
+        status = `${bookFiles(data).length} fájl`;
+        actions = <button onClick={() => onDownload(book.folder)} className="btn btn-primary">Letöltés</button>;
+    } else {
+        status = `Nem érhető el: ${book.remoteError || 'betöltés...'}`;
+    }
+
+    return (
+        <div className={`card list-item scorebook-item ${usable && !active ? 'inactive' : ''}`} data-folder={book.folder}>
+            <div className="card-decoration"></div>
+            <div className="scorebook-content">
+                <div className="scorebook-header">
+                    <h3 className="font-bold text-ink scorebook-title">
+                        {title}
+                        {book.builtin && <span className="scorebook-badge">Beépített</span>}
+                    </h3>
+                    {usable && (
+                        <label className="toggle-switch scorebook-toggle" title={active ? 'Elrejtés' : 'Megjelenítés'}>
+                            <input type="checkbox" checked={active} onChange={() => onToggle(data || local.index)} />
+                            <span className="slider"></span>
+                        </label>
+                    )}
+                </div>
+
+                {data && (
+                    <div className="scorebook-details">
+                        <div>{data.scores.length} db letét, {data.preludes.length} db előjáték</div>
+                        {data.author && <strong>{data.author}</strong>}
+                    </div>
+                )}
+                {data && data.description && <div className="scorebook-description">{data.description}</div>}
+
+                <div className="scorebook-status">
+                    {status && <span>{status}</span>}
+                    {hasUpdate && !progress && !book.builtin && <span className="scorebook-update">Új kották érhetők el</span>}
+                    {actions}
+                </div>
+                {progress && (
+                    <div className="scorebook-progress"><div style={{width: `${progress.total ? Math.round(progress.done / progress.total * 100) : 0}%`}}></div></div>
+                )}
+                {failed && <div className="scorebook-warning">{book.builtin ? 'A mentés' : 'A letöltés'} nem sikerült: {failed}</div>}
+                {serverProblem && data && <div className="scorebook-warning">A szerveren lévő index.json nem használható: {serverProblem}</div>}
+            </div>
+        </div>
+    );
+};
+
+const ScorebooksView = ({ books, downloads, bookActive, online, onToggle, onDownload, onCancel, onDelete }) => (
+    <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
+        <div className="header centered">
+            <h1 className="header-title main">Kottakönyvek</h1>
+        </div>
+
+        <div className="main-content" style={{padding:'1rem', overflowY:'auto'}}>
+            <p className="text-center scorebook-intro">
+                A beépített könyv mindig elérhető. A többi könyvet letöltheted: a kottái a készülékre kerülnek,
+                így internet nélkül is használhatók. A kapcsolóval elrejtheted azokat a könyveket, amiknek a kottáit nem szeretnéd látni.
+            </p>
+            {!online && <p className="text-center scorebook-notice">Nincs internetkapcsolat: csak a készüléken lévő könyvek érhetők el.</p>}
+            {!OFFLINE_SUPPORTED && <p className="text-center scorebook-notice">Ez a böngésző itt nem tudja a könyveket a készülékre menteni (ehhez https kell), ezért minden könyv internettel, a szerverről használható.</p>}
+
+            {/* ÜRES ÁLLAPOT KEZELÉSE */}
+            {books.length === 0 && (
+                <div className="card list-item scorebook-empty">
+                    <div className="card-decoration" style={{ backgroundColor: 'var(--col-red)' }}></div>
+                    <div className="text-center">
+                        <h3 className="font-bold">Még nincsenek kottakönyvek betöltve!</h3>
+                        <p className="text-sm">Ellenőrizd a data/kottakonyvek.json fájlt.</p>
+                    </div>
+                </div>
+            )}
+
+            <div className="scorebook-list">
+                {books.map(book => {
+                    const data = book.remote ? book.remote.index : book.local ? book.local.index : null;
+                    return (
+                        <ScorebookCard key={book.folder} book={book} download={downloads[book.folder]}
+                            active={data ? isBookActive(data, bookActive) : true}
+                            onToggle={onToggle} onDownload={onDownload} onCancel={onCancel} onDelete={onDelete} />
+                    );
+                })}
+            </div>
+        </div>
+    </div>
+);
+
 const PlaylistEditor = ({ playlist, onRemoveItem, onAddItem, onPlay, onReorder, getScoreInfo }) => {
     const [dragItem, setDragItem] = useState(null);
     const [dragOverItem, setDragOverItem] = useState(null);
@@ -1073,7 +1400,6 @@ function OrganistApp() {
     const [playingPlaylistId, setPlayingPlaylistId] = useState(null);
     const [playerIndex, setPlayerIndex] = useState(0);
     const [searchQuery, setSearchQuery] = useState('');
-    const [scorebooks, setScorebooks] = useState([]);
 
     // Selection States
     const [currentVariationId, setCurrentVariationId] = useState(null);
@@ -1087,6 +1413,16 @@ function OrganistApp() {
     const [hymnBook, setHymnBook] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // KOTTAKÖNYVEK: a lista könyvei, mindegyiknél a szerveren lévő (remote) és a készülékre letöltött (local) változat
+    const [books, setBooks] = useState([]);          // [{ folder, builtin, orphan, remote, remoteError, local }]
+    const [downloads, setDownloads] = useState({});  // { [mappa]: { done, total } (folyamatban) | { error } }
+    const [bookToDelete, setBookToDelete] = useState(null);
+    const [online, setOnline] = useState(navigator.onLine);
+    const booksRef = useRef(books);
+    booksRef.current = books;
+    const downloadControllersRef = useRef({});
+    const autoSyncedRef = useRef(new Set());
+
     // MODAL STATES
     const [isCreateListModalOpen, setIsCreateListModalOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -1097,6 +1433,20 @@ function OrganistApp() {
     const [playlistToDelete, setPlaylistToDelete] = useState(null);
     const [alertMessage, setAlertMessage] = useState(null);
     const [isFullscreenModalOpen, setIsFullscreenModalOpen] = useState(() => FULLSCREEN_SUPPORTED && !isFullscreen() && !settings.skipFullscreenPrompt);
+
+    // A könyvek szerveren lévő változata. A háttérben töltődik: indulásnál nem várunk rá, így rossz hálózaton
+    // (vagy internet nélkül) is azonnal használható a program a készüléken lévő könyvekkel.
+    const refreshRemoteBooks = useCallback((entries) => {
+        entries.filter(entry => !entry.orphan).forEach(({ folder }) => {
+            fetchRemoteBook(folder)
+                .then(remote => setBooks(bs => bs.map(b => b.folder === folder ? { ...b, remote, remoteError: null } : b)))
+                .catch(err => {
+                    const remoteError = err instanceof TypeError ? NO_CONNECTION : err.message;
+                    if (remoteError !== NO_CONNECTION) console.error(`Kottakönyv (${folder}):`, err);
+                    setBooks(bs => bs.map(b => b.folder === folder ? { ...b, remoteError } : b));
+                });
+        });
+    }, []);
 
     // LOAD DATA & PERSISTENCE
     useEffect(() => {
@@ -1115,14 +1465,86 @@ function OrganistApp() {
                 return [];
             });
 
-        Promise.all([loadJSONFile('./data/enek.json'), loadJSONFile('./data/kottakonyvek.json')])
-            .then(([hymns, books]) => {
+        Promise.all([loadJSONFile('./data/enek.json'), loadJSONFile(CATALOG_URL), readDownloadedBooks().catch(() => ({}))])
+            .then(([hymns, catalog, downloaded]) => {
+                const entries = normalizeCatalog(catalog).map(entry => ({ ...entry, orphan: false, remote: null, remoteError: null, local: downloaded[entry.folder] || null }));
+                // A listából azóta kikerült, de letöltött könyv is megmarad (törölni a felhasználó tudja)
+                Object.keys(downloaded).filter(folder => !entries.some(e => e.folder === folder))
+                    .forEach(folder => entries.push({ folder, builtin: false, orphan: true, remote: null, remoteError: null, local: downloaded[folder] }));
                 setHymnBook(hymns);
-                setScorebooks(books);
+                setBooks(entries);
                 if (errors.length) setAlertMessage(`Hiba az adatfájlok betöltésekor: ${errors.join(', ')}`);
                 setLoading(false);
+                refreshRemoteBooks(entries);
             });
-    }, []);
+    }, [refreshRemoteBooks]);
+
+    // Internetkapcsolat: ha visszajön, újra megnézzük a szerveren lévő könyveket (frissítések, letölthetőség)
+    useEffect(() => {
+        const update = () => {
+            setOnline(navigator.onLine);
+            if (navigator.onLine) refreshRemoteBooks(booksRef.current);
+        };
+        window.addEventListener('online', update);
+        window.addEventListener('offline', update);
+        return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update); };
+    }, [refreshRemoteBooks]);
+
+    // Könyv letöltése (vagy frissítése) a készülékre
+    const startDownload = (folder) => {
+        const book = booksRef.current.find(b => b.folder === folder);
+        if (!OFFLINE_SUPPORTED || !book || !book.remote || downloadControllersRef.current[folder]) return;
+        const controller = new AbortController();
+        downloadControllersRef.current[folder] = controller;
+        setDownloads(d => ({ ...d, [folder]: { done: 0, total: bookFiles(book.remote.index).length } }));
+        // a böngésző ne törölje magától a letöltött könyveket, ha fogy a hely
+        if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+        const withoutFolder = (d) => { const rest = { ...d }; delete rest[folder]; return rest; };
+        downloadBook({
+            folder, remote: book.remote, previous: book.local, signal: controller.signal,
+            onProgress: (done, total) => setDownloads(d => d[folder] ? { ...d, [folder]: { done, total } } : d)
+        })
+            .then(local => {
+                setBooks(bs => bs.map(b => b.folder === folder ? { ...b, local } : b));
+                setDownloads(withoutFolder);
+            })
+            .catch(err => {
+                if (controller.signal.aborted) { setDownloads(withoutFolder); return; }
+                console.error(`Letöltési hiba (${folder}):`, err);
+                const error = err instanceof TypeError ? NO_CONNECTION
+                    : err && err.name === 'QuotaExceededError' ? 'nincs elég szabad hely a készüléken' : err.message;
+                setDownloads(d => ({ ...d, [folder]: { error } }));
+            })
+            .finally(() => { delete downloadControllersRef.current[folder]; });
+    };
+
+    const cancelDownload = (folder) => {
+        const controller = downloadControllersRef.current[folder];
+        if (controller) controller.abort();
+    };
+
+    const confirmDeleteBook = () => {
+        if (!bookToDelete) return;
+        const { folder } = bookToDelete;
+        setBookToDelete(null);
+        deleteDownloadedBook(folder)
+            .then(() => setBooks(bs => bs.filter(b => !(b.folder === folder && b.orphan)).map(b => b.folder === folder ? { ...b, local: null } : b)))
+            .catch(err => setAlertMessage(`A könyv törlése nem sikerült: ${err.message}`));
+    };
+
+    // A beépített könyv magától mentődik a készülékre, és frissül, ha a szerveren változott.
+    // Egy változatot csak egyszer próbálunk (hiba után a Kottakönyvek oldalon lehet újrapróbálni).
+    useEffect(() => {
+        if (!OFFLINE_SUPPORTED) return;
+        books.forEach(book => {
+            if (!book.builtin || !book.remote || downloads[book.folder]) return;
+            if (book.local && sameBookText(book.local.text, book.remote.text)) return;
+            const key = `${book.folder}\n${book.remote.text}`;
+            if (autoSyncedRef.current.has(key)) return;
+            autoSyncedRef.current.add(key);
+            startDownload(book.folder);
+        });
+    }, [books, downloads]);
 
     // NAVIGÁCIÓ: minden nézetváltás egy history-bejegyzés, a vissza gomb ezt állítja vissza.
     // A bejegyzés csak azonosítókat tárol, ezért a kezelőnek nincs szüksége a friss adatokra.
@@ -1163,6 +1585,21 @@ function OrganistApp() {
         }));
     };
 
+    // A kották forrása: a beépített könyv (a szerveren lévő, ennek hiányában a mentett változat) és a letöltött
+    // könyvek (a letöltött változat, hogy a kották és a leírásuk összetartozzon). Ha a böngésző nem tud menteni
+    // (pl. http-n, IP-címmel megnyitva), minden könyv a szerverről, internettel használható, mint régen.
+    // Ha a könyvek tartalma nem változott, a korábbi tömb marad, így a kottanézet sem számol feleslegesen újra.
+    const scorebooksRef = useRef([]);
+    const scorebooks = useMemo(() => {
+        const next = books
+            .map(b => b.builtin || !OFFLINE_SUPPORTED ? (b.remote ? b.remote.index : b.local && b.local.index) : b.local && b.local.index)
+            .filter(Boolean);
+        const prev = scorebooksRef.current;
+        if (next.length === prev.length && next.every((b, i) => b === prev[i])) return prev;
+        scorebooksRef.current = next;
+        return next;
+    }, [books]);
+
     const activeScores = useMemo(() => {
         const grouped = {};
         // Egy könyvben ugyanahhoz az énekhez több letét is tartozhat azonos "id"-vel (pl. két változat a 7. zsoltárhoz);
@@ -1195,7 +1632,7 @@ function OrganistApp() {
                 const variation = {
                     id: uniqueId(`${book.id}_${score.id}`),
                     name: score.name || book.title,
-                    xmlUrl: resolveDataUrl(score.xmlUrl),
+                    xmlUrl: resolveBookUrl(score.xmlUrl, book.folder),
                     voiceCount: score.voiceCount,
                     composer: details,
                     year: score.year || book.year
@@ -1211,7 +1648,7 @@ function OrganistApp() {
                      grouped[linkId].preludes.push(...score.preludes.map(p => ({
                          ...p,
                          id: uniqueId(`${book.id}_${score.id}_pre_${p.id}`),
-                         xmlUrl: resolveDataUrl(p.xmlUrl),
+                         xmlUrl: resolveBookUrl(p.xmlUrl, book.folder),
                          composer: p.composer || details
                      })));
                 }
@@ -1235,7 +1672,7 @@ function OrganistApp() {
                 const preludeItem = {
                     id: uniqueId(`${book.id}_pre_${prelude.id}`),
                     name: prelude.name || book.title,
-                    xmlUrl: resolveDataUrl(prelude.xmlUrl),
+                    xmlUrl: resolveBookUrl(prelude.xmlUrl, book.folder),
                     composer: details,
                     year: prelude.year || book.year
                 };
@@ -1291,12 +1728,18 @@ function OrganistApp() {
     // A betöltő képernyő és a böngésző „túlgörgetett” széle is a téma színét kapja
     useEffect(() => { document.body.style.backgroundColor = currentTheme.sidebar; }, [currentTheme.sidebar]);
 
-    // Update Selection when Hymn Changes
+    // Énekváltáskor az első változat, előjáték nélkül. Ha csak a könyvek változtak (pl. letöltés a háttérben),
+    // a választás megmarad, amíg létezik.
+    const lastHymnNumberRef = useRef(null);
     useEffect(() => {
         if (!selectedHymn) return;
         const score = getScoreById(selectedHymn.scoreId);
-        setCurrentVariationId(score && score.variations.length > 0 ? score.variations[0].id : null);
-        setCurrentPreludeId(null); // Reset prelude on song change
+        const variations = score ? score.variations : [];
+        const preludes = score ? score.preludes : [];
+        const hymnChanged = lastHymnNumberRef.current !== selectedHymn.number;
+        lastHymnNumberRef.current = selectedHymn.number;
+        setCurrentVariationId(prev => !hymnChanged && variations.some(v => v.id === prev) ? prev : (variations.length > 0 ? variations[0].id : null));
+        setCurrentPreludeId(prev => !hymnChanged && preludes.some(p => p.id === prev) ? prev : null);
     }, [selectedHymn, activeScores]);
 
     const getScoreById = (scoreId) => {
@@ -1400,6 +1843,7 @@ function OrganistApp() {
                 <HymnSelectorModal isOpen={isHymnSelectorOpen} onClose={() => setIsHymnSelectorOpen(false)} onSelect={handleHymnSelected} hymnBook={hymnBook} />
                 <DeleteConfirmModal isOpen={!!itemToDelete} onClose={() => setItemToDelete(null)} onConfirm={confirmDeleteItem} title="Ének törlése" message="Biztosan el szeretnéd távolítani ezt az éneket a listáról?" />
                 <DeleteConfirmModal isOpen={!!playlistToDelete} onClose={() => setPlaylistToDelete(null)} onConfirm={confirmDeletePlaylist} title="Lista törlése" message={`Biztosan törölni szeretnéd a(z) "${playlistToDelete?.name}" listát?`} />
+                <DeleteConfirmModal isOpen={!!bookToDelete} onClose={() => setBookToDelete(null)} onConfirm={confirmDeleteBook} title="Letöltött könyv törlése" message={`A(z) „${bookToDelete?.title}” kottái törlődnek erről a készülékről, és addig nem jelennek meg, amíg újra le nem töltöd.`} />
                 
                 {isAddModalOpen && (pendingHymnToAdd || selectedHymn) && (
                     <AddToPlaylistModal 
@@ -1529,63 +1973,8 @@ function OrganistApp() {
                 )}
 
                 {view === 'scorebooks' && (
-                    <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
-                        <div className="header centered">
-                            <h1 className="header-title main">Kottakönyvek</h1>
-                        </div>
-
-                        <div className="main-content" style={{padding:'1rem', overflowY:'auto'}}>
-                            <p className="text-center">
-                                Kapcsold ki azokat a könyveket, amiknek a kottáit nem szeretnéd látni.
-                            </p>
-
-                            {/* ÜRES ÁLLAPOT KEZELÉSE */}
-                            {scorebooks.length === 0 && (
-                                <div className="card list-item scorebook-empty">
-                                    <div className="card-decoration" style={{ backgroundColor: 'var(--col-red)' }}></div>
-                                    <div className="text-center">
-                                        <h3 className="font-bold">Még nincsenek kottakönyvek betöltve!</h3>
-                                        <p className="text-sm">Ellenőrizd a data/kottakonyvek.json fájlt.</p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* KÖNYVEK LISTÁZÁSA */}
-                            <div className="scorebook-list">
-                            {scorebooks.map(book => {
-                                const isActive = isBookActive(book, settings.bookActive);
-                                return (
-                                    <div key={book.id} className={`card list-item scorebook-item ${!isActive ? 'inactive' : ''}`}>
-                                        <div className="card-decoration"></div>
-                                        
-                                        <div className="scorebook-content">
-                                            <div className="scorebook-header">
-                                                <h3 className="font-bold text-ink scorebook-title">{book.title}</h3>
-                                                <label className="toggle-switch scorebook-toggle">
-                                                    <input 
-                                                        type="checkbox" 
-                                                        checked={isActive} 
-                                                        onChange={() => toggleBookActive(book)}
-                                                    />
-                                                    <span className="slider"></span>
-                                                </label>
-                                            </div>
-
-                                            <div className="scorebook-details">
-                                                <div>{book.scores?.length || 0} db letét, {book.preludes?.length || 0} db előjáték</div>
-                                                <strong>{book.author || 'Ismeretlen'}</strong>
-                                            </div>
-                                            
-                                            {book.description && (
-                                                <div className="scorebook-description">{book.description}</div>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                            </div>
-                        </div>
-                    </div>
+                    <ScorebooksView books={books} downloads={downloads} bookActive={settings.bookActive} online={online}
+                        onToggle={toggleBookActive} onDownload={startDownload} onCancel={cancelDownload} onDelete={setBookToDelete} />
                 )}
 
                 
@@ -1636,6 +2025,11 @@ function OrganistApp() {
             </div>
         </div>
     );
+}
+
+// Offline működés: a service worker (sw.js) az oldalt és a letöltött kottákat internet nélkül is kiszolgálja
+if ('serviceWorker' in navigator && window.isSecureContext) {
+    navigator.serviceWorker.register('sw.js').catch(err => console.info('A service worker nem indult el:', err.message));
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));

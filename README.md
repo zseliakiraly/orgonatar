@@ -41,19 +41,37 @@ nyilvánossá kell tenni.
 
 - `libs/`: `react.js` és `react-dom.js` (React 18 UMD build),
   `opensheetmusicdisplay.min.js`; a `babel.js` csak a `dev.html`-hez kell.
-- `data/`: `enek.json`, `kottakonyvek.json` és a bennük hivatkozott kottafájlok
+- `data/enek.json`: az énekek.
+- `data/kottakonyvek.json`: a kottakönyvek listája (csak a mappák).
+- `data/<mappa>/index.json`: egy kottakönyv adatai és kottái; mellette a kottafájlok
   (MusicXML: `.xml`, `.musicxml`, `.mxl`; vagy kép: `.png`, `.jpg`, `.svg`).
+- `sw.js`: service worker az offline működéshez (lásd lent).
 
 ### Adatformátum (amit a kód használ)
 
 - `enek.json`: `[{ "number": "42", "title": "…", "lyrics": "1. …\n…\n\n2. …", "scoreId": "42" }]`
   A versszakokat üres sor választja el, és mindegyik `1.`, `2.` … számmal kezdődik.
-- `kottakonyvek.json`: kottakönyvek listája: `id`, `title`, `author`, `year`,
-  `description`, `active` (`false` = alapból kikapcsolva), `scores` és `preludes`.
-  A letét és az előjáték `scoreId` mezője (ennek hiányában az `id`) köti a kottát az
-  énekhez (`enek.json` → `scoreId`). További mezők: `name`, `xmlUrl`, `voiceCount`,
-  `composer`, `year`. Az `xmlUrl` az `index.html`-hez képest relatív útvonal
-  (`data/...`); a `/data/...` alakot a program automatikusan relatívvá alakítja.
+- `kottakonyvek.json`: `[{ "folder": "enekeskonyv2021", "builtin": true }, { "folder": "genfi" }]`.
+  A sorrend a Kottakönyvek oldal sorrendje. A `"builtin": true` könyv beépített: mindig
+  elérhető, és magától mentődik a készülékre. A többit a felhasználó töltheti le.
+- `<mappa>/index.json`: egy könyv: `id`, `title`, `author`, `description`, `copyright`,
+  `active` (`false` = alapból elrejtve), `scores` és `preludes`. A letét és az előjáték
+  `scoreId` mezője (ennek hiányában az `id`) köti a kottát az énekhez (`enek.json` → `scoreId`).
+  További mezők: `name`, `xmlUrl`, `voiceCount`, `composer`, `year`.
+  - Az `xmlUrl` a könyv mappájához képest értendő: `"165fm-3k-2017.svg"`, másik könyv
+    mappájából `"../genfi/001-bm-3k-2010.mxl"`. A régi `data/...` és `/data/...` alak is működik.
+  - A könyv `id`-je ne változzon: a listák ehhez kötik a kiválasztott változatot.
+
+### Új könyv, új kották
+
+1. Új könyvhöz új mappa a `data/` alatt (pl. `data/kk59/`), benne az `index.json` és a kottafájlok.
+2. A mappa neve a `data/kottakonyvek.json`-ba: `{ "folder": "kk59" }`.
+
+Ha egy meglévő könyvbe kerül új kotta, elég a fájlt feltölteni és az `index.json`-t bővíteni.
+A letöltött könyvnél a Kottakönyvek oldalon megjelenik a „Frissítés” gomb, a beépített könyv
+magától frissül. A program az `index.json` változásából veszi észre a frissítést. Ha egy kottát
+ugyanazzal a fájlnévvel cserélsz le, az `index.json`-ban is változtass valamit, például a
+könyv `"version"` mezőjét (`"version": "2026-10-01"`). Frissítéskor a lecserélt fájl is letöltődik.
 
 ## Témák
 
@@ -67,7 +85,27 @@ A beállításokban választható: **Pergamen** (alapértelmezett), Papirusz, S�
 ## Tárolás
 
 A listák és a beállítások a böngésző localStorage-ában vannak
-(`orgonista_playlists`, `orgonista_settings`), tehát eszközönként külön.
+(`orgonista_playlists`, `orgonista_settings`), a letöltött kottakönyvek a böngésző
+Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönként külön tárolódik.
+
+## Kottakönyvek letöltése, offline működés
+
+- **Letöltés:** a Kottakönyvek oldalon a beépített könyv mindig elérhető. A többit a „Letöltés”
+  gomb menti a készülékre, és csak a letöltött könyvek kottái jelennek meg. A letöltés
+  megszakítható, a letöltött könyv törölhető.
+- **Internet nélkül:** a letöltött könyvek és maga az oldal is működik (`sw.js`, service
+  worker). Ha a hálózat nem válaszol (pl. van WiFi, de nincs internet), néhány másodperc
+  után a mentett változat jön.
+- **Frissítés:** ha a szerveren megváltozik egy letöltött könyv `index.json`-ja, a kártyán
+  „Frissítés” gomb jelenik meg. Ilyenkor csak az új és a megváltozott fájlok töltődnek le.
+  A szerveren hiányzó fájlokat a letöltés kihagyja, és a kártyán jelzi a számukat.
+- **iPad, iPhone:** a Safari törölheti a weboldalak tárolt adatait (a letöltött könyveket és a
+  listákat is), ha az oldalt kb. egy hétig nem nyitod meg. Megbízhatóbb, ha az oldalt a
+  Megosztás → „Főképernyőhöz adás” menüvel a kezdőképernyőre teszed, és onnan indítod. Az
+  így indított oldal külön tárolót kap, ott újra le kell tölteni a könyveket.
+- Az offline működéshez https kell (GitHub Pages), vagy helyben a `localhost` cím. Ha az oldalt
+  https nélkül nyitod meg (pl. helyi hálózaton, IP-címmel), nincs letöltés: ilyenkor minden könyv
+  a szerverről, internettel használható.
 
 ## Kottanézet és lejátszó
 

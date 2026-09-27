@@ -1,1 +1,15 @@
-fazekas
+{
+  "id": "fazekas_kottak",
+  "title": "Fazekas Márton letétei",
+  "author": "Fazekas Márton",
+  "copyright": "Fazekas Márton saját kották",
+  "description": "Saját letéteim, egy része Parola Csaba segítségével készült, a többi szabadon tenyészik.",
+  "scores": [
+    { "id": "1", "composer": "Teszt Mihály", "voiceCount": 3, "year": "2010", "xmlUrl": "../genfi/001-bm-3k-2010.mxl" },
+    { "id": "165", "composer": "Fazekas Márton", "voiceCount": 3, "year": "2017", "xmlUrl": "165fm-3k-2017.svg" },
+    { "id": "196", "composer": "Fazekas Márton", "voiceCount": 4, "year": "2015", "xmlUrl": "196fm-4k-2015.svg" }
+  ],
+  "preludes": [
+    { "id": "165", "composer": "Fazekas Márton", "year": "2017", "xmlUrl": "165fm-E-2017.svg" }
+  ]
+}

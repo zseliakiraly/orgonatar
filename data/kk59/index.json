@@ -1,0 +1,11 @@
+{
+  "id": "koralkonyv59",
+  "title": "Református Korálkönyv (1959)",
+  "author": "Ismeretlen",
+  "copyright": "egyhazzene.reformatus.hu",
+  "description": "Az 1959-as kiadású korálkönyv. Letölthető az egyhazzene.reformatus.hu weboldalról. ",
+  "scores": [
+    { "id": "641", "composer": "Erkel Ferenc", "voiceCount": 4, "year": "1844", "xmlUrl": "641-erkel-1844.svg" }
+  ],
+  "preludes": []
+}
