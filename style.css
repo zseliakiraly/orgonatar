@@ -395,16 +395,23 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .player-heading-info { flex: 0 1 auto; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .player-position { font-weight: 600; color: var(--col-ink-muted, #666); white-space: nowrap; }
 .player-position-sep { color: var(--col-ink-muted, #666); opacity: 0.6; }
-.player-clock {
-    position: relative; flex-shrink: 0; margin-left: 0.75rem;
-    padding: 0.15rem 0.65rem; border-radius: 0.5rem;
-    font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap;
-    color: var(--col-ink);
+.player-header-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; margin-left: 0.75rem; }
+/* gyors megnyitás (számbillentyűzet ikon): ugyanolyan halvány háttér, mint az óráé */
+.player-quick-open {
+    position: relative; width: 44px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 0.5rem; color: var(--col-ink); touch-action: manipulation;
 }
-/* minimálisan eltérő háttér: a szöveg színe halványan, így minden színsémához illik */
-.player-clock::before {
+.player-quick-open::before, .player-clock::before {
     content: ''; position: absolute; top: 0; right: 0; bottom: 0; left: 0;
     border-radius: inherit; background-color: currentColor; opacity: 0.08; pointer-events: none;
+}
+.player-quick-open:active::before { opacity: 0.16; }
+.player-clock {
+    position: relative; flex-shrink: 0; height: 40px; display: flex; align-items: center;
+    padding: 0 0.65rem; border-radius: 0.5rem;
+    font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap;
+    color: var(--col-ink);
 }
 .player-view {
     position: fixed;
@@ -539,6 +546,59 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .hymn-selector-item-hymn-title {
     color: var(--col-ink);
     font-weight: 500; /* font-medium */
+}
+.hymn-selector-empty { padding: 1rem; text-align: center; font-style: italic; color: var(--col-ink-muted, #999); }
+
+/* Énekválasztó számbillentyűzettel: bal oldalon a kereső és a lista, jobb oldalon a billentyűzet.
+   Az ablak magasságát a billentyűzet adja, a lista ebben görget. */
+.hymn-picker { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 1rem; }
+.hymn-picker-search { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.hymn-picker-results { position: relative; flex: 1; min-height: 200px; }
+.hymn-picker-results .hymn-selector-list { position: absolute; top: 0; right: 0; bottom: 0; left: 0; overflow-y: auto; }
+.hymn-keypad {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 12px; border-radius: 0.5rem;
+    background-color: rgba(0, 0, 0, 0.035);
+}
+.hymn-keypad-label {
+    text-align: center; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--col-ink-muted, #666);
+}
+.hymn-keypad-display {
+    height: 60px; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-serif); font-size: 2.4rem; font-weight: 700; color: var(--col-ink);
+    background-color: var(--col-card-raised, #fff);
+    border: 1px solid var(--col-border-dark, #bbb); border-radius: 0.375rem;
+}
+.hymn-keypad-hint {
+    min-height: 1.25rem; text-align: center; font-size: 0.85rem; font-style: italic;
+    color: var(--col-ink-muted, #666);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hymn-keypad-hint.not-found { color: var(--col-red); font-weight: 700; }
+.hymn-keypad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.hymn-keypad-grid button {
+    height: 56px; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-serif); font-size: 1.6rem; font-weight: 700; color: var(--col-ink);
+    background-color: var(--col-card-raised, #fff);
+    border: 1px solid var(--col-border, #ddd); border-radius: 0.375rem;
+    touch-action: manipulation; -webkit-user-select: none; user-select: none;
+}
+.hymn-keypad-grid button:active { background-color: var(--col-border, #ddd); }
+.hymn-keypad-grid .hymn-keypad-clear {
+    font-family: inherit; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--col-red);
+}
+.hymn-keypad-open { height: 52px; justify-content: center; touch-action: manipulation; }
+.hymn-keypad-open:disabled { opacity: 0.5; cursor: default; }
+/* keskeny kijelzőn a billentyűzet kerül felülre (a megnyitás gomb görgetés nélkül is látszik), alatta a kereső */
+@media (max-width: 640px) {
+    .hymn-picker { grid-template-columns: 1fr; }
+    .hymn-keypad { order: -1; }
+    .hymn-picker-results { flex: none; height: 28vh; min-height: 140px; }
+}
+@media (max-height: 640px) {
+    .hymn-keypad-grid button { height: 46px; }
+    .hymn-keypad-display { height: 50px; }
 }
 
 
