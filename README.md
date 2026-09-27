@@ -121,6 +121,13 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
   teljes szélességet).
 - A lejátszó fejlécében balra a lista sorszáma (pl. `1/4`), utána az énekszám és a cím; jobbra az óra.
   Az óra a beállításokban kikapcsolható („Óra a lejátszóban”, alapból látszik).
+- **Gyors megnyitás:** az óra melletti (számbillentyűzet ikonos) gomb énekválasztót nyit.
+  - Balra a kereső és a találatok, jobbra nagygombos számbillentyűzet.
+  - Tableten a kereső nem kap magától fókuszt, így nem ugrik fel a képernyő-billentyűzet. A keresőre
+    koppintva szöveggel is lehet keresni.
+  - A kiválasztott ének oldala nyílik meg; a vissza gomb a lejátszóba visz, ugyanoda.
+  - Fizikai billentyűzeten is működik: számok, Backspace, Enter, Escape.
+  - A lista szerkesztőjében az „Új ének hozzáadása” ugyanezt az ablakot nyitja.
 - Lapozás a lejátszóban: koppintás a kottaterület bal vagy jobb szélére (a szélső 15%-ra) az előző /
   következő énekre lapoz.
 - Billentyűzet vagy Bluetooth lapozópedál: mindig egész éneket lapoz.

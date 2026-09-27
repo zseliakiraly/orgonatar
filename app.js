@@ -33,6 +33,12 @@ const Icons = {
     List: (props) => <IconBase {...props}><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></IconBase>,
     ListOrdered: (props) => <IconBase {...props}><line x1="10" x2="21" y1="6" y2="6"></line><line x1="10" x2="21" y1="12" y2="12"></line><line x1="10" x2="21" y1="18" y2="18"></line><path d="M4 6h1v4"></path><path d="M4 10h2"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></IconBase>,
     Maximize: (props) => <IconBase {...props}><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></IconBase>,
+    // Saját ikon a gyors megnyitáshoz: számbillentyűzet (3×3 gomb és a 0)
+    Dialpad: (props) => <IconBase {...props}>
+        {[6, 12, 18].map(x => [4.5, 10, 15.5].map(y => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.9" fill="currentColor" stroke="none" />))}
+        <circle cx="12" cy="21" r="1.9" fill="currentColor" stroke="none" />
+    </IconBase>,
+    Backspace: (props) => <IconBase {...props}><path d="M20 5H9l-7 7 7 7h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z"/><line x1="18" x2="12" y1="9" y2="15"/><line x1="12" x2="18" y1="9" y2="15"/></IconBase>,
 };
 
 const parseVerses = (lyrics) => {
@@ -447,27 +453,98 @@ const FullscreenModal = ({ isOpen, onClose, onConfirm }) => {
     );
 };
 
-const HymnSelectorModal = ({ isOpen, onClose, onSelect, hymnBook }) => {
+// Érintőképernyős eszköz (tablet, telefon): itt nem adunk automatikusan fókuszt a keresőmezőnek, mert a képernyő-
+// billentyűzet (fekvő tableten) a fél képernyőt eltakarná; számot a nagygombos számbillentyűzettel lehet beírni.
+const TOUCH_DEVICE = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+const KEYPAD_MAX_DIGITS = 4;
+
+// Énekválasztó: bal oldalon kereső és találati lista, jobb oldalon nagygombos számbillentyűzet. A billentyűzet a
+// keresőbe ír, de nem adja rá a fókuszt. Fizikai billentyűzeten is működik: számok, Backspace, Enter, Escape.
+const HymnSelectorModal = ({ isOpen, onClose, onSelect, hymnBook, title = 'Ének választása', action = 'kiválasztása', ItemIcon = Icons.Plus }) => {
     const [search, setSearch] = useState('');
     const inputRef = useRef(null);
-    useEffect(() => { if(isOpen) { setSearch(''); setTimeout(() => inputRef.current?.focus(), 100); } }, [isOpen]);
+    const latestRef = useRef({});
+    useEffect(() => {
+        if (!isOpen) return;
+        setSearch('');
+        if (!TOUCH_DEVICE) setTimeout(() => inputRef.current?.focus(), 100);
+    }, [isOpen]);
     const searchIndex = useMemo(() => buildSearchIndex(hymnBook || []), [hymnBook]);
     const filtered = useMemo(() => searchHymns(searchIndex, search), [searchIndex, search]);
+    const number = /^\d+$/.test(search.trim()) ? search.trim() : '';
+    const exact = number ? filtered.find(h => String(h.number) === number) || null : null;
+
+    // Számjegy a billentyűzetről: ha a keresőben szöveg volt, új számot kezd
+    const pressDigit = (digit) => setSearch(s => {
+        const current = /^\d+$/.test(s.trim()) ? s.trim() : '';
+        return current.length >= KEYPAD_MAX_DIGITS ? current : current + digit;
+    });
+    const backspace = () => setSearch(s => s.slice(0, -1));
+    // Enter: pontos számegyezés, ennek hiányában az első találat
+    const confirm = () => {
+        const { exact, filtered } = latestRef.current;
+        const hymn = exact || (filtered && filtered[0]);
+        if (hymn) onSelect(hymn);
+    };
+    latestRef.current = { exact, filtered, onClose, pressDigit, backspace, confirm };
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKeyDown = (e) => {
+            const actions = latestRef.current;
+            if (e.key === 'Escape') { e.preventDefault(); actions.onClose(); return; }
+            if (e.target === inputRef.current || e.altKey || e.ctrlKey || e.metaKey) return; // a keresőmezőben a böngésző kezeli
+            if (/^\d$/.test(e.key)) { e.preventDefault(); actions.pressDigit(e.key); }
+            else if (e.key === 'Backspace') { e.preventDefault(); actions.backspace(); }
+            else if (e.key === 'Enter' && !(e.target.closest && e.target.closest('button'))) { e.preventDefault(); actions.confirm(); }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen]);
+
     if (!isOpen) return null;
+    // a billentyűzet gombjai ne vegyék el a fókuszt (így a képernyő-billentyűzet sem ugrik fel, és az Enter sem nyom rájuk)
+    const keepFocus = (e) => e.preventDefault();
 
     return (
-        <Modal title="Ének választása" onClose={onClose} footer={null}>
-            <div className="hymn-selector-search">
-                <Icons.Search className="search-icon" size={18}/>
-                <input ref={inputRef} type="text" className="input search" placeholder="Keresés számra, címre vagy szövegre..." value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && filtered.length > 0) onSelect(filtered[0]); }} />
-            </div>
-            <div className="hymn-selector-list">
-                {filtered.map(h => (
-                    <button key={h.number} onClick={() => onSelect(h)} className="hymn-selector-item">
-                        <div><span className="hymn-selector-item-hymn-number">#{h.number}</span><span className="hymn-selector-item-hymn-title">{h.title}</span></div>
-                        <Icons.Plus size={18} className="icon-plus"/>
+        <Modal title={title} onClose={onClose} footer={null} maxWidth="820px">
+            <div className="hymn-picker">
+                <div className="hymn-picker-search">
+                    <div className="hymn-selector-search">
+                        <Icons.Search className="search-icon" size={18}/>
+                        <input ref={inputRef} type="text" className="input search" placeholder="Keresés számra, címre vagy szövegre..." value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') confirm(); }} />
+                    </div>
+                    <div className="hymn-picker-results">
+                        <div className="hymn-selector-list">
+                            {filtered.map(h => (
+                                <button key={h.number} onClick={() => onSelect(h)} className="hymn-selector-item">
+                                    <div><span className="hymn-selector-item-hymn-number">#{h.number}</span><span className="hymn-selector-item-hymn-title">{h.title}</span></div>
+                                    <ItemIcon size={18} className="icon-plus"/>
+                                </button>
+                            ))}
+                            {filtered.length === 0 && <div className="hymn-selector-empty">Nincs találat</div>}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="hymn-keypad">
+                    <div className="hymn-keypad-label">Énekszám</div>
+                    <div className="hymn-keypad-display">{number || ' '}</div>
+                    <div className={`hymn-keypad-hint ${number && !exact ? 'not-found' : ''}`}>
+                        {exact ? exact.title : number ? 'Nincs ilyen számú ének' : ' '}
+                    </div>
+                    <div className="hymn-keypad-grid">
+                        {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => (
+                            <button key={d} onMouseDown={keepFocus} onClick={() => pressDigit(d)}>{d}</button>
+                        ))}
+                        <button className="hymn-keypad-clear" onMouseDown={keepFocus} onClick={() => setSearch('')}>Törlés</button>
+                        <button onMouseDown={keepFocus} onClick={() => pressDigit('0')}>0</button>
+                        <button onMouseDown={keepFocus} onClick={backspace} title="Utolsó számjegy törlése" aria-label="Utolsó számjegy törlése"><Icons.Backspace size={24}/></button>
+                    </div>
+                    <button className="btn btn-primary hymn-keypad-open" onMouseDown={keepFocus} onClick={() => exact && onSelect(exact)} disabled={!exact}>
+                        {exact ? `${exact.number}. ének ${action}` : 'Írd be az énekszámot'} <Icons.ChevronRight size={18}/>
                     </button>
-                ))}
+                </div>
             </div>
         </Modal>
     );
@@ -1479,6 +1556,7 @@ function OrganistApp() {
     const [isCreateListModalOpen, setIsCreateListModalOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isHymnSelectorOpen, setIsHymnSelectorOpen] = useState(false);
+    const [isQuickOpenOpen, setIsQuickOpenOpen] = useState(false);
     const [targetPlaylistId, setTargetPlaylistId] = useState(null);
     const [pendingHymnToAdd, setPendingHymnToAdd] = useState(null);
     const [itemToDelete, setItemToDelete] = useState(null);
@@ -1898,6 +1976,11 @@ function OrganistApp() {
 
     const openPlaylistEditor = (pl) => navigate({ activeTab: 'playlist_editor', selectedPlaylistId: pl.id });
     const handleAddHymnToEditor = () => { setIsHymnSelectorOpen(true); };
+    // Gyors megnyitás a lejátszóból: az ének oldala nyílik meg; a vissza gomb a lejátszóba visz, ugyanoda
+    const handleQuickOpen = (hymn) => {
+        setIsQuickOpenOpen(false);
+        navigate({ activeTab: 'library', selectedHymnNumber: hymn.number });
+    };
     const handleHymnSelected = (hymn) => {
         setIsHymnSelectorOpen(false);
         setPendingHymnToAdd(hymn);
@@ -1930,6 +2013,7 @@ function OrganistApp() {
                 />
                 <CreatePlaylistModal isOpen={isCreateListModalOpen} onClose={() => setIsCreateListModalOpen(false)} onConfirm={handleCreatePlaylist} />
                 <HymnSelectorModal isOpen={isHymnSelectorOpen} onClose={() => setIsHymnSelectorOpen(false)} onSelect={handleHymnSelected} hymnBook={hymnBook} />
+                <HymnSelectorModal isOpen={isQuickOpenOpen} onClose={() => setIsQuickOpenOpen(false)} onSelect={handleQuickOpen} hymnBook={hymnBook} title="Gyors megnyitás" action="megnyitása" ItemIcon={Icons.ChevronRight} />
                 <DeleteConfirmModal isOpen={!!itemToDelete} onClose={() => setItemToDelete(null)} onConfirm={confirmDeleteItem} title="Ének törlése" message="Biztosan el szeretnéd távolítani ezt az éneket a listáról?" />
                 <DeleteConfirmModal isOpen={!!playlistToDelete} onClose={() => setPlaylistToDelete(null)} onConfirm={confirmDeletePlaylist} title="Lista törlése" message={`Biztosan törölni szeretnéd a(z) "${playlistToDelete?.name}" listát?`} />
                 <DeleteConfirmModal isOpen={!!bookToDelete} onClose={() => setBookToDelete(null)} onConfirm={confirmDeleteBook} title="Letöltött könyv törlése" message={`A(z) „${bookToDelete?.title}” kottái törlődnek erről a készülékről, és addig nem jelennek meg, amíg újra le nem töltöd.`} />
@@ -2093,7 +2177,10 @@ function OrganistApp() {
                                 </div>
                             </div>
 
-                            {settings.showClock && <PlayerClock />}
+                            <div className="player-header-actions">
+                                <button className="player-quick-open" onClick={() => setIsQuickOpenOpen(true)} title="Gyors megnyitás énekszám alapján" aria-label="Gyors megnyitás"><Icons.Dialpad size={24}/></button>
+                                {settings.showClock && <PlayerClock />}
+                            </div>
                         </div>
 
                         <div style={{flex:1, overflow:'hidden', position:'relative'}}>
