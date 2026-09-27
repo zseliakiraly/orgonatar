@@ -119,6 +119,8 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
 - A +/− gomb a legnagyobb méretet állítja 10%-os lépésekben, a felirat a ténylegesen látott méretet
   mutatja. A + nem használható, ha a kotta nagyobban már nem férne ki (képes kottánál: ha elérte a
   teljes szélességet).
+- A lejátszó fejlécében balra a lista sorszáma (pl. `1/4`), utána az énekszám és a cím; jobbra az óra.
+  Az óra a beállításokban kikapcsolható („Óra a lejátszóban”, alapból látszik).
 - Lapozás a lejátszóban: koppintás a kottaterület bal vagy jobb szélére (a szélső 15%-ra) az előző /
   következő énekre lapoz.
 - Billentyűzet vagy Bluetooth lapozópedál: mindig egész éneket lapoz.
