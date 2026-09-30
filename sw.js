@@ -2,21 +2,24 @@
 //  - Az oldal fájljai (index.html, app.min.js, style.css, libs/, data/enek.json, data/kottakonyvek.json):
 //    a hálózatról jönnek, ha az elérhető (így a frissítések rögtön megjelennek), és közben elmentjük őket.
 //    Internet nélkül, vagy ha a hálózat nem válaszol időben, a mentett változat jön.
+//  - A kottarajzoló (libs/verovio/, kb. 7 MB): mindig a mentett példány, hogy ne kelljen minden indításkor a hálózatra
+//    várni, és újra elmenteni. Új változatánál az APP_CACHE számát növelni kell: ekkor a készülék újra letölti.
 //  - A kottakönyvek fájljai (data/<mappa>/...): a készülékre letöltött könyvből, ha ott vannak, különben a hálózatról.
 //    A könyvek letöltését és törlését az app.js végzi; a letöltés kérései (X-Letoltes fejléc) mindig a hálózatra mennek.
-const APP_CACHE = 'orgonatar-app-v1';
+const APP_CACHE = 'orgonatar-app-v2'; // új számnál a készülékek a régi mentett oldalfájlokat törlik
 const NETWORK_TIMEOUT = 4000; // ms: rossz (pl. templomi) hálózaton ennyi után a mentett változat jön
 const SLOW_NETWORK_PAUSE = 30000; // ms: időtúllépés után ennyi ideig nem várunk a hálózatra, rögtön a mentett jön
 const APP_FILES = ['./', 'index.html', 'app.min.js', 'style.css', 'libs/react.js', 'libs/react-dom.js',
-    'libs/opensheetmusicdisplay.min.js', 'data/enek.json', 'data/kottakonyvek.json'];
+    'libs/verovio/verovio-toolkit-wasm.js', 'data/enek.json', 'data/kottakonyvek.json'];
+const CACHE_FIRST = /^libs\/verovio\//;
 const SCOPE_PATH = new URL(self.registration.scope).pathname;
 const MATCH_OPTIONS = { ignoreSearch: true, ignoreVary: true };
 
 self.addEventListener('install', (event) => {
-    // Az oldal fájljait rögtön elmentjük, hogy az első látogatás után internet nélkül is induljon
-    // (a böngésző épp letöltött példányait használva, nem töltjük le őket újra)
+    // Az oldal fájljait rögtön elmentjük, hogy az első látogatás után internet nélkül is induljon. A böngésző épp
+    // letöltött példányait használjuk (no-cache: a szerver csak megerősíti, hogy nem változtak), nem töltjük le újra.
     event.waitUntil(caches.open(APP_CACHE)
-        .then(cache => Promise.all(APP_FILES.map(url => cache.add(url).catch(() => {}))))
+        .then(cache => Promise.all(APP_FILES.map(url => cache.add(new Request(url, { cache: 'no-cache' })).catch(() => {}))))
         .then(() => self.skipWaiting()));
 });
 
@@ -36,11 +39,24 @@ self.addEventListener('fetch', (event) => {
     if (url.origin !== self.location.origin || !url.pathname.startsWith(SCOPE_PATH)) return;
     const path = url.pathname.slice(SCOPE_PATH.length);
     if (/^data\/[^/]+\/./.test(path)) event.respondWith(fromDownloadedBook(request));
+    else if (CACHE_FIRST.test(path)) event.respondWith(cacheFirst(request));
     else event.respondWith(networkFirst(event, request));
 });
 
 // Kottakönyv fájlja: a letöltött könyvből, ha ott van
 const fromDownloadedBook = async (request) => (await caches.match(request, MATCH_OPTIONS)) || fetch(request);
+
+// A kottarajzoló: a mentett példány; ha még nincs meg, a hálózatról (és elmentjük)
+const cacheFirst = async (request) => {
+    const cache = await caches.open(APP_CACHE);
+    const saved = await cache.match(request, MATCH_OPTIONS);
+    if (saved) return saved;
+    const response = await fetch(request);
+    if (response.ok) {
+        try { await cache.put(request, response.clone()); } catch (err) { /* pl. betelt a tárhely */ }
+    }
+    return response;
+};
 
 // Az oldal fájljai: a hálózatról (és elmentjük), ennek hiányában vagy késésekor a mentett változat.
 // Ha a hálózat nem válaszolt időben (pl. van WiFi, de nincs internet), egy ideig nem várunk rá újra: a többi fájl

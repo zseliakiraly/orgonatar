@@ -1,8 +1,10 @@
 # orgonatar – Református Kottagyűjtemény
 
 Református énekek orgonakíséreteinek böngészője (2021-es énekeskönyv): kották
-MusicXML-ből (OpenSheetMusicDisplay), énekszövegek, liturgikus listák és
-lejátszó nézet istentisztelethez.
+MusicXML-ből (a [Verovio](https://www.verovio.org) rajzolja őket), énekszövegek,
+liturgikus listák és lejátszó nézet istentisztelethez.
+
+A korábbi, OpenSheetMusicDisplay-jel (OSMD) rajzoló változat az `osmd` ágon van meg.
 
 ## Fájlok
 
@@ -39,12 +41,13 @@ nyilvánossá kell tenni.
 
 ## Adatok és könyvtárak
 
-- `libs/`: `react.js` és `react-dom.js` (React 18 UMD build),
-  `opensheetmusicdisplay.min.js`; a `babel.js` csak a `dev.html`-hez kell.
+- `libs/`: `react.js` és `react-dom.js` (React 18 UMD build); a `babel.js` csak a `dev.html`-hez kell.
+- `libs/verovio/`: a kottarajzoló (Verovio 6.3.0, LGPL-3.0), a licencek és a frissítés leírása
+  (`libs/verovio/README.md`).
 - `data/enek.json`: az énekek.
 - `data/kottakonyvek.json`: a kottakönyvek listája (csak a mappák).
 - `data/<mappa>/index.json`: egy kottakönyv adatai és kottái; mellette a kottafájlok
-  (MusicXML: `.xml`, `.musicxml`, `.mxl`; vagy kép: `.png`, `.jpg`, `.svg`).
+  (MusicXML: `.xml`, `.musicxml`, `.mxl`; MEI: `.mei`; vagy kép: `.png`, `.jpg`, `.svg`).
 - `sw.js`: service worker az offline működéshez (lásd lent).
 
 ### Adatformátum (amit a kód használ)
@@ -73,6 +76,15 @@ magától frissül. A program az `index.json` változásából veszi észre a fr
 ugyanazzal a fájlnévvel cserélsz le, az `index.json`-ban is változtass valamit, például a
 könyv `"version"` mezőjét (`"version": "2026-10-01"`). Frissítéskor a lecserélt fájl is letöltődik.
 
+## Beállítások
+
+- **Megjelenés:** háttér téma, az oldalmenü helye.
+- **Kottanézet és lejátszó:** szövegpanel, oldalsáv és kotta szélessége, óra a lejátszóban.
+- **Kottagrafika:** a kotta rajzolata. Kottafont: **Leipzig** (tömöttebb, alapértelmezett) vagy
+  **Bravura** (szellősebb); mindkettőt ugyanazon a mintakottán mutatja. Az új kottagrafikai
+  beállítások is ide kerülnek (`app.js`: `SettingsView`, „Kottagrafika” szakasz). A Verovio többi
+  beépített fontja (Gootville, Leland, Petaluma) a `SCORE_FONTS` listával kapcsolható be.
+
 ## Témák
 
 A beállításokban választható: **Pergamen** (alapértelmezett), Papirusz, Sötét papirusz, Törtfehér.
@@ -95,7 +107,8 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
   megszakítható, a letöltött könyv törölhető.
 - **Internet nélkül:** a letöltött könyvek és maga az oldal is működik (`sw.js`, service
   worker). Ha a hálózat nem válaszol (pl. van WiFi, de nincs internet), néhány másodperc
-  után a mentett változat jön.
+  után a mentett változat jön. Az első megnyitáskor az oldal a kottarajzolót is letölti
+  (tömörítve kb. 2,4 MB), ez is a készüléken marad.
 - **Frissítés:** ha a szerveren megváltozik egy letöltött könyv `index.json`-ja, a kártyán
   „Frissítés” gomb jelenik meg. Ilyenkor csak az új és a megváltozott fájlok töltődnek le.
   A szerveren hiányzó fájlokat a letöltés kihagyja, és a kártyán jelzi a számukat. Ha ezek
@@ -110,6 +123,9 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
 
 ## Kottanézet és lejátszó
 
+- A kottákat (MusicXML, MEI) a Verovio rajzolja. A kotta címét, szerzőjét és a hangszer nevét
+  (pl. „Zongora”) nem írja ki; a sortörést a hely szélességéhez igazítja, a fájlba írt sortöréseket
+  nem veszi figyelembe.
 - A kottaterület nem görgethető: az oldal (előjáték + kotta) mindig egészben látszik. Ha a beállított
   méretben nem férne ki, a program kisebb nagyítással újratördeli (több ütem kerül egy sorba), így a
   lehető legnagyobb, még kiférő méretben jelenik meg. Ablakméret-változáskor, a tablet elforgatásakor
