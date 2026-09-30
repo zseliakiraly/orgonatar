@@ -56,7 +56,13 @@ const STORAGE_KEYS = { playlists: 'orgonista_playlists', settings: 'orgonista_se
 
 const SETTINGS_VERSION = 2;
 
-const DEFAULT_SETTINGS = { theme: 'pergamen', showLyrics: true, showClock: true, sidebarSide: 'right', lyricsWidth: '15%', scoreMaxWidth: '100%', bookActive: {}, skipFullscreenPrompt: false, settingsVersion: SETTINGS_VERSION };
+// Kottafontok (a Verovio beépített SMuFL-betűkészletei közül); az első az alapértelmezett
+const SCORE_FONTS = [
+    { id: 'Leipzig', hint: 'tömöttebb' },
+    { id: 'Bravura', hint: 'szellősebb' }
+];
+
+const DEFAULT_SETTINGS = { theme: 'pergamen', showLyrics: true, showClock: true, sidebarSide: 'right', lyricsWidth: '15%', scoreMaxWidth: '100%', scoreFont: SCORE_FONTS[0].id, bookActive: {}, skipFullscreenPrompt: false, settingsVersion: SETTINGS_VERSION };
 
 const loadJSON = (key, fallback) => {
     try {
@@ -75,6 +81,7 @@ const loadSettings = () => {
     const stored = loadJSON(STORAGE_KEYS.settings, {});
     const settings = { ...DEFAULT_SETTINGS, ...(typeof stored === 'object' ? stored : {}) };
     if (!settings.bookActive || typeof settings.bookActive !== 'object') settings.bookActive = {};
+    if (!SCORE_FONTS.some(f => f.id === settings.scoreFont)) settings.scoreFont = DEFAULT_SETTINGS.scoreFont;
     // 2. verzió: a Pergamen lett az alapértelmezett téma. A korábbi alapértéket ("papyrus"), amelyet az oldal
     // magától elmentett, egyszer átállítjuk (addig Pergament nem is lehetett választani).
     if ((stored.settingsVersion || 1) < 2 && settings.theme === 'papyrus') settings.theme = 'pergamen';
@@ -343,7 +350,7 @@ const formatBytes = (bytes) => bytes >= 1048576
     ? `${(bytes / 1048576).toLocaleString('hu-HU', { maximumFractionDigits: 1 })} MB`
     : `${bytes > 0 ? Math.max(1, Math.round(bytes / 1024)) : 0} kB`;
 
-// A kotta lehet MusicXML (.xml, .musicxml, .mxl), vagy kép (szkennelt/exportált kotta)
+// A kotta lehet MusicXML (.xml, .musicxml, .mxl) vagy MEI (.mei), ezeket a Verovio rajzolja; vagy kép (szkennelt/exportált kotta)
 const IMAGE_FILE = /\.(png|jpe?g|gif|webp|svg)([?#].*)?$/i;
 const isImageUrl = (url) => IMAGE_FILE.test(url || '');
 
@@ -732,6 +739,67 @@ const AddToPlaylistModal = ({ onClose, onConfirm, playlists, initialVariationId,
     );
 };
 
+// A beállítások oldal egy szakasza (cím + kártyák)
+const SettingsSection = ({ title, children }) => (
+    <section className="settings-section">
+        <h2 className="settings-section-title">{title}</h2>
+        {children}
+    </section>
+);
+
+// Mintakotta a kottafont kiválasztásához: két ütem, négy szólam (G-dúr, plagális zárlat)
+const FONT_SAMPLE_MEI = `<?xml version="1.0" encoding="UTF-8"?>
+<mei xmlns="http://www.music-encoding.org/ns/mei" meiversion="5.1">
+<meiHead><fileDesc><titleStmt><title>Minta</title></titleStmt><pubStmt/></fileDesc></meiHead>
+<music><body><mdiv><score>
+<scoreDef keysig="1s" meter.count="4" meter.unit="4"><staffGrp symbol="brace" bar.thru="true">
+<staffDef n="1" lines="5" clef.shape="G" clef.line="2"/><staffDef n="2" lines="5" clef.shape="F" clef.line="4"/>
+</staffGrp></scoreDef>
+<section>
+<measure n="1">
+<staff n="1"><layer n="1"><note pname="b" oct="4" dur="4" stem.dir="up"/><beam><note pname="c" oct="5" dur="8" stem.dir="up"/><note pname="b" oct="4" dur="8" stem.dir="up"/></beam><note pname="a" oct="4" dur="4" stem.dir="up"/><note pname="g" oct="4" dur="4" stem.dir="up"/></layer>
+<layer n="2"><note pname="g" oct="4" dur="4" stem.dir="down"/><note pname="g" oct="4" dur="4" stem.dir="down"/><note pname="f" oct="4" accid.ges="s" dur="4" stem.dir="down"/><note pname="g" oct="4" dur="4" stem.dir="down"/></layer></staff>
+<staff n="2"><layer n="1"><note pname="d" oct="4" dur="4" stem.dir="up"/><note pname="e" oct="4" dur="4" stem.dir="up"/><note pname="d" oct="4" dur="4" stem.dir="up"/><note pname="b" oct="3" dur="4" stem.dir="up"/></layer>
+<layer n="2"><note pname="g" oct="2" dur="4" stem.dir="down"/><note pname="c" oct="3" dur="4" stem.dir="down"/><note pname="d" oct="3" dur="4" stem.dir="down"/><note pname="g" oct="2" dur="4" stem.dir="down"/></layer></staff>
+</measure>
+<measure n="2" right="end">
+<staff n="1"><layer n="1"><note xml:id="s1" pname="g" oct="4" dur="2" stem.dir="up"/><note xml:id="s2" pname="g" oct="4" dur="2" stem.dir="up"/></layer>
+<layer n="2"><note pname="e" oct="4" dur="2" stem.dir="down"/><note pname="d" oct="4" dur="2" stem.dir="down"/></layer></staff>
+<staff n="2"><layer n="1"><note pname="c" oct="4" dur="2" stem.dir="up"/><note pname="b" oct="3" dur="2" stem.dir="up"/></layer>
+<layer n="2"><note pname="c" oct="3" dur="2" stem.dir="down"/><note xml:id="b2" pname="g" oct="2" dur="2" stem.dir="down"/></layer></staff>
+<tie startid="#s1" endid="#s2"/><fermata staff="1" startid="#s2" place="above"/><fermata staff="2" startid="#b2" place="below"/>
+</measure>
+</section></score></mdiv></body></music></mei>`;
+
+const fontSamples = new Map(); // kottafont → a mintakotta SVG-je (egyszer rajzoljuk ki)
+const renderFontSample = (vrv, font) => {
+    if (!fontSamples.has(font)) {
+        const tk = new vrv.toolkit();
+        try {
+            tk.setOptions({ ...VEROVIO_OPTIONS, breaks: 'none', adjustPageWidth: true, font });
+            tk.loadData(FONT_SAMPLE_MEI);
+            fontSamples.set(font, tk.renderToSVG(1));
+        } finally {
+            tk.destroy();
+        }
+    }
+    return fontSamples.get(font);
+};
+
+const FontSample = ({ font }) => {
+    const ref = useRef(null);
+    const [failed, setFailed] = useState(false);
+    useEffect(() => {
+        let active = true;
+        loadVerovio()
+            .then(vrv => { if (active && ref.current) ref.current.innerHTML = renderFontSample(vrv, font); })
+            .catch(err => { console.info(err.message); if (active) setFailed(true); });
+        return () => { active = false; };
+    }, [font]);
+    if (failed) return <div className="font-sample font-sample-missing">A minta most nem jeleníthető meg</div>;
+    return <div ref={ref} className="font-sample" aria-hidden="true"></div>;
+};
+
 const SettingsView = ({ settings, onUpdateSettings }) => (
     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
         <div className="header centered">
@@ -739,132 +807,241 @@ const SettingsView = ({ settings, onUpdateSettings }) => (
         </div>
         
         <div className="main-content" style={{padding:'2rem', overflowY:'auto'}}>
-            <div style={{width:'100%', maxWidth:'800px', margin:'0 auto', display:'flex', flexDirection:'column', gap:'10px'}}>
-                
-                {/* Kártyák a beállításoknak */}
-                <div className="card card-row">
-                    <div className="card-decoration"></div>
-                    <div className="setting-label">
-                        <div className="font-bold text-ink">Háttér téma</div>
-                        <div className="text-xs text-gray-500">Válassz megjelenítési módot</div>
-                    </div>
-                    <select className="input" style={{width:'auto', minWidth:'150px'}} value={settings.theme} onChange={(e) => onUpdateSettings({...settings, theme: e.target.value})}>
-                        <option value="pergamen">Pergamen</option>
-                        <option value="papyrus">Papirusz</option>
-                        <option value="dark-papyrus">Sötét papirusz</option>
-                        <option value="white">Törtfehér</option>
-                    </select>
-                </div>
+            <div className="settings-page">
 
-                <div className="card card-row">
-                    <div className="card-decoration"></div>
-                    <div className="setting-label">
-                        <div className="font-bold text-ink">Szövegpanel megjelenítése</div>
-                        <div className="text-xs text-gray-500">Kotta mellett a szöveg láthatósága</div>
+                <SettingsSection title="Megjelenés">
+                    <div className="card card-row">
+                        <div className="card-decoration"></div>
+                        <div className="setting-label">
+                            <div className="font-bold text-ink">Háttér téma</div>
+                            <div className="text-xs text-gray-500">Válassz megjelenítési módot</div>
+                        </div>
+                        <select className="input" style={{width:'auto', minWidth:'150px'}} value={settings.theme} onChange={(e) => onUpdateSettings({...settings, theme: e.target.value})}>
+                            <option value="pergamen">Pergamen</option>
+                            <option value="papyrus">Papirusz</option>
+                            <option value="dark-papyrus">Sötét papirusz</option>
+                            <option value="white">Törtfehér</option>
+                        </select>
                     </div>
-                    <button onClick={() => onUpdateSettings({...settings, showLyrics: !settings.showLyrics})} className="btn-ghost" style={{color: settings.showLyrics ? 'var(--col-accent-text)' : 'var(--col-ink-muted, #999)'}}>
-                        {settings.showLyrics ? <Icons.Eye size={24}/> : <Icons.EyeOff size={24}/>}
-                    </button>
-                </div>
 
-                <div className="card card-row">
-                    <div className="card-decoration"></div>
-                    <div className="setting-label">
-                        <div className="font-bold text-ink">Óra a lejátszóban</div>
-                        <div className="text-xs text-gray-500">A lejátszó jobb felső sarkában</div>
+                    <div className="card card-row">
+                        <div className="card-decoration"></div>
+                        <div className="setting-label">
+                             <div className="font-bold text-ink">Oldalmenü helye</div>
+                             <div className="text-xs text-gray-500">Bal vagy jobb oldalon legyen a menü</div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                             <button onClick={() => onUpdateSettings({...settings, sidebarSide: 'left'})} className={`btn ${settings.sidebarSide === 'left' ? 'btn-primary' : 'btn-ghost'}`}>Bal</button>
+                             <button onClick={() => onUpdateSettings({...settings, sidebarSide: 'right'})} className={`btn ${settings.sidebarSide === 'right' ? 'btn-primary' : 'btn-ghost'}`}>Jobb</button>
+                        </div>
                     </div>
-                    <button onClick={() => onUpdateSettings({...settings, showClock: !settings.showClock})} className="btn-ghost" title={settings.showClock ? 'Óra elrejtése' : 'Óra megjelenítése'} style={{color: settings.showClock ? 'var(--col-accent-text)' : 'var(--col-ink-muted, #999)'}}>
-                        {settings.showClock ? <Icons.Eye size={24}/> : <Icons.EyeOff size={24}/>}
-                    </button>
-                </div>
+                </SettingsSection>
 
-                <div className="card card-row">
-                    <div className="card-decoration"></div>
-                    <div className="setting-label">
-                        <div className="font-bold text-ink">Oldalsáv szélessége</div>
-                        <div className="text-xs text-gray-500">Ha oldalt van a szöveg</div>
+                <SettingsSection title="Kottanézet és lejátszó">
+                    <div className="card card-row">
+                        <div className="card-decoration"></div>
+                        <div className="setting-label">
+                            <div className="font-bold text-ink">Szövegpanel megjelenítése</div>
+                            <div className="text-xs text-gray-500">Kotta mellett a szöveg láthatósága</div>
+                        </div>
+                        <button onClick={() => onUpdateSettings({...settings, showLyrics: !settings.showLyrics})} className="btn-ghost" style={{color: settings.showLyrics ? 'var(--col-accent-text)' : 'var(--col-ink-muted, #999)'}}>
+                            {settings.showLyrics ? <Icons.Eye size={24}/> : <Icons.EyeOff size={24}/>}
+                        </button>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                         <button onClick={() => onUpdateSettings({...settings, lyricsWidth: '15%'})} className={`btn ${settings.lyricsWidth === '15%' ? 'btn-primary' : 'btn-ghost'}`}>15%</button>
-                         <button onClick={() => onUpdateSettings({...settings, lyricsWidth: '20%'})} className={`btn ${settings.lyricsWidth === '20%' ? 'btn-primary' : 'btn-ghost'}`}>20%</button>
-                         <button onClick={() => onUpdateSettings({...settings, lyricsWidth: '25%'})} className={`btn ${settings.lyricsWidth === '25%' ? 'btn-primary' : 'btn-ghost'}`}>25%</button>
-                         <button onClick={() => onUpdateSettings({...settings, lyricsWidth: '30%'})} className={`btn ${settings.lyricsWidth === '30%' ? 'btn-primary' : 'btn-ghost'}`}>30%</button>
-                    </div>
-                </div>
 
-                <div className="card card-row">
-                    <div className="card-decoration"></div>
-                    <div className="setting-label">
-                        <div className="font-bold text-ink">Kotta szélessége</div>
-                        <div className="text-xs text-gray-500">Maximális szélesség</div>
+                    <div className="card card-row">
+                        <div className="card-decoration"></div>
+                        <div className="setting-label">
+                            <div className="font-bold text-ink">Oldalsáv szélessége</div>
+                            <div className="text-xs text-gray-500">Ha oldalt van a szöveg</div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                             <button onClick={() => onUpdateSettings({...settings, lyricsWidth: '15%'})} className={`btn ${settings.lyricsWidth === '15%' ? 'btn-primary' : 'btn-ghost'}`}>15%</button>
+                             <button onClick={() => onUpdateSettings({...settings, lyricsWidth: '20%'})} className={`btn ${settings.lyricsWidth === '20%' ? 'btn-primary' : 'btn-ghost'}`}>20%</button>
+                             <button onClick={() => onUpdateSettings({...settings, lyricsWidth: '25%'})} className={`btn ${settings.lyricsWidth === '25%' ? 'btn-primary' : 'btn-ghost'}`}>25%</button>
+                             <button onClick={() => onUpdateSettings({...settings, lyricsWidth: '30%'})} className={`btn ${settings.lyricsWidth === '30%' ? 'btn-primary' : 'btn-ghost'}`}>30%</button>
+                        </div>
                     </div>
-                    <select className="input" style={{width:'auto', minWidth:'150px'}} value={settings.scoreMaxWidth || '80%'} onChange={(e) => onUpdateSettings({...settings, scoreMaxWidth: e.target.value})}>
-                        <option value="100%">100%</option>
-                        <option value="90%">90%</option>
-                        <option value="80%">80%</option>
-                        <option value="70%">70%</option>
-                        <option value="60%">60%</option>
-                        <option value="50%">50%</option>
-                    </select>
-                </div>
 
-                <div className="card card-row">
-                    <div className="card-decoration"></div>
-                    <div className="setting-label">
-                         <div className="font-bold text-ink">Oldalmenü helye</div>
-                         <div className="text-xs text-gray-500">Bal vagy jobb oldalon legyen a menü</div>
+                    <div className="card card-row">
+                        <div className="card-decoration"></div>
+                        <div className="setting-label">
+                            <div className="font-bold text-ink">Kotta szélessége</div>
+                            <div className="text-xs text-gray-500">Maximális szélesség</div>
+                        </div>
+                        <select className="input" style={{width:'auto', minWidth:'150px'}} value={settings.scoreMaxWidth || '80%'} onChange={(e) => onUpdateSettings({...settings, scoreMaxWidth: e.target.value})}>
+                            <option value="100%">100%</option>
+                            <option value="90%">90%</option>
+                            <option value="80%">80%</option>
+                            <option value="70%">70%</option>
+                            <option value="60%">60%</option>
+                            <option value="50%">50%</option>
+                        </select>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                         <button onClick={() => onUpdateSettings({...settings, sidebarSide: 'left'})} className={`btn ${settings.sidebarSide === 'left' ? 'btn-primary' : 'btn-ghost'}`}>Bal</button>
-                         <button onClick={() => onUpdateSettings({...settings, sidebarSide: 'right'})} className={`btn ${settings.sidebarSide === 'right' ? 'btn-primary' : 'btn-ghost'}`}>Jobb</button>
+
+                    <div className="card card-row">
+                        <div className="card-decoration"></div>
+                        <div className="setting-label">
+                            <div className="font-bold text-ink">Óra a lejátszóban</div>
+                            <div className="text-xs text-gray-500">A lejátszó jobb felső sarkában</div>
+                        </div>
+                        <button onClick={() => onUpdateSettings({...settings, showClock: !settings.showClock})} className="btn-ghost" title={settings.showClock ? 'Óra elrejtése' : 'Óra megjelenítése'} style={{color: settings.showClock ? 'var(--col-accent-text)' : 'var(--col-ink-muted, #999)'}}>
+                            {settings.showClock ? <Icons.Eye size={24}/> : <Icons.EyeOff size={24}/>}
+                        </button>
                     </div>
-                </div>
+                </SettingsSection>
+
+                {/* A kotta rajzolatának beállításai (Verovio); ide kerülnek a további kottagrafikai beállítások is */}
+                <SettingsSection title="Kottagrafika">
+                    <div className="card card-stack">
+                        <div className="card-decoration"></div>
+                        <div className="setting-label">
+                            <div className="font-bold text-ink">Kottafont</div>
+                            <div className="text-xs text-gray-500">A hangjegyek, kulcsok és jelek rajzolata</div>
+                        </div>
+                        <div className="font-choices" role="radiogroup" aria-label="Kottafont">
+                            {SCORE_FONTS.map(font => (
+                                <button key={font.id} type="button" role="radio" aria-checked={settings.scoreFont === font.id}
+                                    className={`font-choice${settings.scoreFont === font.id ? ' selected' : ''}`}
+                                    onClick={() => onUpdateSettings({...settings, scoreFont: font.id})}>
+                                    <FontSample font={font.id} />
+                                    <span className="font-choice-label">
+                                        <span className="font-choice-name">{font.id}</span>
+                                        <span className="font-choice-hint">{font.hint}</span>
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </SettingsSection>
 
             </div>
         </div>
     </div>
 );
 
-// --- OSMD KOTTA RENDERELŐ KOMPONENS ---
-const OSMD_OPTIONS = {
-    autoResize: false, // A kirajzolást a ScoreViewer vezérli (mindig kiférő méretben)
-    backend: "svg",
-    drawTitle: false,
-    drawSubtitle: false,
-    drawComposer: false,
-    drawLyricist: false,
-    drawPartNames: false,
-    drawPartAbbreviations: false
+// --- VEROVIO KOTTARAJZOLÓ ---
+// A kottákat (MusicXML, MEI) a Verovio rajzolja: libs/verovio/ (LGPL-3.0, lásd az ottani README-t). A motor nagy
+// (WebAssembly, tömörítve kb. 2,4 MB), ezért a program indulásakor a háttérben betöltődik.
+const VEROVIO_URL = 'libs/verovio/verovio-toolkit-wasm.js';
+const VEROVIO_VERSION = '6.3.0'; // a libs/verovio-ban lévő változat (a Névjegy forráskód-linkjéhez)
+const VEROVIO_INIT_TIMEOUT = 60000; // ms; ha letöltés után ennyi idő alatt sem indul el (pl. kevés a memória), hibát jelzünk
+
+let verovioPromise = null;
+const loadVerovio = () => {
+    if (verovioPromise) return verovioPromise;
+    const promise = new Promise((resolve, reject) => {
+        if (typeof WebAssembly !== 'object') {
+            throw new Error('Ez a böngésző nem tudja megjeleníteni a kottákat (nem támogatja a WebAssemblyt).');
+        }
+        const notStarted = new Error('A kottarajzoló (Verovio) nem indult el. Töltsd újra az oldalt.');
+        const script = document.createElement('script');
+        script.src = VEROVIO_URL;
+        script.onload = () => {
+            const vrv = window.verovio;
+            if (!vrv || !vrv.module || !vrv.toolkit) { reject(notStarted); return; }
+            // A WebAssembly-rész ekkor még fordul: a kész jelzés biztosan csak ezután jön
+            const timer = setTimeout(() => reject(notStarted), VEROVIO_INIT_TIMEOUT);
+            vrv.module.onRuntimeInitialized = () => { clearTimeout(timer); resolve(vrv); };
+        };
+        script.onerror = () => {
+            script.remove();
+            reject(new Error('A kottarajzoló (Verovio) nem tölthető le. Ellenőrizd az internetkapcsolatot, és nyisd meg újra a kottát.'));
+        };
+        document.head.appendChild(script);
+    });
+    // Sikertelen betöltés után (pl. nem volt internet) a következő kotta újra megpróbálja
+    promise.catch(() => { if (verovioPromise === promise) verovioPromise = null; });
+    verovioPromise = promise;
+    return promise;
 };
 
-// Az OSMD-nek nincs "engravingRules" opciója: a szabályokat a példány EngravingRules objektumán kell beállítani.
-// (Vízszintes térközhöz a VoiceSpacingMultiplierVexflow használható, alapértéke 0.85.)
-const OSMD_ENGRAVING_RULES = {
-    MinNoteDistance: 6, // Minimum térköz a kottafejek között (az OSMD alapértéke 2)
-    PageTopMargin: 2,   // alapérték: 5; kicsi, hogy a kotta görgetés nélkül kiférjen
-    PageBottomMargin: 2
+// A Verovio oldalmérete a saját egységében értendő (scale: 100 mellett 1 egység = 1 px, a vonalköz 18 egység).
+// 100%-os nagyításnál a vonalköz 10 px, mint korábban az OSMD-nél: egy egység 10/18 px. A nagyítást az oldal
+// szélessége adja: a kirajzolt SVG-t a program a hasáb szélességére méretezi, így bármilyen nagyítás beállítható.
+const VEROVIO_PX_PER_UNIT = 10 / 18;
+const VEROVIO_MIN_PAGE_WIDTH = 100; // a Verovio ennél keskenyebb oldalt nem fogad el
+
+const VEROVIO_OPTIONS = {
+    scale: 100,
+    pageWidth: 2100,            // kezdőérték; kirajzoláskor a hasáb szélességéből és a nagyításból számoljuk
+    pageHeight: 60000,          // a legnagyobb megengedett: az egész kotta egy oldalra kerül
+    adjustPageHeight: true,     // az oldal olyan magas, mint a kotta
+    breaks: 'auto',             // a sortörés a szélességhez igazodik (a fájlba írt törések helyett)
+    header: 'none',             // cím, szerző stb. nélkül
+    footer: 'none',
+    pageMarginTop: 0,           // a Verovio a kotta fölött és alatt magától is hagy egy kis helyet
+    pageMarginBottom: 0,
+    pageMarginLeft: 30,         // a kapcsos zárójel a sor elé nyúlik
+    pageMarginRight: 10,
+    svgViewBox: true,           // méretezhető SVG
+    svgFormatRaw: true          // tömörebb SVG
 };
 
-// A kottablokkok (MusicXML: OsmdViewer, kép: ScoreImage) nem maguk választják meg a méretüket: bejelentkeznek
+// Kotta betöltése a Verovióba: tömörített MusicXML (.mxl, zip) vagy szöveg (MusicXML, MEI; a formátumot a Verovio
+// ismeri fel). A hangszernevet (pl. „Zongora”, „Organ”) a Verovio a sorok elé írná, és nincs rá kapcsoló: a beolvasott
+// kottát MEI-be alakítjuk, a neveket (label, labelAbbr) kivesszük, és újratöltjük.
+// Az eredményt (MEI) megjegyezzük: ugyanazt a kottát újra megnyitva (pl. visszalapozáskor) ebből töltjük be, ami
+// sokkal gyorsabb. A kulcsban a fájl tartalma is benne van, így a lecserélt fájl újra beolvasódik.
+// Betöltéskor nem tördelünk (breaks: 'none'; így többszörösen gyorsabb): a sorokat a kirajzolás tördeli a hasábhoz.
+const PART_NAME_ELEMENT = /<(label|labelAbbr)(\s[^>]*[^/>])?>[\s\S]*?<\/\1>/g;
+const SCORE_CACHE_SIZE = 20;
+const scoreCache = new Map(); // fájl címe + tartalma → MEI (a legrégebben használt az első)
+
+const scoreKey = (url, bytes) => {
+    let hash = 0x811c9dc5; // FNV-1a
+    for (let i = 0; i < bytes.length; i++) hash = Math.imul(hash ^ bytes[i], 0x01000193);
+    return `${url}|${bytes.length}|${(hash >>> 0).toString(36)}`;
+};
+
+const loadScore = (tk, url, buffer) => {
+    tk.setOptions({ breaks: 'none' });
+    const bytes = new Uint8Array(buffer);
+    const key = scoreKey(url, bytes);
+    const cached = scoreCache.get(key);
+    if (cached !== undefined) {
+        scoreCache.delete(key);
+        scoreCache.set(key, cached);
+        return tk.loadData(cached);
+    }
+    let loaded;
+    if (bytes[0] === 0x50 && bytes[1] === 0x4B) loaded = tk.loadZipDataBuffer(buffer);
+    else {
+        const encoding = bytes[0] === 0xFF && bytes[1] === 0xFE ? 'utf-16le' : bytes[0] === 0xFE && bytes[1] === 0xFF ? 'utf-16be' : 'utf-8';
+        loaded = tk.loadData(new TextDecoder(encoding).decode(bytes));
+    }
+    if (!loaded) return false;
+    const mei = tk.getMEI();
+    const stripped = mei.replace(PART_NAME_ELEMENT, '');
+    if (stripped !== mei && !tk.loadData(stripped)) return false;
+    scoreCache.set(key, stripped);
+    if (scoreCache.size > SCORE_CACHE_SIZE) scoreCache.delete(scoreCache.keys().next().value);
+    return true;
+};
+
+// A kottablokkok (MusicXML: VerovioViewer, kép: ScoreImage) nem maguk választják meg a méretüket: bejelentkeznek
 // a ScoreViewernél (page.register), jelzik, ha változott az állapotuk (page.notify), és a ScoreViewer abban a
 // méretben rajzoltatja ki őket, amelyben az egész oldal kifér. Egy blokk leírója:
-//   url()         a fájl címe
+//   layoutKey()   ami a tördelést meghatározza (fájl, kottafont): ugyanerre ugyanaz a jó méret
 //   state()       'loading' | 'ready' | 'error'
 //   layout(zoom)  kirajzolás az adott nagyításban
 //   shrink(s)     a kirajzolt kotta arányos kicsinyítése (s < 1), újratördelés nélkül
 //   height()      a kirajzolt kotta magassága (px)
-//   maxZoom       ennél nagyobb nagyításnak nincs hatása (képnél 1 = teljes szélesség); OSMD-nél nincs ilyen
+//   maxZoom       ennél nagyobb nagyításnak nincs hatása (képnél 1 = teljes szélesség); kottánál nincs ilyen
 
-const OsmdViewer = ({ fileUrl, page }) => {
+const VerovioViewer = ({ fileUrl, font, page }) => {
     const containerRef = useRef(null);
-    const osmdRef = useRef(null);
+    const toolkitRef = useRef(null);        // saját Verovio-példány (az előjátéknak és a kottának külön)
     const stateRef = useRef('loading');
-    const renderedRef = useRef(null);        // { zoom, width }: így van most kirajzolva
+    const laidOutRef = useRef(null);        // { pageWidth, font }: így van tördelve a kotta a Verovióban
+    const renderedRef = useRef(null);       // { pageWidth, font }: így van kirajzolva
     const fileUrlRef = useRef(fileUrl);
+    const fontRef = useRef(font);
     const loadIdRef = useRef(0);
     const loadQueueRef = useRef(Promise.resolve());
     const [error, setError] = useState(null);
     fileUrlRef.current = fileUrl;
+    fontRef.current = font;
 
     const fail = (message) => {
         stateRef.current = 'error';
@@ -874,37 +1051,60 @@ const OsmdViewer = ({ fileUrl, page }) => {
         page.notify();
     };
 
+    // Az SVG a hasáb szélességére méretezve (s < 1: arányosan kisebb, középen). Ha egy ütem szélesebb, mint a hely
+    // (nagyon keskeny kijelző, nagy nagyítás), a Verovio jobbra kilógna az oldalról: ilyenkor annyival kisebb, hogy
+    // a kilógó résszel együtt kiférjen.
     const shrink = (s) => {
-        const svg = containerRef.current && containerRef.current.querySelector('svg');
-        if (!svg) return;
-        // az SVG-nek van viewBoxa, így a CSS-méret a rajzot arányosan kicsinyíti
-        svg.style.width = s < 1 ? `${parseFloat(svg.getAttribute('width')) * s}px` : '';
-        svg.style.height = s < 1 ? `${parseFloat(svg.getAttribute('height')) * s}px` : '';
+        const container = containerRef.current;
+        if (!container) return;
+        const width = container.clientWidth;
+        for (const svg of container.children) {
+            const box = svg.viewBox && svg.viewBox.baseVal;
+            if (!box || !box.width) continue;
+            const w = width * s / (parseFloat(svg.dataset.overflow) || 1);
+            svg.style.width = `${w}px`;
+            svg.style.height = `${w * box.height / box.width}px`;
+            svg.style.marginLeft = `${width * (1 - s) / 2}px`;
+        }
     };
 
-    // 1. OSMD példány és bejelentkezés a ScoreViewernél: egyszer, a komponens teljes élettartamára
+    // 1. Bejelentkezés a ScoreViewernél: egyszer, a komponens teljes élettartamára
     useLayoutEffect(() => {
-        const osmd = new window.opensheetmusicdisplay.OpenSheetMusicDisplay(containerRef.current, OSMD_OPTIONS);
-        Object.assign(osmd.EngravingRules, OSMD_ENGRAVING_RULES);
-        osmdRef.current = osmd;
         const unregister = page.register({
-            url: () => fileUrlRef.current,
+            layoutKey: () => `${fileUrlRef.current}|${fontRef.current}`,
             state: () => stateRef.current,
             layout: (zoom) => {
-                const container = containerRef.current;
-                if (stateRef.current !== 'ready' || !osmdRef.current || !container) return;
+                const container = containerRef.current, tk = toolkitRef.current;
+                if (stateRef.current !== 'ready' || !tk || !container) return;
                 container.style.display = '';
-                const width = container.clientWidth;
+                const pageWidth = Math.max(VEROVIO_MIN_PAGE_WIDTH, Math.round(container.clientWidth / (zoom * VEROVIO_PX_PER_UNIT)));
+                const font = fontRef.current;
                 const rendered = renderedRef.current;
-                if (rendered && rendered.zoom === zoom && rendered.width === width) return shrink(1); // már így áll
-                try {
-                    osmd.Zoom = zoom; // a Zoom setter a gerendákat is újraszámolja
-                    osmd.render();
-                    renderedRef.current = { zoom, width };
-                } catch (err) {
-                    console.error("Kotta rajzolási hiba:", err);
-                    fail(`Hiba történt a kotta rajzolásakor: ${err.message}`);
+                if (!rendered || rendered.pageWidth !== pageWidth || rendered.font !== font) {
+                    try {
+                        const laidOut = laidOutRef.current;
+                        if (!laidOut || laidOut.pageWidth !== pageWidth || laidOut.font !== font) {
+                            tk.setOptions({ breaks: VEROVIO_OPTIONS.breaks, pageWidth, font });
+                            tk.redoLayout();
+                            laidOutRef.current = { pageWidth, font };
+                        }
+                        let svg = '';
+                        for (let n = 1; n <= tk.getPageCount(); n++) svg += tk.renderToSVG(n);
+                        container.innerHTML = svg;
+                        for (const el of container.children) {
+                            const box = el.viewBox && el.viewBox.baseVal;
+                            let right = 0;
+                            try { const b = el.getBBox(); right = b.x + b.width; } catch (err) { /* nincs kirajzolva */ }
+                            el.dataset.overflow = box && box.width && right > box.width ? String(right / box.width) : '1';
+                        }
+                        renderedRef.current = { pageWidth, font };
+                    } catch (err) {
+                        console.error('Kotta rajzolási hiba:', err);
+                        fail(`Hiba történt a kotta rajzolásakor: ${err.message}`);
+                        return;
+                    }
                 }
+                shrink(1);
             },
             shrink,
             height: () => (stateRef.current === 'ready' && containerRef.current) ? containerRef.current.offsetHeight : 0
@@ -912,7 +1112,11 @@ const OsmdViewer = ({ fileUrl, page }) => {
         return () => {
             unregister();
             loadIdRef.current++; // a még futó betöltés eredményét eldobjuk
-            osmdRef.current = null;
+            // a Verovio-példány a WebAssembly memóriájában van: fel kell szabadítani (a futó betöltés után)
+            loadQueueRef.current.then(() => {
+                if (toolkitRef.current) toolkitRef.current.destroy();
+                toolkitRef.current = null;
+            });
         };
     }, []);
 
@@ -920,33 +1124,52 @@ const OsmdViewer = ({ fileUrl, page }) => {
     //    sem kerülhet a képernyőre egy korábbi ének kottája. Kirajzolni betöltés után a ScoreViewer fogja.
     useLayoutEffect(() => {
         const loadId = ++loadIdRef.current;
+        const current = () => loadId === loadIdRef.current;
         stateRef.current = 'loading';
         renderedRef.current = null;
         setError(null);
         containerRef.current.style.display = 'none'; // az előző ének kottája ne maradjon kint
-        try { osmdRef.current.clear(); } catch (err) { /* nem volt mit törölni */ }
+        containerRef.current.innerHTML = '';
         page.notify();
 
         loadQueueRef.current = loadQueueRef.current
-            .then(() => {
-                const osmd = osmdRef.current;
-                if (!osmd || loadId !== loadIdRef.current) return; // közben újabb kérés jött
-                return osmd.load(fileUrl).then(() => {
-                    if (loadId !== loadIdRef.current) return;
-                    stateRef.current = 'ready';
-                    page.notify();
-                });
+            .then(async () => {
+                if (!current()) return; // közben újabb kérés jött
+                let vrv;
+                try {
+                    vrv = await loadVerovio();
+                } catch (err) {
+                    if (current()) fail(err.message);
+                    return;
+                }
+                const response = await fetch(fileUrl);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const buffer = await response.arrayBuffer();
+                if (!current()) return;
+                if (!toolkitRef.current) {
+                    toolkitRef.current = new vrv.toolkit();
+                    toolkitRef.current.setOptions({ ...VEROVIO_OPTIONS, font: fontRef.current });
+                }
+                const tk = toolkitRef.current;
+                laidOutRef.current = null; // betöltve, de még nincs tördelve: a kirajzolás tördeli
+                if (!loadScore(tk, fileUrl, buffer)) throw new Error('a fájl nem olvasható');
+                stateRef.current = 'ready';
+                page.notify();
             })
             .catch(err => {
-                if (loadId !== loadIdRef.current) return;
-                fail(`A kotta nem tölthető be (${fileUrl}): ${err.message}`);
+                if (current()) fail(`A kotta nem tölthető be (${fileUrl}): ${err.message}`);
             });
     }, [fileUrl]);
 
+    // Másik kottafont: újratördelés (a ScoreViewer újra megkeresi a kiférő méretet)
+    useEffect(() => {
+        if (stateRef.current === 'ready') page.notify();
+    }, [font]);
+
     return (
-        <div className="osmd-viewer">
+        <div className="verovio-viewer">
             {error && <div className="score-missing">⚠️ {error}</div>}
-            <div ref={containerRef} className="osmd-container"></div>
+            <div ref={containerRef} className="verovio-container"></div>
         </div>
     );
 };
@@ -969,7 +1192,7 @@ const ScoreImage = ({ src, alt, page }) => {
     useLayoutEffect(() => {
         const setWidth = (fraction) => { if (imgRef.current) imgRef.current.style.width = `${fraction * 100}%`; };
         return page.register({
-            url: () => src,
+            layoutKey: () => src,
             state: () => stateRef.current,
             maxZoom: 1,
             layout: (zoom) => { widthRef.current = Math.min(1, zoom); setWidth(widthRef.current); },
@@ -1051,7 +1274,7 @@ const fitPage = (pageEl, content, blocks, maxZoom, cache) => {
     // Ha csak kép van az oldalon, a teljes szélességnél (100%) nagyobbra nem nagyítunk
     const cap = blocks.length ? Math.max(...blocks.map(b => b.maxZoom || Infinity)) : maxZoom;
     const limit = Math.min(maxZoom, cap);
-    const key = [...blocks.map(b => b.url()), pageEl.clientWidth, avail, limit].join('|');
+    const key = [...blocks.map(b => b.layoutKey()), pageEl.clientWidth, avail, limit].join('|');
     let fit = cache.get(key);
     if (fit) {
         const m = measure(fit.zoom);
@@ -1086,7 +1309,7 @@ const hotspotAt = (el, clientX) => {
 const ZOOM_MIN = 0.4;
 const ZOOM_MAX = 2.5;
 
-const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyricsWidth, scoreMaxWidth, onNext, onPrev }) => {
+const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyricsWidth, scoreMaxWidth, scoreFont, onNext, onPrev }) => {
     const [textPosition, setTextPosition] = useState('bottom');
     const [textLayout, setTextLayout] = useState('columns');
     const [zoom, setZoom] = useState(1.0);     // a beállított legnagyobb méret
@@ -1214,7 +1437,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
                                 <div className="prelude-label">Előjáték: {prelude.name}</div>
                                 {prelude.xmlUrl ? (isImageUrl(prelude.xmlUrl)
                                     ? <ScoreImage key={prelude.xmlUrl} src={prelude.xmlUrl} alt={`Előjáték: ${prelude.name}`} page={page} />
-                                    : <OsmdViewer fileUrl={prelude.xmlUrl} page={page} />
+                                    : <VerovioViewer fileUrl={prelude.xmlUrl} font={scoreFont} page={page} />
                                 ) : (
                                     <div className="score-missing">Előjáték kotta helye</div>
                                 )}
@@ -1226,7 +1449,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
                             <div className="score-block" style={{maxWidth: scoreMaxWidth || '100%'}}>
                                 {isImageUrl(variation.xmlUrl)
                                     ? <ScoreImage key={variation.xmlUrl} src={variation.xmlUrl} alt={variation.name || 'Kotta'} page={page} />
-                                    : <OsmdViewer fileUrl={variation.xmlUrl} page={page} />}
+                                    : <VerovioViewer fileUrl={variation.xmlUrl} font={scoreFont} page={page} />}
                             </div>
                         ) : (
                             <div className="score-placeholder">
@@ -2043,6 +2266,10 @@ function OrganistApp() {
                          <div className="content-box">
                             <p>Református énekek orgonakíséretei, a 2021-es énekeskönyvhöz igazítva. Több korálkönyvből válogattam, elsősorban saját használatra - így számos kíséret kimaradt, például a "művészi" B letétek a genfi korálkönyvből.</p>
                         </div>
+                        <p className="about-credits">
+                            A kottákat a <a href="https://www.verovio.org" target="_blank" rel="noopener noreferrer">Verovio</a> rajzolja
+                            (LGPL-3.0 licenc, <a href={`https://github.com/rism-digital/verovio/tree/version-${VEROVIO_VERSION}`} target="_blank" rel="noopener noreferrer">forráskód</a>).
+                        </p>
                     </div>
                 )}
 
@@ -2076,7 +2303,7 @@ function OrganistApp() {
                             </div>
                         </div>
                         <div style={{flex:1, overflow:'hidden'}}>
-                            <ScoreViewer score={getScoreById(selectedHymn.scoreId)} variationId={currentVariationId} preludeId={currentPreludeId} lyrics={selectedHymn.lyrics} showLyrics={settings.showLyrics} lyricsWidth={settings.lyricsWidth} scoreMaxWidth={settings.scoreMaxWidth}/>
+                            <ScoreViewer score={getScoreById(selectedHymn.scoreId)} variationId={currentVariationId} preludeId={currentPreludeId} lyrics={selectedHymn.lyrics} showLyrics={settings.showLyrics} lyricsWidth={settings.lyricsWidth} scoreMaxWidth={settings.scoreMaxWidth} scoreFont={settings.scoreFont}/>
                         </div>
                     </div>
                 ) : (
@@ -2196,6 +2423,7 @@ function OrganistApp() {
                                 showLyrics={settings.showLyrics}
                                 lyricsWidth={settings.lyricsWidth}
                                 scoreMaxWidth={settings.scoreMaxWidth}
+                                scoreFont={settings.scoreFont}
                                 onNext={currentPlayerIndex < playerQueue.length - 1 ? () => goToPlayerIndex(currentPlayerIndex + 1) : null}
                                 onPrev={currentPlayerIndex > 0 ? () => goToPlayerIndex(currentPlayerIndex - 1) : null}
                             />
@@ -2207,9 +2435,17 @@ function OrganistApp() {
     );
 }
 
-// Offline működés: a service worker (sw.js) az oldalt és a letöltött kottákat internet nélkül is kiszolgálja
+// A kottarajzoló betöltése rögtön indul (a háttérben), hogy az első kotta megnyitásakor már kész legyen
+loadVerovio().catch(err => console.info(err.message));
+
+// Offline működés: a service worker (sw.js) az oldalt és a letöltött kottákat internet nélkül is kiszolgálja.
+// Az oldal betöltése után indul: az első látogatáskor a fájlokat (köztük a nagy kottarajzolót) így a böngésző már
+// letöltött példányából menti, nem tölti le újra.
 if ('serviceWorker' in navigator && window.isSecureContext) {
-    navigator.serviceWorker.register('sw.js').catch(err => console.info('A service worker nem indult el:', err.message));
+    const registerServiceWorker = () => navigator.serviceWorker.register('sw.js')
+        .catch(err => console.info('A service worker nem indult el:', err.message));
+    if (document.readyState === 'complete') registerServiceWorker();
+    else window.addEventListener('load', registerServiceWorker);
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));

@@ -228,10 +228,11 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 }
 .score-missing { padding: 20px; border: 1px solid var(--col-border-dark, #ccc); border-radius: 4px; background-color: rgba(0,0,0,0.05); }
 .score-placeholder { opacity: 0.2; display: flex; flex-direction: column; align-items: center; }
-.osmd-viewer { width: 100%; }
-.osmd-container { width: 100%; mix-blend-mode: multiply; }
-/* blokk szintű SVG: különben a sor alapvonala miatt rés marad alatta; kicsinyítve középre kerül */
-.osmd-container svg { display: block; margin: 0 auto; }
+.verovio-viewer { width: 100%; }
+/* A kotta mindig fekete (a Verovio a szöveg színével rajzol) */
+.verovio-container { width: 100%; color: #000; }
+/* blokk szintű SVG: különben a sor alapvonala miatt rés marad alatta (a méretét és a helyét az app.js állítja) */
+.verovio-container svg { display: block; }
 /* Képként tárolt kotta: a fehér háttér beleolvad a papír színébe */
 .score-image-wrap { width: 100%; }
 .score-image { display: block; margin: 0 auto; width: 100%; height: auto; mix-blend-mode: multiply; }
@@ -483,6 +484,8 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     line-height: 1.6;
     margin: 0;
 }
+.about-credits { max-width: 600px; margin: 1.25rem auto 0; font-size: 13px; color: var(--col-ink-muted, #666); }
+.about-credits a { color: inherit; }
 
 /* Verse item in AddToPlaylistModal */
 .verse-item {
@@ -795,9 +798,43 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     gap: 1.5rem;
 }
 
-/* --- Beállítások sorai --- */
+/* --- Beállítások: szakaszok és sorok --- */
+.settings-page { width: 100%; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.75rem; }
+.settings-section { display: flex; flex-direction: column; gap: 10px; }
+.settings-section-title {
+    margin: 0 0 2px 2px;
+    font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--col-accent-text, var(--col-accent));
+}
 .card.card-row { flex-wrap: wrap; row-gap: 0.75rem; }
 .setting-label { flex: 1 1 200px; min-width: 0; }
+/* kártya, amelyben a beállítás a felirat alatt van (pl. kottafont mintakottával) */
+.card.card-stack { height: auto; padding: 1rem; gap: 0.75rem; }
+.card.card-stack .setting-label { flex: none; }
+
+/* Kottafont választása: mindegyik fonttal ugyanaz a mintakotta */
+.font-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 10px; }
+.font-choice {
+    display: flex; flex-direction: column; align-items: stretch; gap: 8px;
+    padding: 10px 12px; border: 2px solid var(--col-border, #d1d5db); border-radius: 8px;
+    background-color: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer;
+    transition: border-color 0.15s;
+}
+.font-choice:hover { border-color: var(--col-border-dark, #9ca3af); }
+.font-choice.selected { border-color: var(--col-accent); }
+.font-choice:focus-visible { outline: 2px solid var(--col-focus, var(--col-accent)); outline-offset: 2px; }
+.font-sample { height: 128px; color: #000; }
+.font-sample svg { display: block; width: 100%; height: 100%; }
+.font-sample-missing { display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--col-ink-muted, #666); }
+.font-choice-label { display: flex; align-items: center; gap: 8px; }
+/* kör alakú jelölő, mint egy választógomb */
+.font-choice-label::before {
+    content: ''; flex: none; width: 16px; height: 16px; box-sizing: border-box;
+    border: 2px solid var(--col-border-dark, #9ca3af); border-radius: 50%;
+}
+.font-choice.selected .font-choice-label::before { border: 5px solid var(--col-accent); }
+.font-choice-name { font-weight: bold; }
+.font-choice-hint { font-size: 13px; color: var(--col-ink-muted, #666); }
 
 /* --- Keskeny képernyő (telefon, álló tablet) --- */
 @media (max-width: 700px) {
