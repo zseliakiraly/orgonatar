@@ -21,6 +21,21 @@
     src: url('fonts/atkinson-hyperlegible-next/atkinson-hyperlegible-next-latin.woff2') format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
 @font-face { font-family: 'Atkinson Hyperlegible Next'; font-style: normal; font-weight: 200 800; font-display: swap;
     src: url('fonts/atkinson-hyperlegible-next/atkinson-hyperlegible-next-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+/* Az énekszámok és az oldalcímek talpas betűi (a régi korálkönyvek mintájára); a választottat az app.js állítja be
+   (--font-serif). Mindegyikből csak egy, félkövér hatású változat van meg; a 400–700-as tartomány azt jelzi, hogy a
+   böngésző ne vastagítsa tovább mesterségesen. */
+@font-face { font-family: 'Old Standard TT'; font-style: normal; font-weight: 400 700; font-display: swap;
+    src: url('fonts/old-standard-tt/old-standard-tt-latin.woff2') format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'Old Standard TT'; font-style: normal; font-weight: 400 700; font-display: swap;
+    src: url('fonts/old-standard-tt/old-standard-tt-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: 'DM Serif Text'; font-style: normal; font-weight: 400 700; font-display: swap;
+    src: url('fonts/dm-serif-text/dm-serif-text-latin.woff2') format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'DM Serif Text'; font-style: normal; font-weight: 400 700; font-display: swap;
+    src: url('fonts/dm-serif-text/dm-serif-text-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: 'Libre Bodoni'; font-style: normal; font-weight: 400 700; font-display: swap;
+    src: url('fonts/libre-bodoni/libre-bodoni-latin.woff2') format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'Libre Bodoni'; font-style: normal; font-weight: 400 700; font-display: swap;
+    src: url('fonts/libre-bodoni/libre-bodoni-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
 
 /* --- Változók (Téma) --- */
 :root {
@@ -36,6 +51,8 @@
     
     --font-fallback: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     --font-ui: 'Figtree', var(--font-fallback); /* a feliratok és az énekszövegek betűtípusa (beállítás) */
+    --font-serif-fallback: Georgia, 'Times New Roman', serif;
+    --font-serif: 'Old Standard TT', var(--font-serif-fallback); /* az énekszámok és az oldalcímek betűtípusa (beállítás) */
 
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -98,6 +115,25 @@ body {
 button { cursor: pointer; border: none; background: none; font-family: inherit; }
 input, select, textarea { font-family: inherit; }
 button:disabled { cursor: not-allowed; opacity: 0.5; }
+
+/* Görgetősávok: régies megjelenés, a téma színeivel (a Pergamené az alapértelmezett) */
+:root {
+    --scrollbar-track: #EFE8D8;
+    --scrollbar-thumb: #C2B597;
+    --scrollbar-thumb-border: #A89874;
+    --scrollbar-thumb-hover: var(--pergamen-teal);
+}
+.theme-papyrus { --scrollbar-track: #EEE8D5; --scrollbar-thumb: #CFC4A3; --scrollbar-thumb-border: #B0A37F; --scrollbar-thumb-hover: #073642; }
+.theme-dark-papyrus { --scrollbar-track: #C9C2AF; --scrollbar-thumb: #A69A7C; --scrollbar-thumb-border: #877B5F; --scrollbar-thumb-hover: #001e26; }
+.theme-white { --scrollbar-track: #EEF0F3; --scrollbar-thumb: #C6CCD5; --scrollbar-thumb-border: #A9B1BD; --scrollbar-thumb-hover: #1f2937; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border: 1px solid var(--scrollbar-thumb-border); }
+::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active { background: var(--scrollbar-thumb-hover); }
+/* Firefox nem ismeri a ::-webkit-scrollbar-t: ott vékony, a téma színeire festett sáv */
+@supports not selector(::-webkit-scrollbar) {
+    * { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track); }
+}
 
 /* --- Layout --- */
 .app-root { display: flex; height: 100vh; height: 100dvh; width: 100vw; overflow: hidden; }
@@ -482,8 +518,6 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .library-keyword.active { border-color: var(--col-accent); font-weight: 600; }
 @media (max-width: 640px) {
     .library-search, .library-keyword { flex: 1 1 100%; }
-    .card.list-item.hymn-card { gap: 0.75rem; padding: 0.6rem 0.75rem; }
-    .hymn-card-number { min-width: 2.25rem; font-size: 1.1rem; }
 }
 .library-result-count {
     display: flex; align-items: center; gap: 12px; margin: 0 0 0.5rem 0.25rem;
@@ -491,21 +525,36 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 }
 .library-clear { font-size: 0.85rem; text-decoration: underline; padding: 0; }
 .library-empty { text-align: center; color: var(--col-ink-muted, #666); margin-top: 2rem; }
-.card.list-item.hymn-card { gap: 1rem; padding: 0.75rem 1rem; }
-.hymn-card-number { flex: none; min-width: 3rem; text-align: right; font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.hymn-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.hymn-card-title { font-weight: 700; }
-.hymn-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 0.8rem; }
-.hymn-card-counts { color: var(--col-ink-muted, #666); margin-right: 4px; white-space: nowrap; }
-.hymn-card-counts.none { opacity: 0.7; font-style: italic; }
-/* kulcsszó: koppintásra csak az ilyen kulcsszavú énekek látszanak */
-.keyword-chip {
-    padding: 1px 9px; border-radius: 999px; font-size: 0.78rem; line-height: 1.5;
-    color: var(--col-ink); background-color: var(--col-wash, rgba(0, 43, 54, 0.07));
-    border: 1px solid transparent; white-space: nowrap;
+/* Énekkártya: balra a szám és a kezdősor (egy alapvonalon), jobbra zárva a kották száma, alatta a kulcsszavak */
+.card.list-item.hymn-card { gap: 1rem; padding: 0.7rem 1rem; }
+.hymn-card-head { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 1rem; }
+.hymn-card-number { flex: none; min-width: 3.25rem; text-align: right; font-size: 1.6rem; line-height: 1; }
+.hymn-card-title { min-width: 0; font-size: 1.15rem; font-weight: 700; line-height: 1.3; }
+.hymn-card-meta {
+    flex: 0 1 auto; max-width: 45%; display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
+    text-align: right; font-size: 0.8rem; color: var(--col-ink-muted, #666);
 }
-.keyword-chip:hover { border-color: var(--col-border-dark, #bbb); }
-.keyword-chip.active { background-color: var(--col-accent); color: var(--col-white); }
+.hymn-card-counts { white-space: nowrap; }
+.hymn-card-counts.none { opacity: 0.7; font-style: italic; }
+/* kulcsszavak: finoman, dőlten; koppintásra csak az ilyen kulcsszavú énekek látszanak */
+.hymn-card-keywords { font-style: italic; line-height: 1.4; }
+.keyword-link { font: inherit; color: inherit; padding: 2px 0; white-space: nowrap; text-underline-offset: 2px; }
+.keyword-link:hover { color: var(--col-ink); text-decoration: underline; }
+.keyword-link.active { color: var(--col-accent-text); font-weight: 600; text-decoration: underline; }
+.hymn-card-chevron { flex: none; align-self: center; color: var(--col-border-dark, #ccc); }
+@media (max-width: 640px) {
+    .card.list-item.hymn-card, .hymn-card-head { gap: 0.6rem; }
+    .card.list-item.hymn-card { padding: 0.6rem 0.75rem; }
+    .hymn-card-number { min-width: 2.4rem; font-size: 1.35rem; }
+    .hymn-card-title { font-size: 1.02rem; }
+    .hymn-card-meta { max-width: 42%; font-size: 0.75rem; }
+}
+/* Keskeny kijelzőn a cím mellett nincs hely: a kották száma és a kulcsszavak a cím alá kerülnek, jobbra zárva */
+@media (max-width: 600px) {
+    .card.list-item.hymn-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 0.5rem; }
+    .hymn-card-meta { grid-row: 2; max-width: none; flex-direction: row; flex-wrap: wrap; align-items: baseline; justify-content: flex-end; column-gap: 10px; }
+    .hymn-card-chevron { grid-column: 2; grid-row: 1 / span 2; }
+}
 
 .playlist-editor-item {
     background-color: var(--col-card-raised, white);
@@ -604,9 +653,10 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     border-bottom: none;
 }
 .hymn-selector-item-hymn-number {
+    display: inline-block; min-width: 2em; text-align: right; /* a címek egy vonalban kezdődjenek */
+    font-size: 1.1em;
     color: var(--col-accent-text);
-    font-weight: bold;
-    margin-right: 0.5rem;
+    margin-right: 0.6rem;
 }
 .hymn-selector-item-hymn-title {
     color: var(--col-ink);
@@ -732,6 +782,11 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     font-size: 1.25rem; /* text-xl */
     white-space: nowrap;
 }
+/* Énekszámok és oldalcímek: talpas betű (--font-serif), a régi korálkönyvek mintájára. A választható betűk
+   nagybetű-magassága eltér; a font-size-adjust egyforma nagyra hozza őket (ahol a böngésző ismeri). */
+.hymn-number, .page-title { font-family: var(--font-serif); font-weight: 700; font-size-adjust: cap-height 0.7; }
+.hymn-number { font-variant-numeric: lining-nums tabular-nums; }
+.header-title.page-title { font-size: 1.5rem; letter-spacing: 0.01em; }
 
 /* --- Scorebook View --- */
 .scorebook-list {
@@ -900,6 +955,9 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .ui-font-sample { display: flex; flex-direction: column; gap: 4px; color: var(--col-ink); }
 .ui-font-sample-title { font-size: 1.05rem; font-weight: 700; }
 .ui-font-sample-text { font-size: 0.95rem; line-height: 1.4; }
+.serif-font-sample { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; font-weight: 700; font-size-adjust: cap-height 0.7; }
+.serif-font-sample-number { font-size: 2rem; line-height: 1.1; color: var(--col-accent-text); }
+.serif-font-sample-title { font-size: 1.2rem; line-height: 1.3; color: var(--col-ink); }
 .font-choice-hint { font-size: 13px; color: var(--col-ink-muted, #666); }
 
 /* --- Keskeny képernyő (telefon, álló tablet) --- */
@@ -911,6 +969,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     .playlist-grid { padding: 1rem; gap: 1rem; }
     .about-view { padding: 2rem 1rem; }
     .header-title.main { white-space: normal; text-align: center; }
+    .header-title.page-title { font-size: 1.3rem; line-height: 1.15; }
     .card.card-row { gap: 0.75rem 1rem; }
 }
 
