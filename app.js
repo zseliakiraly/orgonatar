@@ -38,6 +38,7 @@ const Icons = {
         {[6, 12, 18].map(x => [4.5, 10, 15.5].map(y => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.9" fill="currentColor" stroke="none" />))}
         <circle cx="12" cy="21" r="1.9" fill="currentColor" stroke="none" />
     </IconBase>,
+    Calendar: (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></IconBase>,
     Backspace: (props) => <IconBase {...props}><path d="M20 5H9l-7 7 7 7h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z"/><line x1="18" x2="12" y1="9" y2="15"/><line x1="12" x2="18" y1="9" y2="15"/></IconBase>,
 };
 
@@ -50,8 +51,24 @@ const hymnVerses = (hymn) => {
     return hymn.lyrics.trim().split(/\n\s*\n/).map(v => clean(v.replace(/^\d+\.\s*/, '').split('\n')));
 };
 
-// A versszakok a megjelenítéshez: sorszám (0-tól, a listák ezt tárolják), felirat ("1."), sorok
-const verseList = (hymn) => (hymn.verses || []).map((lines, index) => ({ index, label: `${index + 1}.`, lines }));
+// Egy versszak saját sorai és a refrénje (a "Refr." sor utáni sorok; a további versszakoknál rendszerint csak a rövidítése)
+const splitRefrain = (lines) => {
+    const i = lines.findIndex(l => l.startsWith('Refr.'));
+    if (i < 0) return { body: lines, refrain: null };
+    const first = lines[i].slice(5).trim();
+    return { body: lines.slice(0, i), refrain: (first ? [first] : []).concat(lines.slice(i + 1)) };
+};
+
+// A versszakok a megjelenítéshez: sorszám (0-tól, a listák ezt tárolják), felirat ("1."), sorok (saját + refrén)
+const verseList = (hymn) => (hymn.verses || []).map((lines, index) => ({ index, label: `${index + 1}.`, lines, ...splitRefrain(lines) }));
+
+// A szövegpanel tartalma: a kiválasztott versszakok (üres választás = mind) és az ének teljes refrénje
+// (a leghosszabb, rendszerint az 1. versszak után álló; akkor is, ha az 1. versszak nincs kiválasztva)
+const lyricsOf = (hymn, selected = []) => {
+    const all = verseList(hymn);
+    const refrain = all.reduce((best, v) => v.refrain && v.refrain.length > (best ? best.length : 0) ? v.refrain : best, null);
+    return { verses: selected.length ? all.filter(v => selected.includes(v.index)) : all, refrain };
+};
 
 // --- TÁROLÁS (localStorage) ---
 const STORAGE_KEYS = { playlists: 'orgonista_playlists', settings: 'orgonista_settings' };
@@ -584,22 +601,54 @@ const HymnSelectorModal = ({ isOpen, onClose, onSelect, hymnBook, title = 'Ének
     );
 };
 
+// Listanév mező, előtte dátumválasztó gombbal: a választott nap (ÉÉÉÉ-HH-NN, pl. a szertartás napja) a név elejére
+// kerül (a név elején álló korábbi dátumot lecseréli), a név többi része megmarad, és utána tovább lehet írni.
+const ListNameInput = ({ value, onChange, onEnter, inputRef, placeholder, style }) => {
+    const dateRef = useRef(null);
+    const ownRef = useRef(null);
+    const textRef = inputRef || ownRef;
+    const openPicker = () => {
+        const picker = dateRef.current;
+        try { picker.showPicker(); } catch (e) { picker.focus(); picker.click(); } // régebbi böngészők
+    };
+    const pickDate = (e) => {
+        const date = e.target.value;
+        e.target.value = ''; // így ugyanazt a napot újra választva is beíródik
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+        const rest = value.replace(/^\s*\d{4}-\d{2}-\d{2}\s*/, '');
+        const next = `${date} ${rest}`;
+        onChange(next);
+        requestAnimationFrame(() => { const t = textRef.current; if (t) { t.focus(); t.setSelectionRange(next.length, next.length); } });
+    };
+    return (
+        <div className="list-name-field" style={style}>
+            <button type="button" className="list-name-date" onClick={openPicker} title="Dátum a név elejére (pl. a szertartás napja)" aria-label="Dátum választása">
+                <Icons.Calendar size={20}/>
+            </button>
+            <input ref={dateRef} type="date" className="list-name-date-input" tabIndex={-1} aria-hidden="true" onChange={pickDate} />
+            <input ref={textRef} type="text" className="input" placeholder={placeholder} value={value}
+                onChange={e => onChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && onEnter && onEnter()} />
+        </div>
+    );
+};
+
 const CreatePlaylistModal = ({ isOpen, onClose, onConfirm }) => {
     const [name, setName] = useState('');
     const inputRef = useRef(null);
     useEffect(() => { if(isOpen) { setName(''); setTimeout(() => inputRef.current?.focus(), 100); } }, [isOpen]);
     if (!isOpen) return null;
+    const confirm = () => { if (name.trim()) onConfirm(name.trim()); };
 
     return (
         <Modal title="Új lista létrehozása" onClose={onClose} footer={
             <>
                 <button onClick={onClose} className="btn">Mégse</button>
-                <button onClick={() => name && onConfirm(name)} disabled={!name} className="btn btn-primary">Létrehozás</button>
+                <button onClick={confirm} disabled={!name.trim()} className="btn btn-primary">Létrehozás</button>
             </>
         }>
             <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Lista neve</label>
-                <input ref={inputRef} type="text" className="input" placeholder="pl. Vasárnapi istentisztelet" value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && name && onConfirm(name)} />
+                <ListNameInput inputRef={inputRef} placeholder="pl. 2026-10-04 Vasárnapi istentisztelet" value={name} onChange={setName} onEnter={confirm} />
             </div>
         </Modal>
     );
@@ -727,9 +776,9 @@ const AddToPlaylistModal = ({ onClose, onConfirm, playlists, initialVariationId,
                             </select>
                         )}
                         {isNewList && (
-                            <input ref={newNameRef} type="text" className="input" style={playlists.length > 0 ? {marginTop:'0.5rem'} : undefined}
-                                placeholder="Új lista neve, pl. Vasárnapi istentisztelet" value={newName}
-                                onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleConfirm()} />
+                            <ListNameInput inputRef={newNameRef} style={playlists.length > 0 ? {marginTop:'0.5rem'} : undefined}
+                                placeholder="Új lista neve, pl. 2026-10-04 Vasárnapi istentisztelet" value={newName}
+                                onChange={setNewName} onEnter={handleConfirm} />
                         )}
                     </div>
                 )}
@@ -1387,38 +1436,44 @@ const hotspotAt = (el, clientX) => {
 const ZOOM_MIN = 0.4;
 const ZOOM_MAX = 2.5;
 
-// Egy versszak a szövegpanelen, a refrén („Refr.” után) dőlt betűs. Három nézet:
-//  - side: oldalt, a sorok egymás alatt, a hosszú sor behúzással törik;
-//  - columns: lent, a versszakok egymás mellett, a sorok egymás alatt, törés nélkül (az oszlop olyan széles,
-//    mint a leghosszabb sora);
-//  - block: lent, a versszakok egymás alatt, a sorok folyó szövegként egymás után.
+// Egy versszak a szövegpanelen; a refrén dőlt betűs. Három nézet:
+//  - side: oldalt, a sorok egymás alatt, a hosszú sor behúzással törik; a versszak alatt a refrénje (vagy rövidítése);
+//  - columns: lent, egymás mellett, a sorok törés nélkül (az oszlop olyan széles, mint a leghosszabb sora);
+//    itt csak a versszak saját sorai, a teljes refrén külön oszlop (LyricsRefrain);
+//  - block: lent, egymás alatt, a sorok folyó szövegként, a refrén külön bekezdésben.
 const LyricsVerse = ({ verse, mode }) => {
-    const refrain = verse.lines.findIndex(l => l.startsWith('Refr.'));
-    if (mode === 'block') {
-        const body = refrain < 0 ? verse.lines : verse.lines.slice(0, refrain);
-        return (
-            <div className="lyrics-verse block">
-                <p className="lyrics-paragraph"><span className="lyrics-verse-label">{verse.label}</span> {body.join(' ')}</p>
-                {refrain >= 0 && (
-                    <p className="lyrics-paragraph lyrics-refrain">
-                        <span className="lyrics-refrain-label">{verse.lines[refrain]}</span> {verse.lines.slice(refrain + 1).join(' ')}
-                    </p>
-                )}
-            </div>
-        );
-    }
-    const lineClass = (i) => refrain < 0 || i < refrain ? 'lyrics-line' : i === refrain ? 'lyrics-line lyrics-refrain-label' : 'lyrics-line lyrics-refrain';
+    if (mode === 'block') return (
+        <div className="lyrics-verse block">
+            <p className="lyrics-paragraph"><span className="lyrics-verse-label">{verse.label}</span> {verse.body.join(' ')}</p>
+            {verse.refrain && (
+                <p className="lyrics-paragraph lyrics-refrain"><span className="lyrics-refrain-label">Refr.</span> {verse.refrain.join(' ')}</p>
+            )}
+        </div>
+    );
+    const refrain = mode === 'side' && verse.refrain;
     return (
         <div className={`lyrics-verse ${mode}`}>
             <span className="lyrics-verse-label">{verse.label}</span>
             <div className="lyrics-verse-lines">
-                {verse.lines.map((line, i) => <div key={i} className={lineClass(i)}>{line}</div>)}
+                {verse.body.map((line, i) => <div key={i} className="lyrics-line">{line}</div>)}
+                {refrain && <div className="lyrics-line lyrics-refrain-label">Refr.</div>}
+                {refrain && refrain.map((line, i) => <div key={`r${i}`} className="lyrics-line lyrics-refrain">{line}</div>)}
             </div>
         </div>
     );
 };
 
-const ScoreViewer = ({ score, variationId, preludeId, verses, showLyrics, lyricsWidth, scoreMaxWidth, scoreFont, onNext, onPrev }) => {
+// Az ének refrénje külön oszlopban (lent, egymás mellett nézetben, az első versszak mellett)
+const LyricsRefrain = ({ lines }) => (
+    <div className="lyrics-verse columns refrain">
+        <span className="lyrics-verse-label lyrics-refrain-label">Refr.</span>
+        <div className="lyrics-verse-lines">
+            {lines.map((line, i) => <div key={i} className="lyrics-line lyrics-refrain">{line}</div>)}
+        </div>
+    </div>
+);
+
+const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyricsWidth, scoreMaxWidth, scoreFont, onNext, onPrev }) => {
     const [textPosition, setTextPosition] = useState('bottom');
     const [textLayout, setTextLayout] = useState('columns');
     const [zoom, setZoom] = useState(1.0);     // a beállított legnagyobb méret
@@ -1519,14 +1574,16 @@ const ScoreViewer = ({ score, variationId, preludeId, verses, showLyrics, lyrics
 
     const isSide = textPosition === 'right';
     const lyricsMode = isSide ? 'side' : textLayout === 'columns' ? 'columns' : 'block';
-    // Szövegpanel (oldalt vagy lent); kotta nélkül is látszik, szöveg nélkül elmarad
+    const { verses, refrain } = lyrics;
+    // Szövegpanel (oldalt vagy lent); kotta nélkül is látszik, szöveg nélkül elmarad. Lent folyó szövegként legfeljebb
+    // a kottanézet 30%-át foglalja el (a többi görgethető), hogy a kottától ne vegye el a helyet.
     const lyricsPanel = showLyrics && verses.length > 0 && (
         <div style={{
             width: isSide ? lyricsWidth : '100%', 
             minWidth: isSide ? '200px' : '100%', 
             height: isSide ? '100%' : 'auto',
             minHeight: isSide ? '100%' : '150px',
-            maxHeight: isSide ? '100%' : '50%',
+            maxHeight: isSide ? '100%' : lyricsMode === 'block' ? '30%' : '50%',
             display:'flex', 
             flexDirection:'column', 
             borderLeft: isSide ? '1px solid var(--col-border, #ddd)' : 'none', 
@@ -1546,15 +1603,22 @@ const ScoreViewer = ({ score, variationId, preludeId, verses, showLyrics, lyrics
                      </button>
                  )}
             </div>
-            <div style={{
+            <div className={`lyrics-scroll ${lyricsMode}`} style={{
                 flex: 1, 
                 overflowY: 'auto',
                 overflowX: lyricsMode === 'columns' ? 'auto' : 'hidden',
                 padding: '1rem'
             }}>
-                <div className={lyricsMode === 'columns' ? 'lyrics-columns' : undefined}>
-                    {verses.map(v => <LyricsVerse key={v.index} verse={v} mode={lyricsMode} />)}
-                </div>
+                {lyricsMode === 'columns' ? (
+                    <div className="lyrics-columns">
+                        {verses.map((v, i) => (
+                            <React.Fragment key={v.index}>
+                                <LyricsVerse verse={v} mode="columns" />
+                                {i === 0 && refrain && <LyricsRefrain lines={refrain} />}
+                            </React.Fragment>
+                        ))}
+                    </div>
+                ) : verses.map(v => <LyricsVerse key={v.index} verse={v} mode={lyricsMode} />)}
             </div>
         </div>
     );
@@ -2419,7 +2483,7 @@ function OrganistApp() {
                             </div>
                         </div>
                         <div style={{flex:1, overflow:'hidden'}}>
-                            <ScoreViewer score={getScoreById(selectedHymn.scoreId)} variationId={currentVariationId} preludeId={currentPreludeId} verses={verseList(selectedHymn)} showLyrics={settings.showLyrics} lyricsWidth={settings.lyricsWidth} scoreMaxWidth={settings.scoreMaxWidth} scoreFont={settings.scoreFont}/>
+                            <ScoreViewer score={getScoreById(selectedHymn.scoreId)} variationId={currentVariationId} preludeId={currentPreludeId} lyrics={lyricsOf(selectedHymn)} showLyrics={settings.showLyrics} lyricsWidth={settings.lyricsWidth} scoreMaxWidth={settings.scoreMaxWidth} scoreFont={settings.scoreFont}/>
                         </div>
                     </div>
                 ) : (
@@ -2563,7 +2627,7 @@ function OrganistApp() {
                                 score={getScoreById(playerItem.hymn.scoreId)}
                                 variationId={playerItem.variationId}
                                 preludeId={playerItem.preludeId}
-                                verses={verseList(playerItem.hymn).filter(v => playerItem.verses.length === 0 || playerItem.verses.includes(v.index))}
+                                lyrics={lyricsOf(playerItem.hymn, playerItem.verses)}
                                 showLyrics={settings.showLyrics}
                                 lyricsWidth={settings.lyricsWidth}
                                 scoreMaxWidth={settings.scoreMaxWidth}
