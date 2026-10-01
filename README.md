@@ -44,6 +44,7 @@ nyilvánossá kell tenni.
 - `libs/`: `react.js` és `react-dom.js` (React 18 UMD build); a `babel.js` csak a `dev.html`-hez kell.
 - `libs/verovio/`: a kottarajzoló (Verovio 6.3.0, LGPL-3.0), a licencek és a frissítés leírása
   (`libs/verovio/README.md`).
+- `fonts/`: a feliratok és az énekszövegek betűtípusai (SIL Open Font License, `fonts/README.md`).
 - `data/enek.json`: az énekek.
 - `data/kottakonyvek.json`: a kottakönyvek listája (csak a mappák).
 - `data/<mappa>/index.json`: egy kottakönyv adatai és kottái; mellette a kottafájlok
@@ -52,8 +53,12 @@ nyilvánossá kell tenni.
 
 ### Adatformátum (amit a kód használ)
 
-- `enek.json`: `[{ "number": "42", "title": "…", "lyrics": "1. …\n…\n\n2. …", "scoreId": "42" }]`
+- `enek.json`: `[{ "number": "42", "title": "…", "keywords": ["zsoltár", "bizalom"], "scoreId": "42", "lyrics": "1. …\n…\n\n2. …" }]`
   A versszakokat üres sor választja el, és mindegyik `1.`, `2.` … számmal kezdődik.
+  - `keywords`: 1–3 kulcsszó a könyvtár kártyáin és kulcsszavas szűrőjében (szabadon bővíthető, új kulcsszó is
+    írható; a szűrő magától felveszi). Az első az énekeskönyv témaköre a számtartomány szerint (pl. 401–423:
+    „karácsony”, 651–668: „reggel”); a többit (pl. „bizalom”, „bűnbánat”, „dicséret”) a program az énekszövegből
+    javasolta: ezeket érdemes átnézni, és ahol kell, javítani.
 - `kottakonyvek.json`: `[{ "folder": "enekeskonyv2021", "builtin": true }, { "folder": "genfi" }]`.
   A sorrend a Kottakönyvek oldal sorrendje. A `"builtin": true` könyv beépített: mindig
   elérhető, és magától mentődik a készülékre. A többit a felhasználó töltheti le.
@@ -78,7 +83,10 @@ könyv `"version"` mezőjét (`"version": "2026-10-01"`). Frissítéskor a lecse
 
 ## Beállítások
 
-- **Megjelenés:** háttér téma, az oldalmenü helye.
+- **Megjelenés:** háttér téma, betűtípus, az oldalmenü helye.
+  - Betűtípus (a feliratok és az énekszövegek betűi, mintaszöveggel): **Figtree** (alapértelmezett), Nunito Sans,
+    Onest, DM Sans, Atkinson Hyperlegible Next. Mind a programmal csomagolt, szabad (SIL OFL) betűtípus
+    (`fonts/`); a választás után a többi törölhető (`fonts/README.md`).
 - **Kottanézet és lejátszó:** szövegpanel, oldalsáv és kotta szélessége, óra a lejátszóban.
 - **Kottagrafika:** a kotta rajzolata. Kottafont: **Leipzig** (tömöttebb, alapértelmezett) vagy
   **Bravura** (szellősebb); mindkettőt ugyanazon a mintakottán mutatja. Az új kottagrafikai
@@ -120,6 +128,13 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
 - Az offline működéshez https kell (GitHub Pages), vagy helyben a `localhost` cím. Ha az oldalt
   https nélkül nyitod meg (pl. helyi hálózaton, IP-címmel), nincs letöltés: ilyenkor minden könyv
   a szerverről, internettel használható.
+
+## Könyvtár
+
+- Az énekkártyákon az énekszám, a kezdősor, a letétek és az előjátékok száma (a letöltött, bekapcsolt
+  könyvekből), és az ének kulcsszavai.
+- A kereső mellett kulcsszavas szűrő: pl. „karácsony” választásával csak a karácsonyi énekek látszanak.
+  Egy kártya kulcsszavára koppintva is erre szűr (újra koppintva megszűnik). A kereső a kulcsszavakban is keres.
 
 ## Kottanézet és lejátszó
 

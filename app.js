@@ -62,7 +62,17 @@ const SCORE_FONTS = [
     { id: 'Bravura', hint: 'szellősebb' }
 ];
 
-const DEFAULT_SETTINGS = { theme: 'pergamen', showLyrics: true, showClock: true, sidebarSide: 'right', lyricsWidth: '15%', scoreMaxWidth: '100%', scoreFont: SCORE_FONTS[0].id, bookActive: {}, skipFullscreenPrompt: false, settingsVersion: SETTINGS_VERSION };
+// A feliratok és az énekszövegek betűtípusai (fonts/ mappa, a programmal csomagolva); az első az alapértelmezett
+const UI_FONTS = [
+    { id: 'figtree', family: 'Figtree', hint: 'kiegyensúlyozott, barátságos' },
+    { id: 'nunito-sans', family: 'Nunito Sans', hint: 'lágy, nyitott' },
+    { id: 'onest', family: 'Onest', hint: 'tágas, nagyobb kisbetűk' },
+    { id: 'dm-sans', family: 'DM Sans', hint: 'geometrikus' },
+    { id: 'atkinson', family: 'Atkinson Hyperlegible Next', hint: 'a legjobban olvasható betűformák' }
+];
+const uiFontStack = (id) => `'${(UI_FONTS.find(f => f.id === id) || UI_FONTS[0]).family}', var(--font-fallback)`;
+
+const DEFAULT_SETTINGS = { theme: 'pergamen', uiFont: UI_FONTS[0].id, showLyrics: true, showClock: true, sidebarSide: 'right', lyricsWidth: '15%', scoreMaxWidth: '100%', scoreFont: SCORE_FONTS[0].id, bookActive: {}, skipFullscreenPrompt: false, settingsVersion: SETTINGS_VERSION };
 
 const loadJSON = (key, fallback) => {
     try {
@@ -82,6 +92,7 @@ const loadSettings = () => {
     const settings = { ...DEFAULT_SETTINGS, ...(typeof stored === 'object' ? stored : {}) };
     if (!settings.bookActive || typeof settings.bookActive !== 'object') settings.bookActive = {};
     if (!SCORE_FONTS.some(f => f.id === settings.scoreFont)) settings.scoreFont = DEFAULT_SETTINGS.scoreFont;
+    if (!UI_FONTS.some(f => f.id === settings.uiFont)) settings.uiFont = DEFAULT_SETTINGS.uiFont;
     // 2. verzió: a Pergamen lett az alapértelmezett téma. A korábbi alapértéket ("papyrus"), amelyet az oldal
     // magától elmentett, egyszer átállítjuk (addig Pergament nem is lehetett választani).
     if ((stored.settingsVersion || 1) < 2 && settings.theme === 'papyrus') settings.theme = 'pergamen';
@@ -374,17 +385,23 @@ const toggleFullScreen = () => {
 // Kisbetűs, ékezet nélküli alak az összehasonlításhoz ("eros var" = "Erős vár")
 const normalizeText = (text) => String(text ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-// Az ékezet nélküli címet és szöveget egyszer számoljuk ki, nem minden billentyűleütésnél
+// Az ének kulcsszavai (enek.json: "keywords"), pl. ["karácsony", "dicséret"]
+const hymnKeywords = (hymn) => Array.isArray(hymn.keywords)
+    ? hymn.keywords.filter(k => typeof k === 'string' && k.trim()).map(k => k.trim())
+    : [];
+
+// Az ékezet nélküli címet, kulcsszavakat és szöveget egyszer számoljuk ki, nem minden billentyűleütésnél
 const buildSearchIndex = (hymns) => hymns.map(h => ({
     hymn: h,
     number: String(h.number),
     title: normalizeText(h.title),
+    keywords: normalizeText(hymnKeywords(h).join(' | ')),
     lyrics: normalizeText(h.lyrics)
 }));
 
 // Csak számjegyek: az énekszám elejére keres (a pontos egyezés kerül előre), a szövegben nem,
 // mert ott minden éneknél ott vannak a versszakszámok ("1.", "2." ...).
-// Egyébként ékezet nélkül keres a számban, a címben és a szövegben; a címbeli találatok kerülnek előre.
+// Egyébként ékezet nélkül keres a számban, a címben, a kulcsszavakban és a szövegben; a címbeli találatok kerülnek előre.
 const searchHymns = (index, query) => {
     const q = query.trim();
     if (!q) return index.map(e => e.hymn);
@@ -396,7 +413,7 @@ const searchHymns = (index, query) => {
     }
     const nq = normalizeText(q);
     return index
-        .filter(e => normalizeText(e.number).startsWith(nq) || e.title.includes(nq) || e.lyrics.includes(nq))
+        .filter(e => normalizeText(e.number).startsWith(nq) || e.title.includes(nq) || e.keywords.includes(nq) || e.lyrics.includes(nq))
         .sort((a, b) => b.title.includes(nq) - a.title.includes(nq))
         .map(e => e.hymn);
 };
@@ -423,7 +440,7 @@ const Modal = ({ title, onClose, children, footer, maxWidth }) => (
     <div className="modal-overlay">
         <div className="modal-box" style={{maxWidth: maxWidth || '500px'}}>
             <div className="modal-header" style={{padding: '0.75rem 1rem'}}>
-                <h3 className="font-serif text-lg font-bold text-galaxy">{title}</h3>
+                <h3 className="text-lg font-bold text-galaxy">{title}</h3>
                 <button onClick={onClose}><Icons.X size={20} className="text-gray-500 hover:text-black"/></button>
             </div>
             <div className="modal-body" style={{padding:'1rem'}}>{children}</div>
@@ -686,7 +703,7 @@ const AddToPlaylistModal = ({ onClose, onConfirm, playlists, initialVariationId,
         }>
             <div className="text-center pb-2 border-b border-gray-200 mb-4">
                 <div className="font-bold text-accent text-lg">#{hymn.number}</div>
-                <div className="font-serif font-bold text-galaxy">{hymn.title}</div>
+                <div className="font-bold text-galaxy">{hymn.title}</div>
             </div>
             
             <div className="flex flex-col gap-4">
@@ -824,6 +841,31 @@ const SettingsView = ({ settings, onUpdateSettings }) => (
                         </select>
                     </div>
 
+                    <div className="card card-stack">
+                        <div className="card-decoration"></div>
+                        <div className="setting-label">
+                            <div className="font-bold text-ink">Betűtípus</div>
+                            <div className="text-xs text-gray-500">A feliratok és az énekszövegek betűi</div>
+                        </div>
+                        <div className="font-choices" role="radiogroup" aria-label="Betűtípus">
+                            {UI_FONTS.map(font => (
+                                <button key={font.id} type="button" role="radio" aria-checked={settings.uiFont === font.id}
+                                    className={`font-choice${settings.uiFont === font.id ? ' selected' : ''}`}
+                                    onClick={() => onUpdateSettings({...settings, uiFont: font.id})}>
+                                    <span className="ui-font-sample" style={{fontFamily: uiFontStack(font.id)}}>
+                                        <span className="ui-font-sample-title">42 Mint a szép, híves patakra</span>
+                                        <span className="ui-font-sample-text">Aki nem jár hitlenek tanácsán, és meg nem áll a bűnösök útján…</span>
+                                    </span>
+                                    <span className="font-choice-label">
+                                        <span className="font-choice-text">
+                                            <span className="font-choice-name">{font.family}</span> <span className="font-choice-hint">{font.hint}</span>
+                                        </span>
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     <div className="card card-row">
                         <div className="card-decoration"></div>
                         <div className="setting-label">
@@ -906,8 +948,9 @@ const SettingsView = ({ settings, onUpdateSettings }) => (
                                     onClick={() => onUpdateSettings({...settings, scoreFont: font.id})}>
                                     <FontSample font={font.id} />
                                     <span className="font-choice-label">
-                                        <span className="font-choice-name">{font.id}</span>
-                                        <span className="font-choice-hint">{font.hint}</span>
+                                        <span className="font-choice-text">
+                                            <span className="font-choice-name">{font.id}</span> <span className="font-choice-hint">{font.hint}</span>
+                                        </span>
                                     </span>
                                 </button>
                             ))}
@@ -1454,7 +1497,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
                         ) : (
                             <div className="score-placeholder">
                                 <Icons.Music size={80} className="text-ink"/>
-                                <p className="font-serif mt-4">Kotta helye</p>
+                                <p className="mt-4">Kotta helye</p>
                             </div>
                         ))}
                     </div>
@@ -1518,7 +1561,6 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
                                     marginBottom: '1rem', 
                                     paddingLeft: '10px', 
                                     borderLeft: '3px solid var(--col-border, #eee)', 
-                                    fontFamily: 'var(--font-serif)', 
                                     lineHeight: '1.4',
                                     whiteSpace: 'pre-line', // a versszakon belüli sortörések megmaradnak
                                     breakInside: 'avoid-column',
@@ -1751,6 +1793,7 @@ function OrganistApp() {
     const [playingPlaylistId, setPlayingPlaylistId] = useState(null);
     const [playerIndex, setPlayerIndex] = useState(0);
     const [searchQuery, setSearchQuery] = useState('');
+    const [keywordFilter, setKeywordFilter] = useState('');   // a könyvtár kulcsszavas szűrője ('' = minden ének)
 
     // Selection States
     const [currentVariationId, setCurrentVariationId] = useState(null);
@@ -2117,6 +2160,7 @@ function OrganistApp() {
 
     // A betöltő képernyő és a böngésző „túlgörgetett” széle is a téma színét kapja
     useEffect(() => { document.body.style.backgroundColor = currentTheme.sidebar; }, [currentTheme.sidebar]);
+    useEffect(() => { document.documentElement.style.setProperty('--font-ui', uiFontStack(settings.uiFont)); }, [settings.uiFont]);
 
     // Énekváltáskor az első változat, előjáték nélkül. Ha csak a könyvek változtak (pl. letöltés a háttérben),
     // a választás megmarad, amíg létezik.
@@ -2149,7 +2193,22 @@ function OrganistApp() {
     }
     
     const searchIndex = useMemo(() => buildSearchIndex(hymnBook), [hymnBook]);
-    const filteredHymns = useMemo(() => searchHymns(searchIndex, searchQuery), [searchIndex, searchQuery]);
+    const filteredHymns = useMemo(() => {
+        const found = searchHymns(searchIndex, searchQuery);
+        return keywordFilter ? found.filter(h => hymnKeywords(h).includes(keywordFilter)) : found;
+    }, [searchIndex, searchQuery, keywordFilter]);
+    // A szűrő kulcsszavai ábécérendben, az énekek számával
+    const keywordOptions = useMemo(() => {
+        const counts = new Map();
+        hymnBook.forEach(h => hymnKeywords(h).forEach(k => counts.set(k, (counts.get(k) || 0) + 1)));
+        return [...counts].sort((a, b) => a[0].localeCompare(b[0], 'hu'));
+    }, [hymnBook]);
+    // Énekenként a letétek és az előjátékok száma (a használható, bekapcsolt könyvekből)
+    const scoreCounts = useMemo(() => {
+        const counts = new Map();
+        activeScores.forEach(s => counts.set(String(s.id), { variations: (s.variations || []).length, preludes: (s.preludes || []).length }));
+        return counts;
+    }, [activeScores]);
 
     const closeFullscreenModal = (dontAsk) => {
         setIsFullscreenModalOpen(false);
@@ -2261,7 +2320,7 @@ function OrganistApp() {
                 {view === 'about' && (
                     <div className="about-view">
                         <div className="icon-container"><Icons.Music size={40}/></div>
-                        <h1 className="font-serif font-bold text-3xl text-galaxy mb-2">Református Kottagyűjtemény</h1>
+                        <h1 className="font-bold text-3xl text-galaxy mb-2">Református Kottagyűjtemény</h1>
                         <p className="text-accent uppercase font-bold tracking-widest mb-8">Fazekas Márton</p>
                          <div className="content-box">
                             <p>Református énekek orgonakíséretei, a 2021-es énekeskönyvhöz igazítva. Több korálkönyvből válogattam, elsősorban saját használatra - így számos kíséret kimaradt, például a "művészi" B letétek a genfi korálkönyvből.</p>
@@ -2282,7 +2341,7 @@ function OrganistApp() {
                             <div className="hymn-header-title">
                                 <button onClick={() => window.history.back()} className="header-back" title="Vissza"><Icons.ChevronLeft size={24}/></button>
                                 <div className="hymn-header-text">
-                                    <h2 className="font-serif font-bold text-2xl text-accent">{selectedHymn.number}</h2>
+                                    <h2 className="font-bold text-2xl text-accent">{selectedHymn.number}</h2>
                                     <h3 className="font-bold text-lg truncate">{selectedHymn.title}</h3>
                                 </div>
                             </div>
@@ -2311,23 +2370,49 @@ function OrganistApp() {
                         <div className="header centered">
                             <h1 className="header-title main">Református Kottagyűjtemény</h1>
                         </div>
-                        <div style={{padding:'0.5rem 1rem', borderBottom:'1px solid var(--col-border, #ddd)', backgroundColor:'var(--col-search-bar, rgba(0,0,0,0.02))'}}>
-                            <div style={{position:'relative', width:'100%', maxWidth:'600px', margin:'0 auto'}}>
-                                <Icons.Search style={{position:'absolute', top:'10px', left:'12px', color:'var(--col-ink-muted, #999)', pointerEvents:'none'}} size={20}/>
-                                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && filteredHymns.length > 0) navigate({ activeTab: 'library', selectedHymnNumber: filteredHymns[0].number }); }} placeholder="Keresés számra, címre vagy szövegre..." className="input" style={{paddingLeft:'40px', width:'100%', height:'40px'}}/>
+                        <div className="library-toolbar">
+                            <div className="library-search">
+                                <Icons.Search className="library-search-icon" size={20}/>
+                                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && filteredHymns.length > 0) navigate({ activeTab: 'library', selectedHymnNumber: filteredHymns[0].number }); }} placeholder="Keresés számra, címre vagy szövegre..." className="input"/>
                             </div>
+                            <select className={`input library-keyword${keywordFilter ? ' active' : ''}`} value={keywordFilter} onChange={(e) => setKeywordFilter(e.target.value)} aria-label="Szűrés kulcsszóra">
+                                <option value="">Minden kulcsszó</option>
+                                {keywordOptions.map(([keyword, count]) => <option key={keyword} value={keyword}>{keyword} ({count})</option>)}
+                            </select>
                         </div>
                         <div style={{flex:1, overflowY:'auto', padding:'1rem'}}>
-                            {filteredHymns.map(h => (
-                                <div key={h.number} onClick={() => navigate({ activeTab: 'library', selectedHymnNumber: h.number })} className="card list-item">
-                                    <div className="card-decoration"></div>
-                                    <div style={{flex:1, display: 'flex', alignItems: 'center'}}>
-                                        <span className="text-accent font-bold text-lg" style={{minWidth: '3.5rem', textAlign: 'right', marginRight: '1.5rem'}}>{h.number}</span>
-                                        <span className="font-bold text-ink">{h.title}</span>
-                                    </div>
-                                    <Icons.ChevronRight style={{color:'var(--col-border-dark, #ccc)'}}/>
+                            {(keywordFilter || searchQuery.trim()) && (
+                                <div className="library-result-count">
+                                    {filteredHymns.length} ének
+                                    {keywordFilter && <button type="button" className="btn-ghost library-clear" onClick={() => setKeywordFilter('')}>Szűrés törlése</button>}
                                 </div>
-                            ))}
+                            )}
+                            {filteredHymns.map(h => {
+                                const counts = scoreCounts.get(String(h.scoreId ?? h.number)) || { variations: 0, preludes: 0 };
+                                return (
+                                    <div key={h.number} onClick={() => navigate({ activeTab: 'library', selectedHymnNumber: h.number })} className="card list-item hymn-card">
+                                        <div className="card-decoration"></div>
+                                        <span className="hymn-card-number text-accent">{h.number}</span>
+                                        <div className="hymn-card-body">
+                                            <div className="hymn-card-title text-ink">{h.title}</div>
+                                            <div className="hymn-card-meta">
+                                                {counts.variations || counts.preludes
+                                                    ? <span className="hymn-card-counts">{counts.variations} letét · {counts.preludes} előjáték</span>
+                                                    : <span className="hymn-card-counts none">nincs kotta</span>}
+                                                {hymnKeywords(h).map(keyword => (
+                                                    <button key={keyword} type="button" className={`keyword-chip${keyword === keywordFilter ? ' active' : ''}`}
+                                                        title={keyword === keywordFilter ? 'Szűrés törlése' : `Szűrés: ${keyword}`}
+                                                        onClick={(e) => { e.stopPropagation(); setKeywordFilter(keyword === keywordFilter ? '' : keyword); }}>
+                                                        {keyword}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <Icons.ChevronRight style={{color:'var(--col-border-dark, #ccc)', flex: 'none'}}/>
+                                    </div>
+                                );
+                            })}
+                            {filteredHymns.length === 0 && <p className="library-empty">Nincs a keresésnek megfelelő ének.</p>}
                         </div>
                     </div>
                 ))}
@@ -2353,7 +2438,7 @@ function OrganistApp() {
                                     <div key={pl.id} onClick={() => openPlaylistEditor(pl)} className="card clickable">
                                         <div className="card-decoration"></div>
                                         <div className="playlist-card-header">
-                                            <h3 className="font-serif font-bold text-galaxy">{pl.name}</h3>
+                                            <h3 className="font-bold text-galaxy">{pl.name}</h3>
                                             <div className="flex gap-2">
                                                 <button onClick={(e) => { e.stopPropagation(); openPlaylistEditor(pl); }} className="btn-ghost" title="Szerkesztés"><Icons.Edit size={18}/></button>
                                                 <button onClick={(e) => { e.stopPropagation(); handleRemovePlaylistRequest(pl); }} className="btn-danger" title="Törlés"><Icons.Trash2 size={18}/></button>
@@ -2389,7 +2474,7 @@ function OrganistApp() {
                                     <div className="player-heading-main">
                                         <span className="player-position" title="Hányadik ének a listában">{currentPlayerIndex+1}/{playerQueue.length}</span>
                                         <span className="player-position-sep">–</span>
-                                        <h2 className="font-serif font-bold text-2xl text-accent">{playerItem.hymn.number}</h2>
+                                        <h2 className="font-bold text-2xl text-accent">{playerItem.hymn.number}</h2>
                                         <h3 className="font-bold text-lg truncate">{playerItem.hymn.title}</h3>
                                     </div>
                                     {/* A változat adatai (szükség esetén rövidülnek) */}
