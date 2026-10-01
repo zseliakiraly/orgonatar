@@ -135,6 +135,44 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     * { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track); }
 }
 
+/* --- Háttér (Beállítások → Háttér; az .app-root bg-* osztálya) ---
+   Átmenet: nagyon enyhe, sugaras sötétedés a háttérszínben (belül, vagy a szélek felé). Textúra: a világos
+   felületeken papírszemcse (az oldal hátterén halvány foltokkal), a türkiz oldalsávon, fejléceken és gombokon
+   bőrkötés-szemcse. A textúrák SVG-zajból készülnek (feTurbulence); a keverés a színt a témából veszi, így minden
+   színsémával működnek. */
+:root {
+    --bg-shade: 74, 56, 24; /* az átmenetek árnyalata (meleg barna) */
+    --tex-paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45  0 0 0 0 0.45  0 0 0 0 0.45  0 0 -0.36 0 0.18'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+    --tex-paper-cloud: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='c' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.008' numOctaves='3' seed='8' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.6  0 0 0 0 0.6  0 0 0 0 0.6  0 0 -0.20 0 0.10'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23c)'/%3E%3C/svg%3E");
+    --tex-leather: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='l' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.4' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeDiffuseLighting surfaceScale='1.6' lighting-color='%23fff'%3E%3CfeDistantLight azimuth='225' elevation='55'/%3E%3C/feDiffuseLighting%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='0.3' intercept='0.254'/%3E%3CfeFuncG type='linear' slope='0.3' intercept='0.254'/%3E%3CfeFuncB type='linear' slope='0.3' intercept='0.254'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23l)'/%3E%3C/svg%3E");
+}
+.theme-white { --bg-shade: 30, 41, 59; }
+/* a nézetek belső, görgethető sávja átlátszó: az egész oldalon egy háttér van */
+.app-root > .main-content .main-content { background-color: transparent; }
+.bg-center > .main-content, .bg-center .player-view {
+    background-image: radial-gradient(ellipse 75% 70% at 50% 50%, rgba(var(--bg-shade), 0.08), rgba(var(--bg-shade), 0));
+}
+.bg-edges > .main-content, .bg-edges .player-view {
+    background-image: radial-gradient(ellipse 80% 80% at 50% 50%, rgba(var(--bg-shade), 0) 50%, rgba(var(--bg-shade), 0.12));
+}
+.bg-texture > .main-content, .bg-texture .player-view {
+    background-image: var(--tex-paper-grain), var(--tex-paper-cloud);
+    background-blend-mode: multiply;
+}
+.bg-texture .modal-box, .bg-texture .library-toolbar {
+    background-image: var(--tex-paper-grain);
+    background-blend-mode: multiply;
+}
+.bg-texture .sidebar, .bg-texture .header, .bg-texture .playlist-card-start-btn, .bg-texture .btn-success,
+.bg-texture .about-view .icon-container {
+    background-image: var(--tex-leather);
+    background-blend-mode: soft-light;
+}
+/* a lejátszó világos fejléce a lejátszó hátterén ül */
+.bg-center .player-view .header, .bg-edges .player-view .header, .bg-texture .player-view .header {
+    background-color: transparent; background-image: none;
+}
+
 /* --- Layout --- */
 .app-root { display: flex; height: 100vh; height: 100dvh; width: 100vw; overflow: hidden; }
 .loading-screen { height: 100vh; height: 100dvh; display: flex; align-items: center; justify-content: center; color: var(--col-white); }
@@ -235,6 +273,10 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     display: flex; align-items: center; justify-content: center;
     z-index: 300; /* a lejátszó (200) fölött is látszódjon */
 }
+/* Felső elhelyezés: a szabad hely 1 : 2 arányban oszlik meg a doboz fölött és alatt */
+.modal-overlay.upper { flex-direction: column; }
+.modal-overlay.upper::before { content: ''; flex: 1 1 0; }
+.modal-overlay.upper::after { content: ''; flex: 2 1 0; }
 .modal-box {
     background-color: var(--col-papyrus);
     width: 100%; max-width: 28rem;
@@ -453,7 +495,8 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .player-heading-main { display: flex; align-items: baseline; gap: 8px; flex: 0 1 auto; min-width: 0; max-width: 100%; }
 .player-heading-main > * { flex-shrink: 0; }
 .player-heading-main > h3 { flex-shrink: 1; min-width: 0; }
-.player-heading-info { flex: 0 1 auto; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* a jobb oldali belső margó helyet ad a dőlt utolsó betű kilógó részének (az overflow különben levágná) */
+.player-heading-info { flex: 0 1 auto; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 0.3em; }
 .player-position { font-weight: 600; color: var(--col-ink-muted, #666); white-space: nowrap; }
 .player-position-sep { color: var(--col-ink-muted, #666); opacity: 0.6; }
 .player-header-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; margin-left: 0.75rem; }
@@ -514,8 +557,14 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .library-search { position: relative; flex: 0 1 600px; min-width: 0; }
 .library-search-icon { position: absolute; top: 10px; left: 12px; color: var(--col-ink-muted, #999); pointer-events: none; }
 .library-search .input { padding-left: 40px; height: 40px; }
-.library-keyword { flex: 0 0 auto; width: auto; max-width: 100%; height: 40px; padding: 0 0.75rem; cursor: pointer; }
-.library-keyword.active { border-color: var(--col-accent); font-weight: 600; }
+.library-keyword { flex: 0 0 auto; max-width: 100%; }
+.library-keyword .custom-select-btn { height: 40px; width: 100%; padding-left: 0.75rem; }
+.library-keyword.active .custom-select-btn { border-color: var(--col-accent); font-weight: 600; }
+/* a kulcsszó-szűrő menüjében a kulcsszó mellett jobbra az énekek száma */
+.keyword-option { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.keyword-option-name { font-weight: 600; color: var(--col-galaxy-blue); }
+.keyword-option-count { font-size: 0.8rem; color: var(--col-ink-muted, #666); font-variant-numeric: tabular-nums; }
+.custom-select-option:has(.keyword-option) { padding: 8px 10px; }
 @media (max-width: 640px) {
     .library-search, .library-keyword { flex: 1 1 100%; }
 }
@@ -556,14 +605,33 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     .hymn-card-chevron { grid-column: 2; grid-row: 1 / span 2; }
 }
 
+.playlist-editor-list { max-width: 1000px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
 .playlist-editor-item {
+    position: relative;
     background-color: var(--col-card-raised, white);
-    padding: 1rem;
+    padding: 0.5rem 1rem 0.5rem 0.25rem;
+    min-height: 68px;
     border-radius: 8px;
     border: 1px solid var(--col-border, #ddd);
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 0.5rem;
+    cursor: grab;
+    user-select: none; -webkit-user-select: none;
+}
+/* fogantyú: érintéssel ezzel lehet megfogni (itt a böngésző nem görget) */
+.playlist-editor-grip {
+    flex: none; width: 40px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--col-border-dark, #ccc); touch-action: none;
+}
+.playlist-editor-item:hover .playlist-editor-grip { color: var(--col-ink-muted, #666); }
+/* húzás közben: a megfogott elem kiemelve, a többi simán húzódik a helyére */
+.playlist-editor-list.reordering .playlist-editor-item { transition: transform 0.15s ease; }
+.playlist-editor-list.reordering .playlist-editor-item.dragging {
+    transition: none; z-index: 5; cursor: grabbing;
+    box-shadow: var(--shadow-xl), 0 4px 10px rgba(0, 0, 0, 0.15); border-color: var(--col-accent);
 }
 
 /* About view */
@@ -633,9 +701,46 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     flex: 1; min-width: 0; min-height: 0; padding: 1rem; text-align: center;
     display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.5;
 }
-/* Szövegpanel: versszakonként a száma, mellette a szöveg (a nézeteket lásd a LyricsVerse-nél, app.js) */
+/* Szövegpanel (lent vagy oldalt): eszköztár és a görgethető szöveg. A méretét és a betűméretét énekenként lehet
+   állítani (app.js: ScoreViewer); húzás közben a méretet a --drag-size adja. */
+.lyrics-panel { flex: none; display: flex; flex-direction: column; background-color: var(--col-papyrus); z-index: 20; }
+.lyrics-panel.bottom { width: 100%; border-top: 1px solid var(--col-border, #ddd); box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.1); }
+.lyrics-panel.side { height: 100%; border-left: 1px solid var(--col-border, #ddd); box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1); }
+.lyrics-panel.bottom.resizing { height: var(--drag-size) !important; min-height: 0 !important; max-height: none !important; }
+.lyrics-panel.side.resizing { width: var(--drag-size) !important; min-width: 0 !important; }
+.lyrics-panel.resizing { user-select: none; -webkit-user-select: none; }
+.lyrics-toolbar { flex: none; display: flex; align-items: center; gap: 4px; padding: 2px 4px; border-bottom: 1px dashed var(--col-border, #eee); }
+/* lent: az átméretező fogantyú középen, a gombok jobbra; oldalt a fogantyú a bal szélen */
+.lyrics-panel.bottom .lyrics-toolbar { display: grid; grid-template-columns: 1fr auto 1fr; }
+.lyrics-toolbar-buttons { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+.lyrics-tool {
+    min-width: 32px; height: 30px; padding: 0 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 6px; color: var(--col-ink-muted, #666);
+}
+.lyrics-tool:hover:not(:disabled) { background-color: rgba(0, 0, 0, 0.06); color: var(--col-ink); }
+.lyrics-font-btn { font-family: var(--font-serif); font-weight: 700; font-size: 15px; line-height: 1; gap: 1px; }
+.lyrics-font-t { font-size: 18px; }
+.lyrics-font-t.small { font-size: 13px; }
+.lyrics-tool-sep { width: 1px; height: 18px; margin: 0 4px; background-color: var(--col-border, #ddd); }
+.lyrics-resize {
+    display: flex; align-items: center; justify-content: center;
+    width: 88px; height: 30px; border-radius: 6px;
+    cursor: row-resize; touch-action: none;
+}
+.lyrics-resize::before {
+    content: ''; width: 44px; height: 5px; border-radius: 3px;
+    background-color: var(--col-border-dark, #b5a88b); transition: background-color 0.15s;
+}
+.lyrics-panel.side .lyrics-resize { width: 30px; cursor: col-resize; }
+.lyrics-panel.side .lyrics-resize::before { width: 5px; height: 22px; }
+.lyrics-resize:hover::before, .lyrics-panel.resizing .lyrics-resize::before { background-color: var(--col-accent); }
+.lyrics-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 1rem; font-size: calc(var(--lyrics-scale, 1) * 1rem); }
+
+/* Szöveg: versszakonként a száma, mellette a szöveg (a nézeteket lásd a LyricsVerse-nél, app.js). A távolságok
+   em-ben vannak, hogy a betűmérettel együtt nőjenek. */
 .lyrics-verse {
-    display: flex; gap: 0.45em; margin-bottom: 1rem; padding-left: 10px;
+    display: flex; gap: 0.45em; margin-bottom: 1em; padding-left: 10px;
     border-left: 3px solid var(--col-border, #eee); line-height: 1.4;
 }
 .lyrics-verse-label { flex: none; min-width: 1.2em; font-weight: 700; color: var(--col-ink-muted, #666); font-variant-numeric: tabular-nums; }
@@ -646,12 +751,12 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .lyrics-verse.side .lyrics-line { padding-left: 1em; text-indent: -1em; }
 .lyrics-verse.side .lyrics-refrain-label, .lyrics-verse.columns .lyrics-refrain-label { margin-top: 0.3em; }
 /* lent, egymás mellett: a versszak oszlopa olyan széles, mint a leghosszabb sora, a sorok nem törnek */
-.lyrics-columns { display: flex; gap: 2rem; align-items: flex-start; width: max-content; }
+.lyrics-columns { display: flex; gap: 2em; align-items: flex-start; width: max-content; }
 .lyrics-verse.columns { flex: none; margin-bottom: 0; }
 .lyrics-verse.columns .lyrics-line { white-space: nowrap; }
 .lyrics-verse.refrain .lyrics-verse-label { font-size: 0.85em; line-height: 1.65; }
 /* lent, egymás alatt: a versszak sorai folyó szövegként */
-.lyrics-verse.block { display: block; margin-bottom: 0.6rem; }
+.lyrics-verse.block { display: block; margin-bottom: 0.6em; }
 .lyrics-paragraph { margin: 0; }
 .lyrics-paragraph + .lyrics-paragraph { margin-top: 0.2em; }
 .lyrics-paragraph .lyrics-verse-label, .lyrics-paragraph .lyrics-refrain-label { display: inline; }
@@ -805,20 +910,24 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     justify-content: space-between;
     align-items: center;
 }
+/* Lista kártyáján az énekek: a talpas énekszám (jobbra zárt oszlopban) és a cím egy alapvonalon */
 .playlist-card-item {
-    padding: 5px 1rem;
+    padding: 4px 1rem;
     font-size: 13px;
     border-bottom: 1px dashed var(--col-border, #eee);
     display: flex;
-    gap: 5px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    align-items: baseline;
+    gap: 0.6em;
 }
 .playlist-card-item:last-child {
     border-bottom: none;
 }
-.playlist-card-item span:last-child {
+.playlist-card-item .hymn-number { flex-shrink: 0; min-width: 1.9em; text-align: right; font-size: 1.3em; line-height: 1.2; }
+.playlist-card-item-title {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     color: var(--col-ink-muted, #666);
     font-style: italic;
 }
@@ -947,20 +1056,42 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .custom-select-btn.empty { cursor: default; opacity: 0.6; background-color: rgba(0,0,0,0.05); }
 /* Üres választó a sötét fejlécen: világos, halvány felirat (különben sötét szöveg sötét háttéren) */
 .header .custom-select-btn.empty { opacity: 1; color: rgba(255,255,255,0.6); background-color: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); }
+.custom-select-btn[aria-expanded="true"] { border-color: var(--col-focus, var(--col-accent)); }
+/* A menü a .app-root-ban van, fix pozícióval (helyét és méretét az app.js adja); a modalok (300) fölött */
 .custom-select-menu {
-    position: absolute; top: 100%; margin-top: 5px;
-    width: max(100%, 240px); max-width: calc(100vw - 1rem);
-    max-height: 300px; overflow-y: auto;
+    position: fixed;
+    overflow-y: auto; overscroll-behavior: contain;
     background-color: var(--col-card, var(--col-papyrus));
-    border: 1px solid var(--col-border, #ccc); border-radius: 4px;
-    box-shadow: var(--shadow-xl);
-    z-index: 100;
+    color: var(--col-ink);
+    border: 1px solid var(--col-border, #ccc); border-radius: 6px;
+    box-shadow: var(--shadow-xl), 0 2px 6px rgba(0, 0, 0, 0.12);
+    z-index: 400;
 }
 .custom-select-option { padding: 10px; border-bottom: 1px solid var(--col-border, #eee); cursor: pointer; }
+.custom-select-option:last-child { border-bottom: none; }
 .custom-select-option.placeholder { font-style: italic; color: var(--col-ink-muted, #666); }
-.custom-select-option.selected { background-color: var(--col-wash, rgba(0,0,0,0.05)); }
+.custom-select-option.active { background-color: rgba(0, 0, 0, 0.04); }
+.custom-select-option.selected { background-color: var(--col-wash, rgba(0,0,0,0.05)); box-shadow: inset 3px 0 0 var(--col-accent); }
 .custom-select-option-label { font-weight: bold; font-size: 0.9rem; color: var(--col-galaxy-blue); }
 .custom-select-option-sub { font-size: 0.75rem; color: var(--col-ink-muted, #666); margin-top: 2px; font-style: italic; }
+.custom-select-value { min-width: 0; }
+/* Színséma: színminta (oldalsáv, háttér, akcentus) a név előtt */
+.swatch-label { display: inline-flex; align-items: center; gap: 0.6rem; max-width: 100%; }
+.custom-select-menu .swatch-label { font-weight: bold; font-size: 0.9rem; color: var(--col-galaxy-blue); }
+.theme-swatch {
+    position: relative; flex: none; width: 30px; height: 20px; border-radius: 4px;
+    border: 1px solid rgba(0, 0, 0, 0.25);
+    background: linear-gradient(90deg, var(--swatch-side) 0 32%, var(--swatch-bg) 32% 100%);
+}
+.theme-swatch::after {
+    content: ''; position: absolute; right: 5px; top: 50%; width: 8px; height: 8px; margin-top: -4px;
+    border-radius: 50%; background-color: var(--swatch-accent);
+}
+/* Betűtípus-választók: a menüben minden betűtípus a saját mintájával */
+.font-option { display: flex; flex-direction: column; gap: 6px; }
+.font-option-name { line-height: 1.35; }
+.font-select-menu .custom-select-option { padding: 10px 12px; }
+.serif-font-value { font-weight: 700; font-size-adjust: cap-height 0.7; }
 
 /* --- Listák rácsa --- */
 .playlist-grid {
@@ -972,7 +1103,9 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 }
 
 /* --- Beállítások: szakaszok és sorok --- */
-.settings-page { width: 100%; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.75rem; }
+/* Két oszlop, ha mindkettő legalább 420 px széles lehet (pl. fekvő 10"-es tableten); keskenyebb kijelzőn egymás alatt */
+.settings-page { width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 1.75rem 2rem; }
+.settings-column { flex: 1 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 1.75rem; }
 .settings-section { display: flex; flex-direction: column; gap: 10px; }
 .settings-section-title {
     margin: 0 0 2px 2px;
@@ -1072,3 +1205,5 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .hover\:bg-gray-100:hover { background-color: var(--col-wash, #f3f4f6); }
 .hover\:text-black:hover { color: #000; }
 .hover\:underline:hover { text-decoration: underline; }
+/* a könyvtár listájának vége: ha a látható rész közelébe ér, jön a következő adag kártya (app.js: HymnList) */
+.library-more { height: 1px; }
