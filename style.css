@@ -1,3 +1,27 @@
+/* --- Betűtípusok (fonts/, a programmal csomagolva; SIL Open Font License) ---
+   Változó vastagságú WOFF2-ek, két részben: latin és latin-ext (ő, ű); a böngésző csak a szükséges részt tölti le.
+   A választott betűtípust az app.js állítja be (--font-ui), a beállítások szerint. */
+@font-face { font-family: 'Figtree'; font-style: normal; font-weight: 300 900; font-display: swap;
+    src: url('fonts/figtree/figtree-latin.woff2') format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'Figtree'; font-style: normal; font-weight: 300 900; font-display: swap;
+    src: url('fonts/figtree/figtree-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: 'Nunito Sans'; font-style: normal; font-weight: 200 1000; font-display: swap;
+    src: url('fonts/nunito-sans/nunito-sans-latin.woff2') format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'Nunito Sans'; font-style: normal; font-weight: 200 1000; font-display: swap;
+    src: url('fonts/nunito-sans/nunito-sans-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: 'Onest'; font-style: normal; font-weight: 100 900; font-display: swap;
+    src: url('fonts/onest/onest-latin.woff2') format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'Onest'; font-style: normal; font-weight: 100 900; font-display: swap;
+    src: url('fonts/onest/onest-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: 'DM Sans'; font-style: normal; font-weight: 100 1000; font-display: swap;
+    src: url('fonts/dm-sans/dm-sans-latin.woff2') format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'DM Sans'; font-style: normal; font-weight: 100 1000; font-display: swap;
+    src: url('fonts/dm-sans/dm-sans-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: 'Atkinson Hyperlegible Next'; font-style: normal; font-weight: 200 800; font-display: swap;
+    src: url('fonts/atkinson-hyperlegible-next/atkinson-hyperlegible-next-latin.woff2') format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'Atkinson Hyperlegible Next'; font-style: normal; font-weight: 200 800; font-display: swap;
+    src: url('fonts/atkinson-hyperlegible-next/atkinson-hyperlegible-next-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+
 /* --- Változók (Téma) --- */
 :root {
     --col-galaxy-blue: #002B36;
@@ -10,8 +34,8 @@
     --col-white: #ffffff;
     --col-red: #dc2626;
     
-    --font-serif: 'Georgia', 'Cambria', 'Times New Roman', serif;
-    --font-sans: 'Segoe UI', 'Roboto', 'Helvetica', sans-serif;
+    --font-fallback: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-ui: 'Figtree', var(--font-fallback); /* a feliratok és az énekszövegek betűtípusa (beállítás) */
 
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -64,7 +88,7 @@ body {
     margin: 0;
     padding: 0;
     background-color: var(--col-galaxy-blue);
-    font-family: var(--font-sans);
+    font-family: var(--font-ui);
     -webkit-font-smoothing: antialiased;
     overflow: hidden; /* App-szerű viselkedés */
 }
@@ -72,6 +96,7 @@ body {
 * { box-sizing: border-box; }
 
 button { cursor: pointer; border: none; background: none; font-family: inherit; }
+input, select, textarea { font-family: inherit; }
 button:disabled { cursor: not-allowed; opacity: 0.5; }
 
 /* --- Layout --- */
@@ -287,7 +312,6 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 }
 
 /* Typography */
-.font-serif { font-family: var(--font-serif); }
 .text-accent { color: var(--col-accent-text); }
 .header .text-accent { color: var(--col-accent); }
 .player-view .header .text-accent { color: var(--col-accent-text); }
@@ -445,6 +469,44 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     cursor: pointer;
 }
 
+/* --- Könyvtár: kereső, kulcsszavas szűrő, énekkártyák --- */
+.library-toolbar {
+    display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+    padding: 0.5rem 1rem; border-bottom: 1px solid var(--col-border, #ddd);
+    background-color: var(--col-search-bar, rgba(0,0,0,0.02));
+}
+.library-search { position: relative; flex: 0 1 600px; min-width: 0; }
+.library-search-icon { position: absolute; top: 10px; left: 12px; color: var(--col-ink-muted, #999); pointer-events: none; }
+.library-search .input { padding-left: 40px; height: 40px; }
+.library-keyword { flex: 0 0 auto; width: auto; max-width: 100%; height: 40px; padding: 0 0.75rem; cursor: pointer; }
+.library-keyword.active { border-color: var(--col-accent); font-weight: 600; }
+@media (max-width: 640px) {
+    .library-search, .library-keyword { flex: 1 1 100%; }
+    .card.list-item.hymn-card { gap: 0.75rem; padding: 0.6rem 0.75rem; }
+    .hymn-card-number { min-width: 2.25rem; font-size: 1.1rem; }
+}
+.library-result-count {
+    display: flex; align-items: center; gap: 12px; margin: 0 0 0.5rem 0.25rem;
+    font-size: 0.85rem; font-weight: 600; color: var(--col-ink-muted, #666);
+}
+.library-clear { font-size: 0.85rem; text-decoration: underline; padding: 0; }
+.library-empty { text-align: center; color: var(--col-ink-muted, #666); margin-top: 2rem; }
+.card.list-item.hymn-card { gap: 1rem; padding: 0.75rem 1rem; }
+.hymn-card-number { flex: none; min-width: 3rem; text-align: right; font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hymn-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.hymn-card-title { font-weight: 700; }
+.hymn-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 0.8rem; }
+.hymn-card-counts { color: var(--col-ink-muted, #666); margin-right: 4px; white-space: nowrap; }
+.hymn-card-counts.none { opacity: 0.7; font-style: italic; }
+/* kulcsszó: koppintásra csak az ilyen kulcsszavú énekek látszanak */
+.keyword-chip {
+    padding: 1px 9px; border-radius: 999px; font-size: 0.78rem; line-height: 1.5;
+    color: var(--col-ink); background-color: var(--col-wash, rgba(0, 43, 54, 0.07));
+    border: 1px solid transparent; white-space: nowrap;
+}
+.keyword-chip:hover { border-color: var(--col-border-dark, #bbb); }
+.keyword-chip.active { background-color: var(--col-accent); color: var(--col-white); }
+
 .playlist-editor-item {
     background-color: var(--col-card-raised, white);
     padding: 1rem;
@@ -569,7 +631,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 }
 .hymn-keypad-display {
     height: 60px; display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-serif); font-size: 2.4rem; font-weight: 700; color: var(--col-ink);
+    font-size: 2.4rem; font-weight: 700; color: var(--col-ink);
     background-color: var(--col-card-raised, #fff);
     border: 1px solid var(--col-border-dark, #bbb); border-radius: 0.375rem;
 }
@@ -582,7 +644,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .hymn-keypad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .hymn-keypad-grid button {
     height: 56px; display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-serif); font-size: 1.6rem; font-weight: 700; color: var(--col-ink);
+    font-size: 1.6rem; font-weight: 700; color: var(--col-ink);
     background-color: var(--col-card-raised, #fff);
     border: 1px solid var(--col-border, #ddd); border-radius: 0.375rem;
     touch-action: manipulation; -webkit-user-select: none; user-select: none;
@@ -663,7 +725,6 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 
 /* --- Typography --- */
 .header-title {
-    font-family: var(--font-serif);
     font-weight: bold;
     color: var(--col-accent);
 }
@@ -826,14 +887,19 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .font-sample { height: 128px; color: #000; }
 .font-sample svg { display: block; width: 100%; height: 100%; }
 .font-sample-missing { display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--col-ink-muted, #666); }
-.font-choice-label { display: flex; align-items: center; gap: 8px; }
+.font-choice-label { display: flex; align-items: flex-start; gap: 8px; }
+.font-choice-text { min-width: 0; line-height: 1.35; }
 /* kör alakú jelölő, mint egy választógomb */
 .font-choice-label::before {
-    content: ''; flex: none; width: 16px; height: 16px; box-sizing: border-box;
+    content: ''; flex: none; width: 16px; height: 16px; margin-top: 2px; box-sizing: border-box;
     border: 2px solid var(--col-border-dark, #9ca3af); border-radius: 50%;
 }
 .font-choice.selected .font-choice-label::before { border: 5px solid var(--col-accent); }
-.font-choice-name { font-weight: bold; }
+.font-choice-name { font-weight: bold; margin-right: 2px; }
+/* a felület betűtípusának mintája: énekcím és szövegrészlet */
+.ui-font-sample { display: flex; flex-direction: column; gap: 4px; color: var(--col-ink); }
+.ui-font-sample-title { font-size: 1.05rem; font-weight: 700; }
+.ui-font-sample-text { font-size: 0.95rem; line-height: 1.4; }
 .font-choice-hint { font-size: 13px; color: var(--col-ink-muted, #666); }
 
 /* --- Keskeny képernyő (telefon, álló tablet) --- */

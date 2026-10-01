@@ -2,24 +2,30 @@
 //  - Az oldal fájljai (index.html, app.min.js, style.css, libs/, data/enek.json, data/kottakonyvek.json):
 //    a hálózatról jönnek, ha az elérhető (így a frissítések rögtön megjelennek), és közben elmentjük őket.
 //    Internet nélkül, vagy ha a hálózat nem válaszol időben, a mentett változat jön.
-//  - A kottarajzoló (libs/verovio/, kb. 7 MB): mindig a mentett példány, hogy ne kelljen minden indításkor a hálózatra
-//    várni, és újra elmenteni. Új változatánál az APP_CACHE számát növelni kell: ekkor a készülék újra letölti.
+//  - A kottarajzoló (libs/verovio/, kb. 7 MB) és a betűtípusok (fonts/): mindig a mentett példány, hogy ne kelljen
+//    minden indításkor a hálózatra várni, és újra elmenteni. Új változatuknál az APP_CACHE számát növelni kell: ekkor a
+//    készülék újra letölti őket. (A nem alapértelmezett betűtípusok az első használatukkor mentődnek el.)
 //  - A kottakönyvek fájljai (data/<mappa>/...): a készülékre letöltött könyvből, ha ott vannak, különben a hálózatról.
 //    A könyvek letöltését és törlését az app.js végzi; a letöltés kérései (X-Letoltes fejléc) mindig a hálózatra mennek.
 const APP_CACHE = 'orgonatar-app-v2'; // új számnál a készülékek a régi mentett oldalfájlokat törlik
 const NETWORK_TIMEOUT = 4000; // ms: rossz (pl. templomi) hálózaton ennyi után a mentett változat jön
 const SLOW_NETWORK_PAUSE = 30000; // ms: időtúllépés után ennyi ideig nem várunk a hálózatra, rögtön a mentett jön
 const APP_FILES = ['./', 'index.html', 'app.min.js', 'style.css', 'libs/react.js', 'libs/react-dom.js',
-    'libs/verovio/verovio-toolkit-wasm.js', 'data/enek.json', 'data/kottakonyvek.json'];
-const CACHE_FIRST = /^libs\/verovio\//;
+    'libs/verovio/verovio-toolkit-wasm.js', 'fonts/figtree/figtree-latin.woff2', 'fonts/figtree/figtree-latin-ext.woff2',
+    'data/enek.json', 'data/kottakonyvek.json'];
+const CACHE_FIRST = /^(libs\/verovio|fonts)\//;
 const SCOPE_PATH = new URL(self.registration.scope).pathname;
 const MATCH_OPTIONS = { ignoreSearch: true, ignoreVary: true };
 
 self.addEventListener('install', (event) => {
     // Az oldal fájljait rögtön elmentjük, hogy az első látogatás után internet nélkül is induljon. A böngésző épp
     // letöltött példányait használjuk (no-cache: a szerver csak megerősíti, hogy nem változtak), nem töltjük le újra.
+    // A kottarajzolót és a betűtípusokat akkor sem, ha a service worker frissül, de ugyanez a tár marad.
     event.waitUntil(caches.open(APP_CACHE)
-        .then(cache => Promise.all(APP_FILES.map(url => cache.add(new Request(url, { cache: 'no-cache' })).catch(() => {}))))
+        .then(cache => Promise.all(APP_FILES.map(async (url) => {
+            if (CACHE_FIRST.test(url) && await cache.match(url, MATCH_OPTIONS)) return;
+            await cache.add(new Request(url, { cache: 'no-cache' }));
+        }).map(saving => saving.catch(() => {}))))
         .then(() => self.skipWaiting()));
 });
 
@@ -46,7 +52,7 @@ self.addEventListener('fetch', (event) => {
 // Kottakönyv fájlja: a letöltött könyvből, ha ott van
 const fromDownloadedBook = async (request) => (await caches.match(request, MATCH_OPTIONS)) || fetch(request);
 
-// A kottarajzoló: a mentett példány; ha még nincs meg, a hálózatról (és elmentjük)
+// A kottarajzoló és a betűtípusok: a mentett példány; ha még nincs meg, a hálózatról (és elmentjük)
 const cacheFirst = async (request) => {
     const cache = await caches.open(APP_CACHE);
     const saved = await cache.match(request, MATCH_OPTIONS);
