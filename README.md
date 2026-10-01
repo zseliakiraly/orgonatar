@@ -54,8 +54,12 @@ nyilvánossá kell tenni.
 
 ### Adatformátum (amit a kód használ)
 
-- `enek.json`: `[{ "number": "42", "title": "…", "keywords": ["zsoltár", "bizalom"], "scoreId": "42", "lyrics": "1. …\n…\n\n2. …" }]`
-  A versszakokat üres sor választja el, és mindegyik `1.`, `2.` … számmal kezdődik.
+- `enek.json`: `[{ "number": "42", "title": "…", "keywords": ["zsoltár", "bizalom"], "scoreId": "42", "verses": [["1. versszak 1. sora", "2. sora", …], ["2. versszak 1. sora", …]] }]`
+  - `verses`: a versszakok sorrendben; mindegyik versszak az éneksorok tömbje (egy elem = egy éneksor, a szám
+    nélkül, a versszak számát a program adja). A fájlban versszakonként egy sor, így kézzel is jól javítható.
+    Refrén: egy `"Refr."` sor, utána a refrén sorai (dőlt betűvel jelennek meg). Szöveg nélküli ének: `"verses": []`.
+  - A program a régi formát is elfogadja: `"lyrics"` egyetlen szövegként, a versszakok között üres sorral
+    (`\n\n`), a sorok között egy sortöréssel (`\n`), a versszak elején a számával (`1. `).
   - `keywords`: 1–3 kulcsszó a könyvtár kártyáin és kulcsszavas szűrőjében (szabadon bővíthető, új kulcsszó is
     írható; a szűrő magától felveszi). Az első az énekeskönyv témaköre a számtartomány szerint (pl. 401–423:
     „karácsony”, 651–668: „reggel”); a többit (pl. „bizalom”, „bűnbánat”, „dicséret”) a program az énekszövegből
@@ -156,6 +160,8 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
 - A +/− gomb a legnagyobb méretet állítja 10%-os lépésekben, a felirat a ténylegesen látott méretet
   mutatja. A + nem használható, ha a kotta nagyobban már nem férne ki (képes kottánál: ha elérte a
   teljes szélességet).
+- A szövegpanelen versszakonként a szám, mellette soronként a szöveg; a hosszú sor behúzással törik a
+  következő sorba. Kotta nélküli énekeknél is látszik; szöveg nélküli énekeknél nincs panel.
 - A lejátszó fejlécében balra a lista sorszáma (pl. `1/4`), utána az énekszám és a cím; jobbra az óra.
   Az óra a beállításokban kikapcsolható („Óra a lejátszóban”, alapból látszik).
 - **Gyors megnyitás:** az óra melletti (számbillentyűzet ikonos) gomb énekválasztót nyit.
