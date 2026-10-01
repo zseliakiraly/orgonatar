@@ -72,7 +72,15 @@ const UI_FONTS = [
 ];
 const uiFontStack = (id) => `'${(UI_FONTS.find(f => f.id === id) || UI_FONTS[0]).family}', var(--font-fallback)`;
 
-const DEFAULT_SETTINGS = { theme: 'pergamen', uiFont: UI_FONTS[0].id, showLyrics: true, showClock: true, sidebarSide: 'right', lyricsWidth: '15%', scoreMaxWidth: '100%', scoreFont: SCORE_FONTS[0].id, bookActive: {}, skipFullscreenPrompt: false, settingsVersion: SETTINGS_VERSION };
+// Az énekszámok és az oldalcímek talpas betűtípusai, a régi korálkönyvek mintájára (fonts/ mappa); az első az alapértelmezett
+const SERIF_FONTS = [
+    { id: 'old-standard', family: 'Old Standard TT', hint: 'a régi korálkönyvhöz legközelebbi' },
+    { id: 'dm-serif', family: 'DM Serif Text', hint: 'vaskosabb, messziről is jól olvasható' },
+    { id: 'libre-bodoni', family: 'Libre Bodoni', hint: 'klasszikus Bodoni' }
+];
+const serifFontStack = (id) => `'${(SERIF_FONTS.find(f => f.id === id) || SERIF_FONTS[0]).family}', var(--font-serif-fallback)`;
+
+const DEFAULT_SETTINGS = { theme: 'pergamen', uiFont: UI_FONTS[0].id, serifFont: SERIF_FONTS[0].id, showLyrics: true, showClock: true, sidebarSide: 'right', lyricsWidth: '15%', scoreMaxWidth: '100%', scoreFont: SCORE_FONTS[0].id, bookActive: {}, skipFullscreenPrompt: false, settingsVersion: SETTINGS_VERSION };
 
 const loadJSON = (key, fallback) => {
     try {
@@ -93,6 +101,7 @@ const loadSettings = () => {
     if (!settings.bookActive || typeof settings.bookActive !== 'object') settings.bookActive = {};
     if (!SCORE_FONTS.some(f => f.id === settings.scoreFont)) settings.scoreFont = DEFAULT_SETTINGS.scoreFont;
     if (!UI_FONTS.some(f => f.id === settings.uiFont)) settings.uiFont = DEFAULT_SETTINGS.uiFont;
+    if (!SERIF_FONTS.some(f => f.id === settings.serifFont)) settings.serifFont = DEFAULT_SETTINGS.serifFont;
     // 2. verzió: a Pergamen lett az alapértelmezett téma. A korábbi alapértéket ("papyrus"), amelyet az oldal
     // magától elmentett, egyszer átállítjuk (addig Pergament nem is lehetett választani).
     if ((stored.settingsVersion || 1) < 2 && settings.theme === 'papyrus') settings.theme = 'pergamen';
@@ -542,7 +551,7 @@ const HymnSelectorModal = ({ isOpen, onClose, onSelect, hymnBook, title = 'Ének
                         <div className="hymn-selector-list">
                             {filtered.map(h => (
                                 <button key={h.number} onClick={() => onSelect(h)} className="hymn-selector-item">
-                                    <div><span className="hymn-selector-item-hymn-number">#{h.number}</span><span className="hymn-selector-item-hymn-title">{h.title}</span></div>
+                                    <div><span className="hymn-selector-item-hymn-number hymn-number">{h.number}</span><span className="hymn-selector-item-hymn-title">{h.title}</span></div>
                                     <ItemIcon size={18} className="icon-plus"/>
                                 </button>
                             ))}
@@ -553,7 +562,7 @@ const HymnSelectorModal = ({ isOpen, onClose, onSelect, hymnBook, title = 'Ének
 
                 <div className="hymn-keypad">
                     <div className="hymn-keypad-label">Énekszám</div>
-                    <div className="hymn-keypad-display">{number || ' '}</div>
+                    <div className="hymn-keypad-display hymn-number">{number || ' '}</div>
                     <div className={`hymn-keypad-hint ${number && !exact ? 'not-found' : ''}`}>
                         {exact ? exact.title : number ? 'Nincs ilyen számú ének' : ' '}
                     </div>
@@ -702,7 +711,7 @@ const AddToPlaylistModal = ({ onClose, onConfirm, playlists, initialVariationId,
             </>
         }>
             <div className="text-center pb-2 border-b border-gray-200 mb-4">
-                <div className="font-bold text-accent text-lg">#{hymn.number}</div>
+                <div className="hymn-number text-accent text-2xl">{hymn.number}</div>
                 <div className="font-bold text-galaxy">{hymn.title}</div>
             </div>
             
@@ -820,7 +829,7 @@ const FontSample = ({ font }) => {
 const SettingsView = ({ settings, onUpdateSettings }) => (
     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
         <div className="header centered">
-             <h1 className="header-title main">Beállítások</h1>
+             <h1 className="header-title main page-title">Beállítások</h1>
         </div>
         
         <div className="main-content" style={{padding:'2rem', overflowY:'auto'}}>
@@ -855,6 +864,31 @@ const SettingsView = ({ settings, onUpdateSettings }) => (
                                     <span className="ui-font-sample" style={{fontFamily: uiFontStack(font.id)}}>
                                         <span className="ui-font-sample-title">42 Mint a szép, híves patakra</span>
                                         <span className="ui-font-sample-text">Aki nem jár hitlenek tanácsán, és meg nem áll a bűnösök útján…</span>
+                                    </span>
+                                    <span className="font-choice-label">
+                                        <span className="font-choice-text">
+                                            <span className="font-choice-name">{font.family}</span> <span className="font-choice-hint">{font.hint}</span>
+                                        </span>
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="card card-stack">
+                        <div className="card-decoration"></div>
+                        <div className="setting-label">
+                            <div className="font-bold text-ink">Énekszámok és oldalcímek</div>
+                            <div className="text-xs text-gray-500">Talpas betű, a régi korálkönyvek mintájára</div>
+                        </div>
+                        <div className="font-choices" role="radiogroup" aria-label="Énekszámok és oldalcímek betűtípusa">
+                            {SERIF_FONTS.map(font => (
+                                <button key={font.id} type="button" role="radio" aria-checked={settings.serifFont === font.id}
+                                    className={`font-choice${settings.serifFont === font.id ? ' selected' : ''}`}
+                                    onClick={() => onUpdateSettings({...settings, serifFont: font.id})}>
+                                    <span className="serif-font-sample" style={{fontFamily: serifFontStack(font.id)}}>
+                                        <span className="serif-font-sample-number">489</span>
+                                        <span className="serif-font-sample-title">Református Kottagyűjtemény</span>
                                     </span>
                                     <span className="font-choice-label">
                                         <span className="font-choice-text">
@@ -1681,7 +1715,7 @@ const ScorebookCard = ({ book, download, active, onToggle, onDownload, onCancel,
 const ScorebooksView = ({ books, downloads, bookActive, online, onToggle, onDownload, onCancel, onDelete }) => (
     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
         <div className="header centered">
-            <h1 className="header-title main">Kottakönyvek</h1>
+            <h1 className="header-title main page-title">Kottakönyvek</h1>
         </div>
 
         <div className="main-content" style={{padding:'1rem', overflowY:'auto'}}>
@@ -1761,7 +1795,7 @@ const PlaylistEditor = ({ playlist, onRemoveItem, onAddItem, onPlay, onReorder, 
                                         <div style={{cursor:'move', color:'var(--col-border-dark, #ccc)'}}><Icons.GripVertical size={20} /></div>
                                         <div style={{fontWeight:'bold', color:'var(--col-ink-muted, #6b7280)', width:'20px'}}>{idx + 1}.</div>
                                         <div>
-                                            <div><span className="text-accent font-bold">#{item.hymn.number}</span> <span className="font-bold text-ink">{item.hymn.title}</span></div>
+                                            <div><span className="hymn-number text-accent">{item.hymn.number}</span> <span className="font-bold text-ink">{item.hymn.title}</span></div>
                                             <div style={{fontSize:'12px', color:'var(--col-ink-muted, #666)', marginTop:'2px'}}>
                                                 {preludeName ? <span className="text-accent">Előjáték: {preludeName} + </span> : ''}
                                                 Változat: {variationName} • {item.verses.length} versszak
@@ -2161,6 +2195,7 @@ function OrganistApp() {
     // A betöltő képernyő és a böngésző „túlgörgetett” széle is a téma színét kapja
     useEffect(() => { document.body.style.backgroundColor = currentTheme.sidebar; }, [currentTheme.sidebar]);
     useEffect(() => { document.documentElement.style.setProperty('--font-ui', uiFontStack(settings.uiFont)); }, [settings.uiFont]);
+    useEffect(() => { document.documentElement.style.setProperty('--font-serif', serifFontStack(settings.serifFont)); }, [settings.serifFont]);
 
     // Énekváltáskor az első változat, előjáték nélkül. Ha csak a könyvek változtak (pl. letöltés a háttérben),
     // a választás megmarad, amíg létezik.
@@ -2320,7 +2355,7 @@ function OrganistApp() {
                 {view === 'about' && (
                     <div className="about-view">
                         <div className="icon-container"><Icons.Music size={40}/></div>
-                        <h1 className="font-bold text-3xl text-galaxy mb-2">Református Kottagyűjtemény</h1>
+                        <h1 className="page-title text-3xl text-galaxy mb-2">Református Kottagyűjtemény</h1>
                         <p className="text-accent uppercase font-bold tracking-widest mb-8">Fazekas Márton</p>
                          <div className="content-box">
                             <p>Református énekek orgonakíséretei, a 2021-es énekeskönyvhöz igazítva. Több korálkönyvből válogattam, elsősorban saját használatra - így számos kíséret kimaradt, például a "művészi" B letétek a genfi korálkönyvből.</p>
@@ -2341,7 +2376,7 @@ function OrganistApp() {
                             <div className="hymn-header-title">
                                 <button onClick={() => window.history.back()} className="header-back" title="Vissza"><Icons.ChevronLeft size={24}/></button>
                                 <div className="hymn-header-text">
-                                    <h2 className="font-bold text-2xl text-accent">{selectedHymn.number}</h2>
+                                    <h2 className="hymn-number text-2xl text-accent">{selectedHymn.number}</h2>
                                     <h3 className="font-bold text-lg truncate">{selectedHymn.title}</h3>
                                 </div>
                             </div>
@@ -2368,7 +2403,7 @@ function OrganistApp() {
                 ) : (
                     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
                         <div className="header centered">
-                            <h1 className="header-title main">Református Kottagyűjtemény</h1>
+                            <h1 className="header-title main page-title">Református Kottagyűjtemény</h1>
                         </div>
                         <div className="library-toolbar">
                             <div className="library-search">
@@ -2392,23 +2427,29 @@ function OrganistApp() {
                                 return (
                                     <div key={h.number} onClick={() => navigate({ activeTab: 'library', selectedHymnNumber: h.number })} className="card list-item hymn-card">
                                         <div className="card-decoration"></div>
-                                        <span className="hymn-card-number text-accent">{h.number}</span>
-                                        <div className="hymn-card-body">
-                                            <div className="hymn-card-title text-ink">{h.title}</div>
-                                            <div className="hymn-card-meta">
-                                                {counts.variations || counts.preludes
-                                                    ? <span className="hymn-card-counts">{counts.variations} letét · {counts.preludes} előjáték</span>
-                                                    : <span className="hymn-card-counts none">nincs kotta</span>}
-                                                {hymnKeywords(h).map(keyword => (
-                                                    <button key={keyword} type="button" className={`keyword-chip${keyword === keywordFilter ? ' active' : ''}`}
-                                                        title={keyword === keywordFilter ? 'Szűrés törlése' : `Szűrés: ${keyword}`}
-                                                        onClick={(e) => { e.stopPropagation(); setKeywordFilter(keyword === keywordFilter ? '' : keyword); }}>
-                                                        {keyword}
-                                                    </button>
-                                                ))}
-                                            </div>
+                                        <div className="hymn-card-head">
+                                            <span className="hymn-card-number hymn-number text-accent">{h.number}</span>
+                                            <span className="hymn-card-title text-ink">{h.title}</span>
                                         </div>
-                                        <Icons.ChevronRight style={{color:'var(--col-border-dark, #ccc)', flex: 'none'}}/>
+                                        {/* jobbra zárva: a kották száma, alatta a kulcsszavak (koppintásra szűrnek) */}
+                                        <div className="hymn-card-meta">
+                                            {counts.variations || counts.preludes
+                                                ? <span className="hymn-card-counts">{counts.variations} letét · {counts.preludes} előjáték</span>
+                                                : <span className="hymn-card-counts none">nincs kotta</span>}
+                                            <span className="hymn-card-keywords">
+                                                {hymnKeywords(h).map((keyword, i) => (
+                                                    <React.Fragment key={keyword}>
+                                                        {i > 0 && ', '}
+                                                        <button type="button" className={`keyword-link${keyword === keywordFilter ? ' active' : ''}`}
+                                                            title={keyword === keywordFilter ? 'Szűrés törlése' : `Szűrés: ${keyword}`}
+                                                            onClick={(e) => { e.stopPropagation(); setKeywordFilter(keyword === keywordFilter ? '' : keyword); }}>
+                                                            {keyword}
+                                                        </button>
+                                                    </React.Fragment>
+                                                ))}
+                                            </span>
+                                        </div>
+                                        <Icons.ChevronRight className="hymn-card-chevron"/>
                                     </div>
                                 );
                             })}
@@ -2421,7 +2462,7 @@ function OrganistApp() {
                     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
                         <div className="header">
                             <div style={{flex:1}}></div>
-                            <h1 className="header-title main">Liturgikus listák</h1>
+                            <h1 className="header-title main page-title">Liturgikus listák</h1>
                             <div style={{flex:1, display:'flex', justifyContent:'flex-end'}}>
                                 <button onClick={() => setIsCreateListModalOpen(true)} className="btn btn-primary"><Icons.Plus size={20}/> Új lista</button>
                             </div>
@@ -2445,7 +2486,7 @@ function OrganistApp() {
                                             </div>
                                         </div>
                                         <div style={{flex:1, overflowY:'auto', padding:'0.5rem'}}>
-                                            {pl.items.map(resolveItem).map((it, idx) => (<div key={it.id} className="playlist-card-item"><span className="text-accent font-bold">{idx+1}.</span><span>{it.hymn.number}</span> <span>{it.hymn.title}</span></div>))}
+                                            {pl.items.map(resolveItem).map((it, idx) => (<div key={it.id} className="playlist-card-item"><span className="text-accent font-bold">{idx+1}.</span><span className="hymn-number">{it.hymn.number}</span> <span>{it.hymn.title}</span></div>))}
                                         </div>
                                         <div style={{padding:'1rem', borderTop:'1px solid var(--col-border, #ddd)'}}>
                                             <button onClick={(e) => { e.stopPropagation(); startPlaylist(pl); }} className="btn playlist-card-start-btn"><Icons.Play /> INDÍTÁS</button>
@@ -2474,7 +2515,7 @@ function OrganistApp() {
                                     <div className="player-heading-main">
                                         <span className="player-position" title="Hányadik ének a listában">{currentPlayerIndex+1}/{playerQueue.length}</span>
                                         <span className="player-position-sep">–</span>
-                                        <h2 className="font-bold text-2xl text-accent">{playerItem.hymn.number}</h2>
+                                        <h2 className="hymn-number text-2xl text-accent">{playerItem.hymn.number}</h2>
                                         <h3 className="font-bold text-lg truncate">{playerItem.hymn.title}</h3>
                                     </div>
                                     {/* A változat adatai (szükség esetén rövidülnek) */}

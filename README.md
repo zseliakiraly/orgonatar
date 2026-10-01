@@ -44,7 +44,8 @@ nyilvánossá kell tenni.
 - `libs/`: `react.js` és `react-dom.js` (React 18 UMD build); a `babel.js` csak a `dev.html`-hez kell.
 - `libs/verovio/`: a kottarajzoló (Verovio 6.3.0, LGPL-3.0), a licencek és a frissítés leírása
   (`libs/verovio/README.md`).
-- `fonts/`: a feliratok és az énekszövegek betűtípusai (SIL Open Font License, `fonts/README.md`).
+- `fonts/`: a feliratok, az énekszövegek, valamint az énekszámok és az oldalcímek betűtípusai
+  (SIL Open Font License, `fonts/README.md`).
 - `data/enek.json`: az énekek.
 - `data/kottakonyvek.json`: a kottakönyvek listája (csak a mappák).
 - `data/<mappa>/index.json`: egy kottakönyv adatai és kottái; mellette a kottafájlok
@@ -83,10 +84,14 @@ könyv `"version"` mezőjét (`"version": "2026-10-01"`). Frissítéskor a lecse
 
 ## Beállítások
 
-- **Megjelenés:** háttér téma, betűtípus, az oldalmenü helye.
+- **Megjelenés:** háttér téma, betűtípusok, az oldalmenü helye.
   - Betűtípus (a feliratok és az énekszövegek betűi, mintaszöveggel): **Figtree** (alapértelmezett), Nunito Sans,
-    Onest, DM Sans, Atkinson Hyperlegible Next. Mind a programmal csomagolt, szabad (SIL OFL) betűtípus
-    (`fonts/`); a választás után a többi törölhető (`fonts/README.md`).
+    Onest, DM Sans, Atkinson Hyperlegible Next.
+  - Énekszámok és oldalcímek (talpas betű, a régi korálkönyvek mintájára): **Old Standard TT** (alapértelmezett,
+    a régi korálkönyvhöz legközelebbi), DM Serif Text (vaskosabb), Libre Bodoni. Ezzel jelennek meg az
+    énekszámok (könyvtár, ének fejléce, lejátszó, listák, énekválasztó) és a főoldalak címe.
+  - Mind a programmal csomagolt, szabad (SIL OFL) betűtípus (`fonts/`); a választás után a többi törölhető
+    (`fonts/README.md`).
 - **Kottanézet és lejátszó:** szövegpanel, oldalsáv és kotta szélessége, óra a lejátszóban.
 - **Kottagrafika:** a kotta rajzolata. Kottafont: **Leipzig** (tömöttebb, alapértelmezett) vagy
   **Bravura** (szellősebb); mindkettőt ugyanazon a mintakottán mutatja. Az új kottagrafikai
@@ -131,8 +136,9 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
 
 ## Könyvtár
 
-- Az énekkártyákon az énekszám, a kezdősor, a letétek és az előjátékok száma (a letöltött, bekapcsolt
-  könyvekből), és az ének kulcsszavai.
+- Az énekkártyákon balra az énekszám és a kezdősor, jobbra zárva a letétek és az előjátékok száma (a letöltött,
+  bekapcsolt könyvekből), alatta dőlt betűvel az ének kulcsszavai. Keskeny kijelzőn (telefonon) ezek a kezdősor
+  alá kerülnek.
 - A kereső mellett kulcsszavas szűrő: pl. „karácsony” választásával csak a karácsonyi énekek látszanak.
   Egy kártya kulcsszavára koppintva is erre szűr (újra koppintva megszűnik). A kereső a kulcsszavakban is keres.
 
