@@ -165,7 +165,11 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
   - Oldalt: a versszakok és bennük a sorok egymás alatt; a hosszú sor behúzással törik a következő sorba.
   - Lent, egymás mellett (alapértelmezett): a versszakok oszlopokban, a sorok egymás alatt, törés nélkül: egy
     versszak oszlopa olyan széles, mint a leghosszabb sora (ha nem fér ki minden versszak, oldalra görgethető).
+    A refrén külön oszlop az első versszak mellett (dőlt betűvel), így a versszakok oszlopa rövidebb; a lejátszóban
+    akkor is látszik, ha az 1. versszak nincs a kiválasztottak között.
   - Lent, egymás alatt („Folyó szöveg” gomb): a versszakok egymás alatt, a soraik folyó szövegként egymás után.
+    A panel legfeljebb a kottanézet 30%-át foglalja el, a többi versszak görgethető.
+  - Ha a panelen jobbra (oszlopok) vagy lejjebb (folyó szöveg) még van szöveg, a szélén árnyék jelzi.
 - A lejátszó fejlécében balra a lista sorszáma (pl. `1/4`), utána az énekszám és a cím; jobbra az óra.
   Az óra a beállításokban kikapcsolható („Óra a lejátszóban”, alapból látszik).
 - **Gyors megnyitás:** az óra melletti (számbillentyűzet ikonos) gomb énekválasztót nyit.
@@ -175,6 +179,9 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
   - A kiválasztott ének oldala nyílik meg; a vissza gomb a lejátszóba visz, ugyanoda.
   - Fizikai billentyűzeten is működik: számok, Backspace, Enter, Escape.
   - A lista szerkesztőjében az „Új ének hozzáadása” ugyanezt az ablakot nyitja.
+- Új lista neve: a mező előtti naptár gombbal dátum (ÉÉÉÉ-HH-NN, pl. a szertartás napja) kerül a név elejére,
+  utána tovább lehet írni (pl. `2026-10-04 Úrvacsorás istentisztelet`). Újabb dátum választásakor a név elején
+  álló dátum cserélődik, a többi marad. A Hozzáadás ablak „+ Új lista…” mezőjében is így működik.
 - Lapozás a lejátszóban: koppintás a kottaterület bal vagy jobb szélére (a szélső 15%-ra) az előző /
   következő énekre lapoz.
 - Billentyűzet vagy Bluetooth lapozópedál: mindig egész éneket lapoz.

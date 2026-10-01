@@ -617,6 +617,17 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .verse-item-text { min-width: 0; }
 .verse-item-preview { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* Listanév mező, előtte a dátumválasztó gomb; a natív dátumválasztó a gomb helyén nyílik meg */
+.list-name-field { position: relative; display: flex; gap: 6px; }
+.list-name-field .input { flex: 1; min-width: 0; }
+.list-name-date {
+    flex: none; width: 44px; display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--col-border-dark, #bbb); border-radius: 0.375rem;
+    background-color: var(--col-card-raised, #fff); color: var(--col-accent-text);
+}
+.list-name-date:hover { border-color: var(--col-accent); }
+.list-name-date-input { position: absolute; left: 0; top: 0; width: 44px; height: 100%; opacity: 0; pointer-events: none; }
+
 /* Kotta nélküli ének: az üzenet a kotta helyén, a szövegpanel mellette ugyanúgy látszik */
 .score-empty {
     flex: 1; min-width: 0; min-height: 0; padding: 1rem; text-align: center;
@@ -638,11 +649,28 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .lyrics-columns { display: flex; gap: 2rem; align-items: flex-start; width: max-content; }
 .lyrics-verse.columns { flex: none; margin-bottom: 0; }
 .lyrics-verse.columns .lyrics-line { white-space: nowrap; }
+.lyrics-verse.refrain .lyrics-verse-label { font-size: 0.85em; line-height: 1.65; }
 /* lent, egymás alatt: a versszak sorai folyó szövegként */
 .lyrics-verse.block { display: block; margin-bottom: 0.6rem; }
 .lyrics-paragraph { margin: 0; }
 .lyrics-paragraph + .lyrics-paragraph { margin-top: 0.2em; }
 .lyrics-paragraph .lyrics-verse-label, .lyrics-paragraph .lyrics-refrain-label { display: inline; }
+/* Ha a panelen még van szöveg lejjebb (folyó szöveg) vagy jobbra (oszlopok), árnyék jelzi. A görgetéssel együtt
+   mozgó („local”) takaró színátmenetek a szöveg elején és végén eltakarják az árnyékot. */
+.lyrics-scroll.block {
+    background:
+        linear-gradient(var(--col-papyrus) 30%, transparent) top / 100% 2.5rem no-repeat local,
+        linear-gradient(transparent, var(--col-papyrus) 70%) bottom / 100% 2.5rem no-repeat local,
+        radial-gradient(farthest-side at 50% 0, rgba(0, 0, 0, 0.18), transparent) top / 100% 0.75rem no-repeat scroll,
+        radial-gradient(farthest-side at 50% 100%, rgba(0, 0, 0, 0.18), transparent) bottom / 100% 0.75rem no-repeat scroll;
+}
+.lyrics-scroll.columns {
+    background:
+        linear-gradient(to right, var(--col-papyrus) 30%, transparent) left / 2.5rem 100% no-repeat local,
+        linear-gradient(to left, var(--col-papyrus) 30%, transparent) right / 2.5rem 100% no-repeat local,
+        radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.18), transparent) left / 0.75rem 100% no-repeat scroll,
+        radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.18), transparent) right / 0.75rem 100% no-repeat scroll;
+}
 
 /* HymnSelectorModal */
 .hymn-selector-search {
