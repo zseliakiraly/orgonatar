@@ -41,15 +41,17 @@ const Icons = {
     Backspace: (props) => <IconBase {...props}><path d="M20 5H9l-7 7 7 7h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z"/><line x1="18" x2="12" y1="9" y2="15"/><line x1="12" x2="18" y1="9" y2="15"/></IconBase>,
 };
 
-const parseVerses = (lyrics) => {
-    if (!lyrics) return [];
-    return lyrics.split(/\n\s*\n/).map((text, index) => {
-        const lines = text.split('\n');
-        const firstLine = lines[0] || "";
-        const match = firstLine.match(/^(\d+\.)\s*(.*)/);
-        return { index, label: match ? match[1] : `${index + 1}.`, preview: (match ? match[2] : firstLine).substring(0, 50), fullText: text };
-    });
+// Az ének versszakai soronként (enek.json: "verses": [["1. versszak 1. sora", "2. sora", …], [2. versszak], …]).
+// A régi formátumot is elfogadja: "lyrics" egyetlen szövegként, a versszakok között üres sorral, elején a számukkal.
+const hymnVerses = (hymn) => {
+    const clean = (lines) => lines.filter(l => typeof l === 'string' && l.trim()).map(l => l.trim());
+    if (Array.isArray(hymn.verses)) return hymn.verses.filter(Array.isArray).map(clean);
+    if (typeof hymn.lyrics !== 'string' || !hymn.lyrics.trim()) return [];
+    return hymn.lyrics.trim().split(/\n\s*\n/).map(v => clean(v.replace(/^\d+\.\s*/, '').split('\n')));
 };
+
+// A versszakok a megjelenítéshez: sorszám (0-tól, a listák ezt tárolják), felirat ("1."), sorok
+const verseList = (hymn) => (hymn.verses || []).map((lines, index) => ({ index, label: `${index + 1}.`, lines }));
 
 // --- TÁROLÁS (localStorage) ---
 const STORAGE_KEYS = { playlists: 'orgonista_playlists', settings: 'orgonista_settings' };
@@ -405,11 +407,10 @@ const buildSearchIndex = (hymns) => hymns.map(h => ({
     number: String(h.number),
     title: normalizeText(h.title),
     keywords: normalizeText(hymnKeywords(h).join(' | ')),
-    lyrics: normalizeText(h.lyrics)
+    lyrics: normalizeText((h.verses || []).map(v => v.join(' ')).join(' '))
 }));
 
-// Csak számjegyek: az énekszám elejére keres (a pontos egyezés kerül előre), a szövegben nem,
-// mert ott minden éneknél ott vannak a versszakszámok ("1.", "2." ...).
+// Csak számjegyek: az énekszám elejére keres (a pontos egyezés kerül előre), a szövegben nem.
 // Egyébként ékezet nélkül keres a számban, a címben, a kulcsszavakban és a szövegben; a címbeli találatok kerülnek előre.
 const searchHymns = (index, query) => {
     const q = query.trim();
@@ -672,7 +673,7 @@ const NEW_PLAYLIST = '__new__';
 
 // Csak nyitott állapotban csatoljuk, ezért a kezdőértékeket egyszer, a megnyitáskor számoljuk ki
 const AddToPlaylistModal = ({ onClose, onConfirm, playlists, initialVariationId, initialPreludeId, hymn, variations, preludes, lockPlaylistId }) => {
-    const parsedVerses = useMemo(() => parseVerses(hymn.lyrics), [hymn.lyrics]);
+    const parsedVerses = useMemo(() => verseList(hymn), [hymn]);
     const [targetId, setTargetId] = useState(() => lockPlaylistId ?? (playlists.length > 0 ? playlists[0].id : NEW_PLAYLIST));
     const [newName, setNewName] = useState('');
     const [selectedVariationId, setSelectedVariationId] = useState(() => variations.some(v => v.id === initialVariationId) ? initialVariationId : (variations.length > 0 ? variations[0].id : null));
@@ -755,7 +756,7 @@ const AddToPlaylistModal = ({ onClose, onConfirm, playlists, initialVariationId,
                         {parsedVerses.map(verse => (
                             <div key={verse.index} onClick={() => toggleVerse(verse.index)} className={`verse-item ${selectedVerses.includes(verse.index) ? 'selected' : ''}`}>
                                 <div className="text-accent">{selectedVerses.includes(verse.index) ? <Icons.CheckSquare size={20} /> : <Icons.Square size={20} />}</div>
-                                <div><div className="font-bold text-galaxy text-sm">{verse.label}</div><div className="text-xs text-gray-500">{verse.preview}</div></div>
+                                <div className="verse-item-text"><div className="font-bold text-galaxy text-sm">{verse.label}</div><div className="verse-item-preview text-xs text-gray-500">{verse.lines.slice(0, 2).join(' / ')}</div></div>
                             </div>
                         ))}
                     </div>
@@ -1386,7 +1387,21 @@ const hotspotAt = (el, clientX) => {
 const ZOOM_MIN = 0.4;
 const ZOOM_MAX = 2.5;
 
-const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyricsWidth, scoreMaxWidth, scoreFont, onNext, onPrev }) => {
+// Egy versszak a szövegpanelen: a száma, mellette soronként a szöveg. A refrén („Refr.” után) dőlt betűs.
+const LyricsVerse = ({ verse, column }) => {
+    const refrain = verse.lines.findIndex(l => l.startsWith('Refr.'));
+    const lineClass = (i) => refrain < 0 || i < refrain ? 'lyrics-line' : i === refrain ? 'lyrics-line lyrics-refrain-label' : 'lyrics-line lyrics-refrain';
+    return (
+        <div className={`lyrics-verse${column ? ' column' : ''}`}>
+            <span className="lyrics-verse-label">{verse.label}</span>
+            <div className="lyrics-verse-lines">
+                {verse.lines.map((line, i) => <div key={i} className={lineClass(i)}>{line}</div>)}
+            </div>
+        </div>
+    );
+};
+
+const ScoreViewer = ({ score, variationId, preludeId, verses, showLyrics, lyricsWidth, scoreMaxWidth, scoreFont, onNext, onPrev }) => {
     const [textPosition, setTextPosition] = useState('bottom');
     const [textLayout, setTextLayout] = useState('columns');
     const [zoom, setZoom] = useState(1.0);     // a beállított legnagyobb méret
@@ -1485,15 +1500,62 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
         if (e.currentTarget.style.cursor !== cursor) e.currentTarget.style.cursor = cursor;
     };
 
-    if (!hasContent) return (
-        <div style={{display:'flex', height:'100%', alignItems:'center', justifyContent:'center', flexDirection:'column', opacity:0.5}}>
-            <Icons.Music size={64}/>
-            <p>Nincs elérhető kotta</p>
-            <p className="text-sm">További kottákat a Kottakönyvek oldalon tölthetsz le.</p>
+    const isSide = textPosition === 'right';
+    // Szövegpanel (oldalt vagy lent); kotta nélkül is látszik, szöveg nélkül elmarad
+    const lyricsPanel = showLyrics && verses.length > 0 && (
+        <div style={{
+            width: isSide ? lyricsWidth : '100%', 
+            minWidth: isSide ? '200px' : '100%', 
+            height: isSide ? '100%' : 'auto',
+            minHeight: isSide ? '100%' : '150px',
+            maxHeight: isSide ? '100%' : '50%',
+            display:'flex', 
+            flexDirection:'column', 
+            borderLeft: isSide ? '1px solid var(--col-border, #ddd)' : 'none', 
+            borderTop: !isSide ? '1px solid var(--col-border, #ddd)' : 'none',
+            backgroundColor:'var(--col-papyrus)', 
+            zIndex:20, 
+            boxShadow: isSide ? '-5px 0 15px rgba(0,0,0,0.1)' : '0 -5px 15px rgba(0,0,0,0.1)'
+        }}>
+            {/* Toolbar */}
+            <div style={{display:'flex', justifyContent:'flex-end', padding:'4px', borderBottom:'1px dashed var(--col-border, #eee)', gap:'4px'}}>
+                 <button onClick={() => setTextPosition(textPosition === 'right' ? 'bottom' : 'right')} className="btn-ghost p-1" title={textPosition === 'right' ? "Lentre tesz" : "Oldalra tesz"}>
+                     {textPosition === 'right' ? <Icons.LayoutBottom size={16}/> : <Icons.LayoutSidebar size={16}/>}
+                 </button>
+                 {textPosition === 'bottom' && (
+                     <button onClick={() => setTextLayout(textLayout === 'block' ? 'columns' : 'block')} className="btn-ghost p-1" title={textLayout === 'block' ? "Oszlopos nézet" : "Folyó szöveg"}>
+                         {textLayout === 'block' ? <Icons.Columns size={16}/> : <Icons.List size={16}/>}
+                     </button>
+                 )}
+            </div>
+            <div style={{
+                flex: 1, 
+                overflowY: (!isSide && textLayout === 'columns') ? 'hidden' : 'auto',
+                overflowX: (!isSide && textLayout === 'columns') ? 'auto' : 'hidden',
+                padding: '1rem'
+            }}>
+                <div style={
+                    !isSide && textLayout === 'columns' 
+                    ? { display: 'flex', flexDirection: 'row', gap: '2rem', height: '100%' } 
+                    : {}
+                }>
+                    {verses.map(v => <LyricsVerse key={v.index} verse={v} column={!isSide && textLayout === 'columns'} />)}
+                </div>
+            </div>
         </div>
     );
 
-    const isSide = textPosition === 'right';
+    if (!hasContent) return (
+        <div style={{display:'flex', height:'100%', flexDirection: isSide ? 'row' : 'column'}}>
+            <div className="score-empty">
+                <Icons.Music size={64}/>
+                <p>Nincs elérhető kotta</p>
+                <p className="text-sm">További kottákat a Kottakönyvek oldalon tölthetsz le.</p>
+            </div>
+            {lyricsPanel}
+        </div>
+    );
+
     // A kijelzett méret a ténylegesen látott; a gombok ehhez képest lépnek 10%-ot, és a legnagyobb méretet állítják
     const shownZoom = fit ? fit.zoom * fit.scale : zoom;
     const fitLimited = shownZoom < zoom - 0.005; // a beállított méretben nem férne ki
@@ -1553,61 +1615,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
                 </div>
             </div>
 
-            {showLyrics && (
-                <div style={{
-                    width: isSide ? lyricsWidth : '100%', 
-                    minWidth: isSide ? '200px' : '100%', 
-                    height: isSide ? '100%' : 'auto',
-                    minHeight: isSide ? '100%' : '150px',
-                    maxHeight: isSide ? '100%' : '50%',
-                    display:'flex', 
-                    flexDirection:'column', 
-                    borderLeft: isSide ? '1px solid var(--col-border, #ddd)' : 'none', 
-                    borderTop: !isSide ? '1px solid var(--col-border, #ddd)' : 'none',
-                    backgroundColor:'var(--col-papyrus)', 
-                    zIndex:20, 
-                    boxShadow: isSide ? '-5px 0 15px rgba(0,0,0,0.1)' : '0 -5px 15px rgba(0,0,0,0.1)'
-                }}>
-                    {/* Toolbar */}
-                    <div style={{display:'flex', justifyContent:'flex-end', padding:'4px', borderBottom:'1px dashed var(--col-border, #eee)', gap:'4px'}}>
-                         <button onClick={() => setTextPosition(textPosition === 'right' ? 'bottom' : 'right')} className="btn-ghost p-1" title={textPosition === 'right' ? "Lentre tesz" : "Oldalra tesz"}>
-                             {textPosition === 'right' ? <Icons.LayoutBottom size={16}/> : <Icons.LayoutSidebar size={16}/>}
-                         </button>
-                         {textPosition === 'bottom' && (
-                             <button onClick={() => setTextLayout(textLayout === 'block' ? 'columns' : 'block')} className="btn-ghost p-1" title={textLayout === 'block' ? "Oszlopos nézet" : "Folyó szöveg"}>
-                                 {textLayout === 'block' ? <Icons.Columns size={16}/> : <Icons.List size={16}/>}
-                             </button>
-                         )}
-                    </div>
-                    <div style={{
-                        flex: 1, 
-                        overflowY: (!isSide && textLayout === 'columns') ? 'hidden' : 'auto',
-                        overflowX: (!isSide && textLayout === 'columns') ? 'auto' : 'hidden',
-                        padding: '1rem'
-                    }}>
-                        <div style={
-                            !isSide && textLayout === 'columns' 
-                            ? { display: 'flex', flexDirection: 'row', gap: '2rem', height: '100%' } 
-                            : {}
-                        }>
-                            {parseVerses(lyrics).map(v => (
-                                <div key={v.index} style={{
-                                    marginBottom: '1rem', 
-                                    paddingLeft: '10px', 
-                                    borderLeft: '3px solid var(--col-border, #eee)', 
-                                    lineHeight: '1.4',
-                                    whiteSpace: 'pre-line', // a versszakon belüli sortörések megmaradnak
-                                    breakInside: 'avoid-column',
-                                    flex: (!isSide && textLayout === 'columns') ? '0 0 auto' : 'auto',
-                                    width: (!isSide && textLayout === 'columns') ? '300px' : 'auto'
-                                }}>
-                                    {v.fullText}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
+            {lyricsPanel}
         </div>
     );
 };
@@ -1901,7 +1909,7 @@ function OrganistApp() {
                 // A listából azóta kikerült, de letöltött könyv is megmarad (törölni a felhasználó tudja)
                 Object.keys(downloaded).filter(folder => !entries.some(e => e.folder === folder))
                     .forEach(folder => entries.push({ folder, builtin: false, orphan: true, remote: null, remoteError: null, local: downloaded[folder] }));
-                setHymnBook(hymns);
+                setHymnBook(hymns.map(h => ({ ...h, verses: hymnVerses(h) })));
                 setBooks(entries);
                 if (errors.length) setAlertMessage(`Hiba az adatfájlok betöltésekor: ${errors.join(', ')}`);
                 setLoading(false);
@@ -2161,7 +2169,7 @@ function OrganistApp() {
 
     const resolveItem = (item) => ({
         ...item,
-        hymn: hymnByNumber.get(String(item.hymnNumber)) || { number: item.hymnNumber, title: 'Ismeretlen ének', lyrics: '', scoreId: null }
+        hymn: hymnByNumber.get(String(item.hymnNumber)) || { number: item.hymnNumber, title: 'Ismeretlen ének', verses: [], scoreId: null }
     });
 
     const selectedPlaylist = useMemo(() => {
@@ -2397,7 +2405,7 @@ function OrganistApp() {
                             </div>
                         </div>
                         <div style={{flex:1, overflow:'hidden'}}>
-                            <ScoreViewer score={getScoreById(selectedHymn.scoreId)} variationId={currentVariationId} preludeId={currentPreludeId} lyrics={selectedHymn.lyrics} showLyrics={settings.showLyrics} lyricsWidth={settings.lyricsWidth} scoreMaxWidth={settings.scoreMaxWidth} scoreFont={settings.scoreFont}/>
+                            <ScoreViewer score={getScoreById(selectedHymn.scoreId)} variationId={currentVariationId} preludeId={currentPreludeId} verses={verseList(selectedHymn)} showLyrics={settings.showLyrics} lyricsWidth={settings.lyricsWidth} scoreMaxWidth={settings.scoreMaxWidth} scoreFont={settings.scoreFont}/>
                         </div>
                     </div>
                 ) : (
@@ -2541,11 +2549,7 @@ function OrganistApp() {
                                 score={getScoreById(playerItem.hymn.scoreId)}
                                 variationId={playerItem.variationId}
                                 preludeId={playerItem.preludeId}
-                                lyrics={(() => {
-                                    const allV = parseVerses(playerItem.hymn.lyrics);
-                                    if(playerItem.verses.length === 0) return playerItem.hymn.lyrics;
-                                    return allV.filter(v => playerItem.verses.includes(v.index)).map(v => v.fullText).join('\n\n');
-                                })()}
+                                verses={verseList(playerItem.hymn).filter(v => playerItem.verses.length === 0 || playerItem.verses.includes(v.index))}
                                 showLyrics={settings.showLyrics}
                                 lyricsWidth={settings.lyricsWidth}
                                 scoreMaxWidth={settings.scoreMaxWidth}
