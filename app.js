@@ -466,6 +466,36 @@ const searchHymns = (index, query) => {
 
 // --- KOMPONENSEK ---
 
+// A program logója (orgonatar-logo.svg: három orgonasíp és három kottakönyv a polcon), a téma színével (currentColor).
+// A kis méretű változatok (böngészőfül, kezdőképernyő) vastagabb vonallal az icons/ mappában vannak.
+const LogoBookLines = () => (
+    <><path d="m 156.99252,53.753505 h 9.42806"/><path d="m 156.99252,57.243044 h 9.42806"/><path d="m 156.99252,60.732583 h 9.42806"/></>
+);
+const Logo = ({ className = '' }) => (
+    <svg className={className} viewBox="-2 -2 138.83 117.19" role="img" aria-label="Református OrgonaTár logója">
+        <g fill="none" stroke="currentColor" strokeWidth="1.25">
+            <path d="M 11.665256,96.89102 V 26.891019 h 15 V 96.89102 m 0,0 -7.74406,13.71858 -7.25594,-13.71858"/>
+            <path d="M 26.665256,96.89102 V 15.330814 h 15.13162 V 96.89102 m 0,0 -7.41596,13.94826 -7.71566,-13.94826"/>
+            <path d="M 41.796876,96.89102 V 1.6203879 h 14.75924 V 96.89102 m 0,0 -6.96932,13.94826 -7.78992,-13.94826"/>
+            <g strokeWidth="3"><path d="m 16.157066,96.79998 h 6.01639"/><path d="m 31.162686,96.79998 h 6.01638"/><path d="m 46.288676,96.79998 h 6.01639"/></g>
+            <g transform="translate(0,1.0844793)">
+                <rect x="59.014545" y="13.173469" width="18.714531" height="96.014175" rx="1.4971626"/>
+                <g transform="translate(-93.334744,-33.10883)" strokeWidth="1.8"><LogoBookLines/></g>
+            </g>
+            <g transform="translate(-1.6267189,0.94891939)">
+                <rect x="79.430588" y="26.740086" width="19.591698" height="82.574493" rx="1.5673356"/>
+                <g transform="matrix(1.3045127,0,0,1,-121.72181,-19.011521)" strokeWidth="1.35"><LogoBookLines/></g>
+            </g>
+            <g transform="translate(-3.8644401,0.81335948)">
+                <rect x="97.204147" y="47.691582" width="16.321545" height="72.106903" rx="1.3057234" strokeLinecap="round" strokeLinejoin="round"
+                    transform="matrix(0.99537042,-0.09611313,0.0952079,0.99545741,0,0)"/>
+                <g transform="rotate(-5.4418803,58.771014,590.97334)" strokeWidth="1.95"><LogoBookLines/></g>
+            </g>
+            <line x1="1.348415" y1="111.84411" x2="133.47885" y2="111.84411" strokeWidth="3"/>
+        </g>
+    </svg>
+);
+
 const NavigationSidebar = ({ activeTab, onTabChange, menuSide, toggleFullScreen }) => (
     <div className={`sidebar ${menuSide}`}>
         <div className="sidebar-group">
@@ -583,7 +613,7 @@ const HymnSelectorModal = ({ isOpen, onClose, onSelect, hymnBook, title = 'Ének
                 <div className="hymn-picker-search">
                     <div className="hymn-selector-search">
                         <Icons.Search className="search-icon" size={18}/>
-                        <input ref={inputRef} type="text" className="input search" placeholder="Keresés számra, címre vagy szövegre..." value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') confirm(); }} />
+                        <ClearableInput inputRef={inputRef} type="text" className="input search" placeholder="Keresés számra, címre vagy szövegre..." value={search} onClear={() => setSearch('')} onChange={e => setSearch(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') confirm(); }} />
                     </div>
                     <div className="hymn-picker-results">
                         <div className="hymn-selector-list">
@@ -621,6 +651,20 @@ const HymnSelectorModal = ({ isOpen, onClose, onSelect, hymnBook, title = 'Ének
     );
 };
 
+// Szövegmező a jobb szélén törlőgombbal (X), ha van benne szöveg. A gomb nem veszi el a fókuszt: ha a mezőben
+// gépeltek (nyitva a képernyő-billentyűzet), a fókusz ott marad; ha nem, a billentyűzet nem ugrik fel tőle.
+const ClearableInput = ({ value, onClear, inputRef, ...props }) => (
+    <span className="clearable">
+        <input ref={inputRef} value={value} {...props} />
+        {value && (
+            <button type="button" className="input-clear" onMouseDown={e => e.preventDefault()} onClick={onClear}
+                title="Törlés" aria-label="Szöveg törlése">
+                <Icons.X size={18}/>
+            </button>
+        )}
+    </span>
+);
+
 // Listanév mező, előtte dátumválasztó gombbal: a választott nap (ÉÉÉÉ-HH-NN, pl. a szertartás napja) a név elejére
 // kerül (a név elején álló korábbi dátumot lecseréli), a név többi része megmarad, és utána tovább lehet írni.
 const ListNameInput = ({ value, onChange, onEnter, inputRef, placeholder, style }) => {
@@ -646,7 +690,7 @@ const ListNameInput = ({ value, onChange, onEnter, inputRef, placeholder, style 
                 <Icons.Calendar size={20}/>
             </button>
             <input ref={dateRef} type="date" className="list-name-date-input" tabIndex={-1} aria-hidden="true" onChange={pickDate} />
-            <input ref={textRef} type="text" className="input" placeholder={placeholder} value={value}
+            <ClearableInput inputRef={textRef} type="text" className="input" placeholder={placeholder} value={value} onClear={() => onChange('')}
                 onChange={e => onChange(e.target.value)} onKeyDown={e => e.key === 'Enter' && onEnter && onEnter()} />
         </div>
     );
@@ -943,18 +987,35 @@ const FONT_SAMPLE_MEI = `<?xml version="1.0" encoding="UTF-8"?>
 </measure>
 </section></score></mdiv></body></music></mei>`;
 
-const fontSamples = new Map(); // kottafont → a mintakotta SVG-je (egyszer rajzoljuk ki)
-const renderFontSample = (vrv, font) => {
+// A mintakották SVG-je: a memóriában és a localStorage-ban is (a Verovio és a minta változatához kötve), így a
+// Beállítások lapon csak a legelső megnyitáskor kell kirajzolni őket (az tableten több száz ms).
+// A mintakotta vagy a rajzolás beállításainak változásakor a FONT_SAMPLE_VERSION-t növelni kell.
+const FONT_SAMPLE_VERSION = 1;
+const FONT_SAMPLE_PREFIX = 'orgonista_font_samples_';
+const fontSamples = new Map(); // kottafont → a mintakotta SVG-je
+const fontSampleKey = () => `${FONT_SAMPLE_PREFIX}${VEROVIO_VERSION}_${FONT_SAMPLE_VERSION}`;
+const storedFontSample = (font) => {
     if (!fontSamples.has(font)) {
-        const tk = new vrv.toolkit();
-        try {
-            tk.setOptions({ ...VEROVIO_OPTIONS, breaks: 'none', adjustPageWidth: true, font });
-            tk.loadData(FONT_SAMPLE_MEI);
-            fontSamples.set(font, tk.renderToSVG(1));
-        } finally {
-            tk.destroy();
-        }
+        const svg = loadJSON(fontSampleKey(), {})[font];
+        if (typeof svg === 'string' && svg.startsWith('<svg')) fontSamples.set(font, svg);
     }
+    return fontSamples.get(font) || null;
+};
+const renderFontSample = (vrv, font) => {
+    if (storedFontSample(font)) return fontSamples.get(font);
+    const tk = new vrv.toolkit();
+    try {
+        tk.setOptions({ ...VEROVIO_OPTIONS, breaks: 'none', adjustPageWidth: true, font });
+        tk.loadData(FONT_SAMPLE_MEI);
+        fontSamples.set(font, tk.renderToSVG(1));
+    } finally {
+        tk.destroy();
+    }
+    try {
+        // a régebbi változatok mentett mintái törlődnek
+        Object.keys(localStorage).filter(k => k.startsWith(FONT_SAMPLE_PREFIX) && k !== fontSampleKey()).forEach(k => localStorage.removeItem(k));
+        saveJSON(fontSampleKey(), Object.fromEntries(fontSamples));
+    } catch (e) { /* a minta mentése nem fontos */ }
     return fontSamples.get(font);
 };
 
@@ -962,13 +1023,18 @@ const FontSample = ({ font }) => {
     const ref = useRef(null);
     const [failed, setFailed] = useState(false);
     useEffect(() => {
-        // A minta rajzolása (Verovio) tableten több száz ms: a Beállítások lap előbb megjelenik, a minták utána, egyenként
-        let active = true, timer = null;
+        const stored = storedFontSample(font);
+        if (stored) { if (ref.current) ref.current.innerHTML = stored; return; }
+        // A minta rajzolása (Verovio) tableten több száz ms: a Beállítások lap előbb megjelenik (a következő képkocka
+        // után rajzolunk), a minták utána, egyenként
+        let active = true, timer = null, frame = null;
         loadVerovio()
-            .then(vrv => new Promise(resolve => { timer = setTimeout(() => resolve(vrv), fontSamples.has(font) ? 0 : 50 + SCORE_FONTS.findIndex(f => f.id === font) * 50); }))
+            .then(vrv => new Promise(resolve => {
+                frame = requestAnimationFrame(() => { timer = setTimeout(() => resolve(vrv), 30 + SCORE_FONTS.findIndex(f => f.id === font) * 60); });
+            }))
             .then(vrv => { if (active && ref.current) ref.current.innerHTML = renderFontSample(vrv, font); })
             .catch(err => { console.info(err.message); if (active) setFailed(true); });
-        return () => { active = false; clearTimeout(timer); };
+        return () => { active = false; clearTimeout(timer); cancelAnimationFrame(frame); };
     }, [font]);
     if (failed) return <div className="font-sample font-sample-missing">A minta most nem jeleníthető meg</div>;
     return <div ref={ref} className="font-sample" aria-hidden="true"></div>;
@@ -1005,7 +1071,7 @@ const serifFontOption = (font) => (
     <span className="font-option">
         <span className="serif-font-sample" style={{fontFamily: serifFontStack(font.id)}}>
             <span className="serif-font-sample-number">489</span>
-            <span className="serif-font-sample-title">Református Kottagyűjtemény</span>
+            <span className="serif-font-sample-title">Református OrgonaTár</span>
         </span>
         <span className="font-option-name"><span className="font-choice-name">{font.family}</span> <span className="font-choice-hint">{font.hint}</span></span>
     </span>
@@ -2038,38 +2104,80 @@ const HymnCard = React.memo(({ hymn, counts, keywordFilter, onOpen, onKeyword })
     </div>
 ));
 
-// A kártyák részletekben kerülnek a lapra: először LIBRARY_BATCH darab (bőven kitölti a képernyőt), a többi görgetés
-// közben, amikor a lista vége a látható rész közelébe ér. Így a Könyvtárra váltás és a keresés gépelés közben is gyors
-// (a teljes, több száz kártyás lista felépítése tableten egy másodpercig is eltarthat).
-const LIBRARY_BATCH = 50;
+// A kártyák kirajzolása: az első csoport (LIBRARY_GROUP kártya, bőven kitölti a képernyőt) azonnal, a többi a háttérben,
+// csoportonként, alacsony prioritással (startTransition: közben a görgetés és a gépelés elsőbbséget kap). A csoportok
+// elrendezése egymástól független (content-visibility: auto): a képernyőn kívüli csoportokat a böngésző nem rendezi
+// el és nem festi ki, és egy új csoport sem számoltatja újra a többit. A még ki nem rajzolt kártyák helyét a már
+// kirajzoltak átlagos magasságából előre lefoglaljuk, így a görgetősáv mérete nem ugrál. Ha valaki gyorsan a lista
+// végére görget, a következő csoport azonnal jön.
+// (A teljes, több száz kártyás lista egyszerre felépítve tableten közel egy másodpercig foglalná le a programot.)
+const LIBRARY_GROUP = 50;
+const HymnGroup = React.memo(({ hymns, start, slot, scoreCounts, keywordFilter, onOpen, onKeyword }) => {
+    const items = hymns.slice(start, start + LIBRARY_GROUP);
+    return (
+        <div className="hymn-group" style={{containIntrinsicSize: `auto ${Math.round(items.length * slot)}px`}}>
+            {items.map(h => (
+                <HymnCard key={h.number} hymn={h} counts={scoreCounts.get(String(h.scoreId ?? h.number)) || NO_SCORES}
+                    keywordFilter={keywordFilter} onOpen={onOpen} onKeyword={onKeyword} />
+            ))}
+        </div>
+    );
+});
 const HymnList = ({ hymns, scoreCounts, keywordFilter, onOpen, onKeyword }) => {
-    const [shown, setShown] = useState({ hymns, count: LIBRARY_BATCH });
-    let count = shown.count;
-    if (shown.hymns !== hymns) { count = LIBRARY_BATCH; setShown({ hymns, count }); } // új találati lista: elölről
-    const sentinelRef = useRef(null);
+    const [shown, setShown] = useState({ hymns, groups: 1 });
+    let groups = shown.groups;
+    if (shown.hymns !== hymns) { groups = 1; setShown({ hymns, groups }); } // új találati lista: elölről
+    const total = Math.ceil(hymns.length / LIBRARY_GROUP);
+    const visible = Math.min(hymns.length, groups * LIBRARY_GROUP);
+    const [slot, setSlot] = useState(70);  // egy kártya helye a listában (magasság + térköz), px
+    const [resized, setResized] = useState(0);
     const topRef = useRef(null);
+    const pendingRef = useRef(null);
+    const more = useCallback(() => setShown(prev => (prev.hymns === hymns ? { hymns, groups: prev.groups + 1 } : prev)), [hymns]);
+
     // új keresés vagy szűrés: a lista elejére (a legjobb találatokhoz) görgetünk
     useLayoutEffect(() => {
         const scroller = topRef.current && topRef.current.closest('.library-scroll');
         if (scroller) scroller.scrollTop = 0;
     }, [hymns]);
+    // a következő csoport a háttérben
     useEffect(() => {
-        const el = sentinelRef.current;
+        if (groups >= total) return;
+        const timer = setTimeout(() => React.startTransition(more), 16);
+        return () => clearTimeout(timer);
+    }, [groups, total, more]);
+    // ha a lefoglalt (még üres) rész a látható terület közelébe ér, azonnal jön a következő csoport
+    useEffect(() => {
+        const el = pendingRef.current;
         if (!el) return;
-        const observer = new IntersectionObserver((entries) => {
-            if (entries.some(e => e.isIntersecting)) setShown(prev => ({ ...prev, count: prev.count + LIBRARY_BATCH }));
-        }, { root: el.closest('.library-scroll'), rootMargin: '0px 0px 800px 0px' });
+        const observer = new IntersectionObserver((entries) => { if (entries.some(e => e.isIntersecting)) more(); },
+            { root: el.closest('.library-scroll'), rootMargin: '0px 0px 400px 0px' });
         observer.observe(el);
         return () => observer.disconnect();
-    }, [count, hymns]);
+    }, [groups, hymns, more]);
+    // egy kártya átlagos helye az első (látható, tehát elrendezett) csoportból; a kijelző szélességétől függ, ezért
+    // elforgatáskor, átméretezéskor újramérjük
+    useLayoutEffect(() => {
+        const group = topRef.current && topRef.current.nextElementSibling;
+        const cards = group && group.classList.contains('hymn-group') ? group.children : null;
+        if (!cards || cards.length < 2) return;
+        const avg = (cards[cards.length - 1].getBoundingClientRect().top - cards[0].getBoundingClientRect().top) / (cards.length - 1);
+        if (avg > 0 && Math.abs(avg - slot) > 0.5) setSlot(avg);
+    }, [hymns, resized]);
+    useEffect(() => {
+        const onResize = () => setResized(n => n + 1);
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
+
     return (
         <>
             <div ref={topRef} hidden />
-            {hymns.slice(0, count).map(h => (
-                <HymnCard key={h.number} hymn={h} counts={scoreCounts.get(String(h.scoreId ?? h.number)) || NO_SCORES}
+            {Array.from({ length: Math.min(groups, total) }, (_, i) => (
+                <HymnGroup key={i} hymns={hymns} start={i * LIBRARY_GROUP} slot={slot} scoreCounts={scoreCounts}
                     keywordFilter={keywordFilter} onOpen={onOpen} onKeyword={onKeyword} />
             ))}
-            {count < hymns.length && <div ref={sentinelRef} className="library-more" aria-hidden="true" />}
+            {visible < hymns.length && <div ref={pendingRef} className="library-pending" style={{height: `${Math.round((hymns.length - visible) * slot)}px`}} aria-hidden="true" />}
         </>
     );
 };
@@ -2753,8 +2861,8 @@ function OrganistApp() {
 
                 {view === 'about' && (
                     <div className="about-view">
-                        <div className="icon-container"><Icons.Music size={40}/></div>
-                        <h1 className="page-title text-3xl text-galaxy mb-2">Református Kottagyűjtemény</h1>
+                        <Logo className="about-logo" />
+                        <h1 className="page-title text-3xl text-galaxy mb-2">Református OrgonaTár</h1>
                         <p className="text-accent uppercase font-bold tracking-widest mb-8">Fazekas Márton</p>
                          <div className="content-box">
                             <p>Református énekek orgonakíséretei, a 2021-es énekeskönyvhöz igazítva. Több korálkönyvből válogattam, elsősorban saját használatra - így számos kíséret kimaradt, például a "művészi" B letétek a genfi korálkönyvből.</p>
@@ -2802,12 +2910,17 @@ function OrganistApp() {
                 ) : (
                     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
                         <div className="header centered">
-                            <h1 className="header-title main page-title">Református Kottagyűjtemény</h1>
+                            <h1 className="header-title main page-title">Református OrgonaTár</h1>
                         </div>
                         <div className="library-toolbar">
                             <div className="library-search">
                                 <Icons.Search className="library-search-icon" size={20}/>
-                                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && filteredHymns.length > 0) navigate({ activeTab: 'library', selectedHymnNumber: filteredHymns[0].number }); }} placeholder="Keresés számra, címre vagy szövegre..." className="input"/>
+                                <ClearableInput type="text" value={searchQuery} onClear={() => setSearchQuery('')} onChange={(e) => setSearchQuery(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && filteredHymns.length > 0) navigate({ activeTab: 'library', selectedHymnNumber: filteredHymns[0].number });
+                                        else if (e.key === 'Escape' && searchQuery) { e.preventDefault(); setSearchQuery(''); }
+                                    }}
+                                    placeholder="Keresés számra, címre vagy szövegre..." className="input"/>
                             </div>
                             <CustomSelect items={keywordOptions} currentId={keywordFilter || null} onChange={(k) => setKeywordFilter(k || '')}
                                 placeholder="Minden kulcsszó" width="190px" menuMaxHeight={420} ariaLabel="Szűrés kulcsszóra"

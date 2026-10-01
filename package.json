@@ -1,7 +1,7 @@
 {
   "name": "orgonatar",
   "private": true,
-  "description": "Református Kottagyűjtemény: orgonakíséretek böngészése és liturgikus listák",
+  "description": "Református OrgonaTár: orgonakíséretek böngészése és liturgikus listák",
   "scripts": {
     "build": "esbuild app.js --loader:.js=jsx --target=es2019 --minify --outfile=app.min.js"
   },

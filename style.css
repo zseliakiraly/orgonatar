@@ -163,8 +163,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     background-image: var(--tex-paper-grain);
     background-blend-mode: multiply;
 }
-.bg-texture .sidebar, .bg-texture .header, .bg-texture .playlist-card-start-btn, .bg-texture .btn-success,
-.bg-texture .about-view .icon-container {
+.bg-texture .sidebar, .bg-texture .header, .bg-texture .playlist-card-start-btn, .bg-texture .btn-success {
     background-image: var(--tex-leather);
     background-blend-mode: soft-light;
 }
@@ -555,7 +554,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     background-color: var(--col-search-bar, rgba(0,0,0,0.02));
 }
 .library-search { position: relative; flex: 0 1 600px; min-width: 0; }
-.library-search-icon { position: absolute; top: 10px; left: 12px; color: var(--col-ink-muted, #999); pointer-events: none; }
+.library-search-icon { position: absolute; top: 10px; left: 12px; z-index: 1; color: var(--col-ink-muted, #999); pointer-events: none; }
 .library-search .input { padding-left: 40px; height: 40px; }
 .library-keyword { flex: 0 0 auto; max-width: 100%; }
 .library-keyword .custom-select-btn { height: 40px; width: 100%; padding-left: 0.75rem; }
@@ -639,17 +638,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     padding: 4rem;
     text-align: center;
 }
-.about-view .icon-container {
-    margin: 0 auto 2rem;
-    width: 80px;
-    height: 80px;
-    background-color: var(--col-galaxy-blue);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--col-accent);
-}
+.about-logo { display: block; width: 180px; max-width: 60%; height: auto; margin: 0 auto 1.75rem; color: var(--col-galaxy-blue); }
 .about-view .content-box {
     max-width: 600px;
     margin: 0 auto;
@@ -687,7 +676,17 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 
 /* Listanév mező, előtte a dátumválasztó gomb; a natív dátumválasztó a gomb helyén nyílik meg */
 .list-name-field { position: relative; display: flex; gap: 6px; }
-.list-name-field .input { flex: 1; min-width: 0; }
+.list-name-field .clearable { flex: 1; min-width: 0; }
+/* Szövegmező törlőgombbal (app.js: ClearableInput): az X a mező jobb szélén, ha van benne szöveg */
+.clearable { position: relative; display: block; }
+.clearable > .input { width: 100%; padding-right: 40px; }
+.input-clear {
+    position: absolute; top: 50%; right: 4px; transform: translateY(-50%);
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--col-ink-muted, #666);
+}
+.input-clear:hover { background-color: rgba(0, 0, 0, 0.06); color: var(--col-ink); }
 .list-name-date {
     flex: none; width: 44px; display: flex; align-items: center; justify-content: center;
     border: 1px solid var(--col-border-dark, #bbb); border-radius: 0.375rem;
@@ -788,7 +787,9 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     position: absolute;
     top: 10px;
     left: 10px;
+    z-index: 1; /* a törlőgombos mező (.clearable) fölött */
     color: var(--col-ink-muted, #999);
+    pointer-events: none;
 }
 .hymn-selector-list {
     display: flex;
@@ -1205,5 +1206,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .hover\:bg-gray-100:hover { background-color: var(--col-wash, #f3f4f6); }
 .hover\:text-black:hover { color: #000; }
 .hover\:underline:hover { text-decoration: underline; }
-/* a könyvtár listájának vége: ha a látható rész közelébe ér, jön a következő adag kártya (app.js: HymnList) */
-.library-more { height: 1px; }
+/* A könyvtár kártyái csoportokban (app.js: HymnList): a képernyőn kívüli csoportot a böngésző nem rendezi el és nem
+   festi ki (a helyét a contain-intrinsic-size adja, az app.js számolja); a még ki nem rajzolt kártyák helye lefoglalva */
+.hymn-group { content-visibility: auto; }
+.library-pending { flex: none; }
