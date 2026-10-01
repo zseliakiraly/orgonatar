@@ -1,4 +1,4 @@
-# orgonatar – Református Kottagyűjtemény
+# orgonatar – Református OrgonaTár
 
 Református énekek orgonakíséreteinek böngészője (2021-es énekeskönyv): kották
 MusicXML-ből (a [Verovio](https://www.verovio.org) rajzolja őket), énekszövegek,
@@ -15,6 +15,8 @@ A korábbi, OpenSheetMusicDisplay-jel (OSMD) rajzoló változat az `osmd` ágon 
 | `app.js` | A forráskód (React 18, JSX). |
 | `app.min.js` | Generált fájl (`npm run build`), kézzel ne szerkeszd. |
 | `style.css` | Stílusok. |
+| `orgonatar-logo.svg` | A program logója (eredeti rajz); a Névjegy oldalon az `app.js` `Logo` komponense ugyanezt rajzolja, a téma színével. |
+| `icons/` | A böngészőfül és a kezdőképernyő ikonja: a logó vastagabb vonalú változatai (`favicon.svg`, sötét böngészőben világos vonallal; `apple-touch-icon.png`, `icon-192.png`). Ha a logó változik, ezeket is újra kell készíteni. |
 
 ## Build
 
@@ -109,7 +111,8 @@ ahonnan a beállításokba jöttél. A lenyíló menük mindenhol a program saj�
   az oldalsó szövegpanel alapmérete; énekenként a panelen is átméretezhető (lásd lent).
 - **Kottagrafika:** a kotta rajzolata. Kottafont: **Leipzig** (tömöttebb, alapértelmezett) vagy
   **Bravura** (szellősebb); mindkettőt ugyanazon a mintakottán mutatja (választógombokkal). A minták a lap
-  megjelenése után rajzolódnak ki, így a lap tableten is azonnal megnyílik. Az új kottagrafikai
+  megjelenése után rajzolódnak ki, így a lap tableten is azonnal megnyílik, és a böngészőben megmaradnak
+  (`orgonista_font_samples_*`), így később már nem kell újra kirajzolni őket. Az új kottagrafikai
   beállítások is ide kerülnek (`app.js`: `SettingsView`, „Kottagrafika” szakasz). A Verovio többi
   beépített fontja (Gootville, Leland, Petaluma) a `SCORE_FONTS` listával kapcsolható be.
 
@@ -129,7 +132,8 @@ Színséma (a választóban színmintával): **Pergamen** (alapértelmezett), Pa
 ## Tárolás
 
 A listák, a beállítások és a szövegpanel énekenkénti elrendezése a böngésző localStorage-ában vannak
-(`orgonista_playlists`, `orgonista_settings`, `orgonista_lyrics_layouts`), a letöltött kottakönyvek a böngésző
+(`orgonista_playlists`, `orgonista_settings`, `orgonista_lyrics_layouts`; a kottafont-minták rajza:
+`orgonista_font_samples_*`), a letöltött kottakönyvek a böngésző
 Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönként külön tárolódik.
 
 ## Kottakönyvek letöltése, offline működés
@@ -161,9 +165,14 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
 - A kereső mellett kulcsszavas szűrő: pl. „karácsony” választásával csak a karácsonyi énekek látszanak (a menüben
   a kulcsszavak mellett az énekek száma). Egy kártya kulcsszavára koppintva is erre szűr (újra koppintva megszűnik).
   A kereső a kulcsszavakban is keres. Új keresésnél vagy szűrésnél a lista az elejére ugrik.
-- A kártyák részletekben kerülnek a lapra: először 50, a többi görgetés közben, amikor a lista vége közel ér. A
-  teljes, több száz kártyás lista egyszerre felépítve tableten közel egy másodpercig tartott; így a Könyvtárra váltás
-  és a keresés gépelés közben is gyors.
+- A szövegmezők (kereső, énekválasztó, listanév) jobb szélén **X** törli a beírt szöveget; a könyvtár keresőjében az
+  Escape is. Az X nem ad fókuszt a mezőnek, így tableten nem ugrik fel tőle a billentyűzet.
+- A kártyák 50-es csoportokban kerülnek a lapra: az első csoport azonnal, a többi görgetés nélkül, a háttérben (kb.
+  egy másodperc alatt), alacsony prioritással, hogy közben a görgetés és a gépelés ne akadjon. A még ki nem rajzolt
+  kártyák helye előre le van foglalva (a kártyák mért átlagmagasságával), így a görgetősáv mérete nem ugrál. A
+  képernyőn kívüli csoportokat a böngésző nem rendezi el és nem festi ki (`content-visibility: auto`), és egy új
+  csoport nem számoltatja újra a többit. (A teljes lista egyszerre felépítve tableten közel egy másodpercig
+  foglalta le a programot.)
 
 ## Listák
 
