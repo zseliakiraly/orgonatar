@@ -88,33 +88,48 @@ könyv `"version"` mezőjét (`"version": "2026-10-01"`). Frissítéskor a lecse
 
 ## Beállítások
 
-- **Megjelenés:** háttér téma, betűtípusok, az oldalmenü helye.
-  - Betűtípus (a feliratok és az énekszövegek betűi, mintaszöveggel): **Figtree** (alapértelmezett), Nunito Sans,
-    Onest, DM Sans, Atkinson Hyperlegible Next.
+Széles kijelzőn (pl. fekvő 10"-es tableten) két oszlopban: balra a Megjelenés, jobbra a Kottanézet és lejátszó, alatta
+a Kottagrafika; keskenyebb kijelzőn egymás alatt. A Beállítások gombot újra megnyomva a program oda lép vissza,
+ahonnan a beállításokba jöttél. A lenyíló menük mindenhol a program saját stílusában jelennek meg (nem a böngészőéi).
+
+- **Megjelenés:** színséma, háttér, betűtípusok, az oldalmenü helye.
+  - Színséma: lásd lent („Színsémák és háttér”).
+  - Háttér: **egyszínű** (alapértelmezett), **átmenet** (nagyon enyhe, sugaras: belül kissé sötétebb, vagy a szélek
+    felé sötétebb), **textúra** (a világos felületeken enyhe papírszemcse, a türkiz oldalsávon, fejléceken és
+    gombokon bőrkötés-szemcse).
+  - Betűtípus (a feliratok és az énekszövegek betűi): **Figtree** (alapértelmezett), Nunito Sans, Onest, DM Sans,
+    Atkinson Hyperlegible Next. Lenyíló menü: lenyitva mindegyik a saját mintaszövegével látszik.
   - Énekszámok és oldalcímek (talpas betű, a régi korálkönyvek mintájára): **Old Standard TT** (alapértelmezett,
     a régi korálkönyvhöz legközelebbi), DM Serif Text (vaskosabb), Libre Bodoni. Ezzel jelennek meg az
-    énekszámok (könyvtár, ének fejléce, lejátszó, listák, énekválasztó) és a főoldalak címe.
+    énekszámok (könyvtár, ének fejléce, lejátszó, listák, énekválasztó) és a főoldalak címe. Lenyíló menü,
+    mintákkal.
   - Mind a programmal csomagolt, szabad (SIL OFL) betűtípus (`fonts/`); a választás után a többi törölhető
     (`fonts/README.md`).
-- **Kottanézet és lejátszó:** szövegpanel, oldalsáv és kotta szélessége, óra a lejátszóban.
+- **Kottanézet és lejátszó:** szövegpanel, oldalsáv és kotta szélessége, óra a lejátszóban. Az oldalsáv szélessége
+  az oldalsó szövegpanel alapmérete; énekenként a panelen is átméretezhető (lásd lent).
 - **Kottagrafika:** a kotta rajzolata. Kottafont: **Leipzig** (tömöttebb, alapértelmezett) vagy
-  **Bravura** (szellősebb); mindkettőt ugyanazon a mintakottán mutatja. Az új kottagrafikai
+  **Bravura** (szellősebb); mindkettőt ugyanazon a mintakottán mutatja (választógombokkal). A minták a lap
+  megjelenése után rajzolódnak ki, így a lap tableten is azonnal megnyílik. Az új kottagrafikai
   beállítások is ide kerülnek (`app.js`: `SettingsView`, „Kottagrafika” szakasz). A Verovio többi
   beépített fontja (Gootville, Leland, Petaluma) a `SCORE_FONTS` listával kapcsolható be.
 
-## Témák
+## Színsémák és háttér
 
-A beállításokban választható: **Pergamen** (alapértelmezett), Papirusz, Sötét papirusz, Törtfehér.
+Színséma (a választóban színmintával): **Pergamen** (alapértelmezett), Papirusz, Sötét papirusz, Törtfehér.
 
 - A Pergamen színei a `style.css` elején, a `--pergamen-*` változókban vannak; a színek
   szerepét (kártya, keret, kiemelés stb.) a `.theme-pergamen` blokk rendeli hozzájuk.
 - A `:root` `--col-*` értékei a Papirusz téma színei. A háttér, a szöveg, az oldalsáv és
-  az akcentus színét témánként az `app.js` (`themeColors`) állítja be.
+  az akcentus színét témánként az `app.js` (`THEMES`) állítja be.
+- A háttér (`BACKGROUNDS`) az `.app-root` `bg-*` osztálya; a megvalósítás a `style.css` „Háttér” részében. Az
+  átmenetek sugaras színátmenetek a háttérszínen; a textúrák SVG-zajból (feTurbulence) készült, kis képek
+  (`--tex-paper-grain`, `--tex-paper-cloud`, `--tex-leather`). A papírszemcse szorzó, a bőrszemcse lágy fény
+  keveréssel kerül a felületre, így a színt mindig a színséma adja.
 
 ## Tárolás
 
-A listák és a beállítások a böngésző localStorage-ában vannak
-(`orgonista_playlists`, `orgonista_settings`), a letöltött kottakönyvek a böngésző
+A listák, a beállítások és a szövegpanel énekenkénti elrendezése a böngésző localStorage-ában vannak
+(`orgonista_playlists`, `orgonista_settings`, `orgonista_lyrics_layouts`), a letöltött kottakönyvek a böngésző
 Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönként külön tárolódik.
 
 ## Kottakönyvek letöltése, offline működés
@@ -143,8 +158,24 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
 - Az énekkártyákon balra az énekszám és a kezdősor, jobbra zárva a letétek és az előjátékok száma (a letöltött,
   bekapcsolt könyvekből), alatta dőlt betűvel az ének kulcsszavai. Keskeny kijelzőn (telefonon) ezek a kezdősor
   alá kerülnek.
-- A kereső mellett kulcsszavas szűrő: pl. „karácsony” választásával csak a karácsonyi énekek látszanak.
-  Egy kártya kulcsszavára koppintva is erre szűr (újra koppintva megszűnik). A kereső a kulcsszavakban is keres.
+- A kereső mellett kulcsszavas szűrő: pl. „karácsony” választásával csak a karácsonyi énekek látszanak (a menüben
+  a kulcsszavak mellett az énekek száma). Egy kártya kulcsszavára koppintva is erre szűr (újra koppintva megszűnik).
+  A kereső a kulcsszavakban is keres. Új keresésnél vagy szűrésnél a lista az elejére ugrik.
+- A kártyák részletekben kerülnek a lapra: először 50, a többi görgetés közben, amikor a lista vége közel ér. A
+  teljes, több száz kártyás lista egyszerre felépítve tableten közel egy másodpercig tartott; így a Könyvtárra váltás
+  és a keresés gépelés közben is gyors.
+
+## Listák
+
+- A lista kártyáján az énekek száma (talpas betűvel, jobbra zárt oszlopban) és kezdősora, egy alapvonalon.
+- A lista szerkesztőjében az énekek húzással rendezhetők át, egérrel és érintéssel is. Érintéssel a bal oldali
+  fogantyúnál (⋮⋮) kell megfogni (máshol a lista görgethető); húzás közben a többi ének félrehúzódik, a képernyő
+  széléhez érve a lista magától görget.
+- Új lista neve: a mező előtti naptár gombbal dátum (ÉÉÉÉ-HH-NN, pl. a szertartás napja) kerül a név elejére,
+  utána tovább lehet írni (pl. `2026-10-04 Úrvacsorás istentisztelet`). Újabb dátum választásakor a név elején
+  álló dátum cserélődik, a többi marad. A Hozzáadás ablak „+ Új lista…” mezőjében is így működik.
+- Az Új lista és a Hozzáadás ablak nem középen, hanem a képernyő felső harmadában nyílik meg, hogy a tablet
+  képernyő-billentyűzete ne takarja el az alját.
 
 ## Kottanézet és lejátszó
 
@@ -170,7 +201,15 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
   - Lent, egymás alatt („Folyó szöveg” gomb): a versszakok egymás alatt, a soraik folyó szövegként egymás után.
     A panel legfeljebb a kottanézet 30%-át foglalja el, a többi versszak görgethető.
   - Ha a panelen jobbra (oszlopok) vagy lejjebb (folyó szöveg) még van szöveg, a szélén árnyék jelzi.
-- A lejátszó fejlécében balra a lista sorszáma (pl. `1/4`), utána az énekszám és a cím; jobbra az óra.
+  - A panel eszköztárán a nézetváltó gombok előtt **T− / T+**: kisebb, nagyobb betű (80–200%).
+  - **Átméretezés:** lent az eszköztár közepén, oldalt az eszköztár bal szélén lévő fogantyút húzva (egérrel vagy
+    ujjal). Dupla koppintás a fogantyún: vissza az alapméretre.
+  - A panel helyét (lent/oldalt), nézetét, méretét és betűméretét a program **énekenként megjegyzi**
+    (`orgonista_lyrics_layouts`): legközelebb – a könyvtárban és a lejátszóban is – ugyanígy jelenik meg. A méret a
+    kottanézet magasságának, ill. szélességének hányadaként tárolódik, így más méretű kijelzőn is arányos. Amit egy
+    énekhez még nem állítottak be, az az alapértelmezés szerint jelenik meg.
+- A lejátszó fejlécében balra a lista sorszáma (pl. `1/4`), utána az énekszám és a cím, majd a változat adatai
+  (a dőlt utolsó betű sem vágódik le); jobbra az óra.
   Az óra a beállításokban kikapcsolható („Óra a lejátszóban”, alapból látszik).
 - **Gyors megnyitás:** az óra melletti (számbillentyűzet ikonos) gomb énekválasztót nyit.
   - Balra a kereső és a találatok, jobbra nagygombos számbillentyűzet.
@@ -179,12 +218,11 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
   - A kiválasztott ének oldala nyílik meg; a vissza gomb a lejátszóba visz, ugyanoda.
   - Fizikai billentyűzeten is működik: számok, Backspace, Enter, Escape.
   - A lista szerkesztőjében az „Új ének hozzáadása” ugyanezt az ablakot nyitja.
-- Új lista neve: a mező előtti naptár gombbal dátum (ÉÉÉÉ-HH-NN, pl. a szertartás napja) kerül a név elejére,
-  utána tovább lehet írni (pl. `2026-10-04 Úrvacsorás istentisztelet`). Újabb dátum választásakor a név elején
-  álló dátum cserélődik, a többi marad. A Hozzáadás ablak „+ Új lista…” mezőjében is így működik.
 - Lapozás a lejátszóban: koppintás a kottaterület bal vagy jobb szélére (a szélső 15%-ra) az előző /
   következő énekre lapoz.
 - Billentyűzet vagy Bluetooth lapozópedál: mindig egész éneket lapoz.
   - előre: PageDown, lefelé nyíl, jobbra nyíl;
   - hátra: PageUp, felfelé nyíl, balra nyíl.
   - A lenyomva tartott billentyű (pedál) csak egyet lapoz.
+  - A lenyíló menük zárt állapotban nem reagálnak a nyilakra, így a pedál akkor is lapoz, ha egy menü gombján van a
+    fókusz (a menü Enterrel vagy szóközzel nyílik).

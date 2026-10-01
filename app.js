@@ -71,7 +71,7 @@ const lyricsOf = (hymn, selected = []) => {
 };
 
 // --- TÁROLÁS (localStorage) ---
-const STORAGE_KEYS = { playlists: 'orgonista_playlists', settings: 'orgonista_settings' };
+const STORAGE_KEYS = { playlists: 'orgonista_playlists', settings: 'orgonista_settings', lyricsLayouts: 'orgonista_lyrics_layouts' };
 
 const SETTINGS_VERSION = 2;
 
@@ -99,7 +99,25 @@ const SERIF_FONTS = [
 ];
 const serifFontStack = (id) => `'${(SERIF_FONTS.find(f => f.id === id) || SERIF_FONTS[0]).family}', var(--font-serif-fallback)`;
 
-const DEFAULT_SETTINGS = { theme: 'pergamen', uiFont: UI_FONTS[0].id, serifFont: SERIF_FONTS[0].id, showLyrics: true, showClock: true, sidebarSide: 'right', lyricsWidth: '15%', scoreMaxWidth: '100%', scoreFont: SCORE_FONTS[0].id, bookActive: {}, skipFullscreenPrompt: false, settingsVersion: SETTINGS_VERSION };
+// Színsémák: háttér, szöveg, oldalsáv, akcentus. A Pergamen színei a style.css-ben vannak (--pergamen-*), a további
+// szerepeit a .theme-pergamen osztály adja; az első az alapértelmezett.
+const THEMES = [
+    { id: 'pergamen', name: 'Pergamen', bg: 'var(--pergamen-bg)', text: 'var(--pergamen-ink)', sidebar: 'var(--pergamen-teal-dark)', accent: 'var(--pergamen-gold)', accentText: 'var(--pergamen-gold-text)' },
+    { id: 'papyrus', name: 'Papirusz', bg: '#FDF6E3', text: '#2a2a2a', sidebar: '#002B36', accent: '#B58900', accentText: '#8a6800' },
+    { id: 'dark-papyrus', name: 'Sötét papirusz', bg: '#d4cebc', text: '#1a1a1a', sidebar: '#001e26', accent: '#8a6800', accentText: '#6b5000' },
+    { id: 'white', name: 'Törtfehér', bg: '#f9fafb', text: '#111827', sidebar: '#1f2937', accent: '#2563eb', accentText: '#2563eb' }
+];
+// Háttér: egyszínű, nagyon enyhe átmenet (belül vagy a szélek felé sötétebb), textúra (a világos felületeken papír,
+// a türkiz oldalsávon, fejlécen és gombokon bőrkötés). Az .app-root bg-* osztálya; a megvalósítás a style.css-ben.
+const BACKGROUNDS = [
+    { id: 'plain', name: 'Egyszínű' },
+    { id: 'center', name: 'Átmenet – közép', hint: 'belül kissé sötétebb' },
+    { id: 'edges', name: 'Átmenet – szélek', hint: 'a szélek felé sötétebb' },
+    { id: 'texture', name: 'Textúra', hint: 'papír, a türkiz elemeken bőrkötés' }
+];
+const SCORE_WIDTHS = ['100%', '90%', '80%', '70%', '60%', '50%'].map(w => ({ id: w, name: w }));
+
+const DEFAULT_SETTINGS = { theme: 'pergamen', background: 'plain', uiFont: UI_FONTS[0].id, serifFont: SERIF_FONTS[0].id, showLyrics: true, showClock: true, sidebarSide: 'right', lyricsWidth: '15%', scoreMaxWidth: '100%', scoreFont: SCORE_FONTS[0].id, bookActive: {}, skipFullscreenPrompt: false, settingsVersion: SETTINGS_VERSION };
 
 const loadJSON = (key, fallback) => {
     try {
@@ -121,6 +139,7 @@ const loadSettings = () => {
     if (!SCORE_FONTS.some(f => f.id === settings.scoreFont)) settings.scoreFont = DEFAULT_SETTINGS.scoreFont;
     if (!UI_FONTS.some(f => f.id === settings.uiFont)) settings.uiFont = DEFAULT_SETTINGS.uiFont;
     if (!SERIF_FONTS.some(f => f.id === settings.serifFont)) settings.serifFont = DEFAULT_SETTINGS.serifFont;
+    if (!BACKGROUNDS.some(b => b.id === settings.background)) settings.background = DEFAULT_SETTINGS.background;
     // 2. verzió: a Pergamen lett az alapértelmezett téma. A korábbi alapértéket ("papyrus"), amelyet az oldal
     // magától elmentett, egyszer átállítjuk (addig Pergament nem is lehetett választani).
     if ((stored.settingsVersion || 1) < 2 && settings.theme === 'papyrus') settings.theme = 'pergamen';
@@ -463,8 +482,9 @@ const NavigationSidebar = ({ activeTab, onTabChange, menuSide, toggleFullScreen 
     </div>
 );
 
-const Modal = ({ title, onClose, children, footer, maxWidth }) => (
-    <div className="modal-overlay">
+// placement="upper": a felső harmadban (nem középen), hogy a tablet képernyő-billentyűzete ne takarja ki az alját
+const Modal = ({ title, onClose, children, footer, maxWidth, placement }) => (
+    <div className={`modal-overlay${placement === 'upper' ? ' upper' : ''}`}>
         <div className="modal-box" style={{maxWidth: maxWidth || '500px'}}>
             <div className="modal-header" style={{padding: '0.75rem 1rem'}}>
                 <h3 className="text-lg font-bold text-galaxy">{title}</h3>
@@ -640,7 +660,7 @@ const CreatePlaylistModal = ({ isOpen, onClose, onConfirm }) => {
     const confirm = () => { if (name.trim()) onConfirm(name.trim()); };
 
     return (
-        <Modal title="Új lista létrehozása" onClose={onClose} footer={
+        <Modal title="Új lista létrehozása" onClose={onClose} placement="upper" footer={
             <>
                 <button onClick={onClose} className="btn">Mégse</button>
                 <button onClick={confirm} disabled={!name.trim()} className="btn btn-primary">Létrehozás</button>
@@ -668,52 +688,132 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, title, message }) => {
     );
 };
 
-const CustomSelect = ({ items, currentId, onChange, labelKey = "name", subLabelKey = "composer", placeholder = "Nincs kiválasztva", emptyText = "Nincs adat", width="180px" }) => {
+// Saját stílusú lenyíló választó (a böngésző <select>-je helyett, hogy mindenhol a program témáját kövesse).
+// A menü portállal a .app-root-ba kerül, fix pozícióval a gomb alá (ha ott nincs elég hely, fölé): így a kártyák és
+// ablakok overflow-ja nem vágja le, a téma színváltozói pedig érvényesek rá.
+// Billentyűzet: Enter/szóköz (vagy Alt+le) nyitja; nyitva a nyilak, Home/End, betűk léptetnek, Enter választ, Escape
+// bezár. Zárva a nyilakat nem kezeli, hogy a lapozópedál (nyíl billentyűk) akkor is lapozzon, ha a gombon a fókusz.
+// allowEmpty: az első sor a placeholder (null-t választ). renderOption/renderValue: egyedi tartalom a menüben/gombon.
+let customSelectSeq = 0;
+const CustomSelect = ({ items, currentId, onChange, labelKey = "name", subLabelKey = "composer", placeholder = "Nincs kiválasztva",
+        emptyText = "Nincs adat", width = "180px", allowEmpty = true, renderOption, renderValue, ariaLabel, className = '',
+        menuClassName = '', menuMinWidth = 240, menuMaxHeight = 320 }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [alignRight, setAlignRight] = useState(false);
-    const dropdownRef = useRef(null);
-    const currentItem = items && items.find(v => v.id === currentId);
+    const [menuStyle, setMenuStyle] = useState(null);
+    const [activeIndex, setActiveIndex] = useState(-1);
+    const wrapRef = useRef(null), btnRef = useRef(null), menuRef = useRef(null), typeRef = useRef({ text: '', time: 0 });
+    const idRef = useRef(null);
+    if (idRef.current === null) idRef.current = `custom-select-${++customSelectSeq}`;
+    const list = items || [];
+    const isEmpty = list.length === 0;
+    const options = allowEmpty ? [{ id: null, placeholder: true }, ...list] : list;
+    const currentItem = list.find(v => v.id === currentId);
 
+    // A menü helye: a gomb alatt, ha ott elfér (vagy ott több a hely), különben fölötte; vízszintesen a gomb bal
+    // széléhez igazítva, ha jobbra nem férne el, a jobb széléhez
+    const place = useCallback(() => {
+        const btn = btnRef.current, menu = menuRef.current;
+        if (!btn || !menu) return;
+        const r = btn.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight, margin = 8;
+        const width = Math.min(Math.max(r.width, menuMinWidth), vw - 2 * margin);
+        const left = r.left + width <= vw - margin ? r.left : Math.max(margin, r.right - width);
+        const below = vh - r.bottom - margin - 4, above = r.top - margin - 4;
+        const wanted = Math.min(menuMaxHeight, menu.scrollHeight);
+        setMenuStyle(below >= wanted || below >= above
+            ? { left, width, top: r.bottom + 4, maxHeight: Math.min(menuMaxHeight, below) }
+            : { left, width, bottom: vh - r.top + 4, maxHeight: Math.min(menuMaxHeight, above) });
+    }, [menuMinWidth, menuMaxHeight]);
+
+    useLayoutEffect(() => { if (isOpen) place(); else setMenuStyle(null); }, [isOpen, place]);
+
+    // Nyitva: kattintás/koppintás máshová bezárja; ha a gombot tartalmazó terület (vagy a lap) görget, bezárul;
+    // átméretezéskor újra igazodik
     useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) { setIsOpen(false); }
+        if (!isOpen) return;
+        const inside = (t) => (wrapRef.current && wrapRef.current.contains(t)) || (menuRef.current && menuRef.current.contains(t));
+        const onPointerDown = (e) => { if (!inside(e.target)) setIsOpen(false); };
+        const onScroll = (e) => { if (e.target.contains && btnRef.current && e.target.contains(btnRef.current)) setIsOpen(false); };
+        document.addEventListener('pointerdown', onPointerDown);
+        window.addEventListener('scroll', onScroll, true);
+        window.addEventListener('resize', place);
+        return () => {
+            document.removeEventListener('pointerdown', onPointerDown);
+            window.removeEventListener('scroll', onScroll, true);
+            window.removeEventListener('resize', place);
         };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
+    }, [isOpen, place]);
 
-    const isEmpty = !items || items.length === 0;
+    // A kiemelt sor mindig látszódjon a menüben (csak a menüt görgetjük, a lapot nem)
+    useLayoutEffect(() => {
+        const menu = menuRef.current;
+        const el = menu && activeIndex >= 0 ? menu.children[activeIndex] : null;
+        if (!el) return;
+        if (el.offsetTop < menu.scrollTop) menu.scrollTop = el.offsetTop;
+        else if (el.offsetTop + el.offsetHeight > menu.scrollTop + menu.clientHeight) menu.scrollTop = el.offsetTop + el.offsetHeight - menu.clientHeight;
+    }, [activeIndex, menuStyle]);
 
-    const toggleOpen = () => {
+    const open = () => {
         if (isEmpty) return;
-        if (!isOpen && dropdownRef.current) {
-            // A menü jobbra nyílik; ha ott nem férne el (pl. telefonon), a gomb jobb széléhez igazítjuk
-            const rect = dropdownRef.current.getBoundingClientRect();
-            setAlignRight(rect.left + Math.max(rect.width, 240) > window.innerWidth - 8);
+        setActiveIndex(Math.max(0, options.findIndex(o => o.placeholder ? currentItem == null : o.id === currentId)));
+        setIsOpen(true);
+    };
+    const choose = (option) => {
+        setIsOpen(false);
+        const id = option.placeholder ? null : option.id;
+        if (id !== (currentItem ? currentId : null)) onChange(id);
+    };
+    const handleKeyDown = (e) => {
+        if (isEmpty || e.ctrlKey || e.metaKey) return;
+        if (!isOpen) {
+            if (e.key === 'Enter' || e.key === ' ' || (e.altKey && e.key === 'ArrowDown')) { e.preventDefault(); open(); }
+            return;
         }
-        setIsOpen(!isOpen);
+        const last = options.length - 1;
+        const move = { ArrowDown: Math.min(last, activeIndex + 1), ArrowUp: Math.max(0, activeIndex - 1), Home: 0, End: last, PageDown: Math.min(last, activeIndex + 8), PageUp: Math.max(0, activeIndex - 8) };
+        if (e.key in move) { e.preventDefault(); setActiveIndex(move[e.key]); }
+        else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (activeIndex >= 0) choose(options[activeIndex]); }
+        else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setIsOpen(false); }
+        else if (e.key === 'Tab') setIsOpen(false);
+        else if (e.key.length === 1 && !e.altKey) {
+            // gépelés: a beírt betűkkel kezdődő első sorra ugrik
+            const now = Date.now(), t = typeRef.current;
+            t.text = (now - t.time < 800 ? t.text : '') + e.key.toLocaleLowerCase('hu'); t.time = now;
+            const idx = options.findIndex(o => !o.placeholder && String(o[labelKey]).toLocaleLowerCase('hu').startsWith(t.text));
+            if (idx >= 0) setActiveIndex(idx);
+        }
     };
 
+    const portalTarget = isOpen && wrapRef.current ? (wrapRef.current.closest('.app-root') || document.body) : null;
     return (
-        <div className="custom-select" ref={dropdownRef} style={{'--select-min-width': width}}>
-            <button onClick={toggleOpen} className={`input custom-select-btn ${isEmpty ? 'empty' : ''}`}>
-                <span className="truncate">{isEmpty ? emptyText : (currentItem ? currentItem[labelKey] : placeholder)}</span>
+        <div className={`custom-select ${className}`} ref={wrapRef} style={{'--select-min-width': width}}>
+            <button ref={btnRef} type="button" onClick={() => (isOpen ? setIsOpen(false) : open())} onKeyDown={handleKeyDown}
+                className={`input custom-select-btn ${isEmpty ? 'empty' : ''}`} aria-label={ariaLabel}
+                role="combobox" aria-haspopup="listbox" aria-expanded={isOpen} aria-controls={isOpen ? `${idRef.current}-menu` : undefined}
+                aria-activedescendant={isOpen && activeIndex >= 0 ? `${idRef.current}-${activeIndex}` : undefined}>
+                <span className="custom-select-value truncate">
+                    {isEmpty ? emptyText : currentItem ? (renderValue ? renderValue(currentItem) : currentItem[labelKey]) : placeholder}
+                </span>
                 <Icons.ChevronDown size={16} style={{opacity:0.5, flexShrink:0}}/>
             </button>
-            
-            {isOpen && !isEmpty && (
-                <div className="custom-select-menu" style={alignRight ? {right:0} : {left:0}}>
-                    <div onClick={() => { onChange(null); setIsOpen(false); }} className="custom-select-option placeholder hover:bg-gray-100">
-                        {placeholder}
-                    </div>
-                    {items.map(v => (
-                        <div key={v.id} onClick={() => { onChange(v.id); setIsOpen(false); }} className={`custom-select-option hover:bg-gray-100 ${currentId === v.id ? 'selected' : ''}`}>
-                            <div className="custom-select-option-label">{v[labelKey]}</div>
-                            <div className="custom-select-option-sub">{v[subLabelKey]}</div>
-                        </div>
-                    ))}
-                </div>
-            )}
+
+            {portalTarget && ReactDOM.createPortal(
+                <div ref={menuRef} id={`${idRef.current}-menu`} role="listbox" aria-label={ariaLabel} className={`custom-select-menu ${menuClassName}`}
+                    style={menuStyle || { visibility: 'hidden', left: 0, top: 0 }}
+                    onMouseDown={e => e.preventDefault() /* a fókusz maradjon a gombon */}>
+                    {options.map((o, i) => {
+                        const selected = o.placeholder ? currentItem == null : o.id === currentId;
+                        return (
+                            <div key={o.placeholder ? '__placeholder__' : o.id} id={`${idRef.current}-${i}`} role="option" aria-selected={selected}
+                                onClick={() => choose(o)} onMouseMove={() => i !== activeIndex && setActiveIndex(i)}
+                                className={`custom-select-option${o.placeholder ? ' placeholder' : ''}${selected ? ' selected' : ''}${i === activeIndex ? ' active' : ''}`}>
+                                {o.placeholder ? placeholder : renderOption ? renderOption(o) : (<>
+                                    <div className="custom-select-option-label">{o[labelKey]}</div>
+                                    {o[subLabelKey] && <div className="custom-select-option-sub">{o[subLabelKey]}</div>}
+                                </>)}
+                            </div>
+                        );
+                    })}
+                </div>, portalTarget)}
         </div>
     );
 }
@@ -747,14 +847,12 @@ const AddToPlaylistModal = ({ onClose, onConfirm, playlists, initialVariationId,
             verses: selectedVerses
         });
     };
-    const handleTargetChange = (value) => {
-        if (value === NEW_PLAYLIST) { setTargetId(NEW_PLAYLIST); return; }
-        const pl = playlists.find(p => String(p.id) === value);
-        setTargetId(pl ? pl.id : null);
-    };
+    // A cél lista választója: a listák (az énekek számával), a végén az új lista
+    const targetOptions = useMemo(() => playlists.map(pl => ({ id: pl.id, name: pl.name, count: `${pl.items.length} ének` }))
+        .concat([{ id: NEW_PLAYLIST, name: '+ Új lista…' }]), [playlists]);
 
     return (
-        <Modal title="Hozzáadás" onClose={onClose} maxWidth="600px" footer={
+        <Modal title="Hozzáadás" onClose={onClose} maxWidth="600px" placement="upper" footer={
             <>
                 <button onClick={onClose} className="btn">Mégse</button>
                 <button onClick={handleConfirm} disabled={!canSave} className="btn btn-primary">Mentés</button>
@@ -770,10 +868,8 @@ const AddToPlaylistModal = ({ onClose, onConfirm, playlists, initialVariationId,
                     <div>
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Cél lista</label>
                         {playlists.length > 0 && (
-                            <select className="input" value={isNewList ? NEW_PLAYLIST : String(targetId)} onChange={(e) => handleTargetChange(e.target.value)}>
-                                {playlists.map(pl => <option key={pl.id} value={String(pl.id)}>{pl.name}</option>)}
-                                <option value={NEW_PLAYLIST}>+ Új lista…</option>
-                            </select>
+                            <CustomSelect items={targetOptions} currentId={targetId} onChange={setTargetId} allowEmpty={false}
+                                subLabelKey="count" width="100%" ariaLabel="Cél lista" className="target-list-select" />
                         )}
                         {isNewList && (
                             <ListNameInput inputRef={newNameRef} style={playlists.length > 0 ? {marginTop:'0.5rem'} : undefined}
@@ -866,155 +962,126 @@ const FontSample = ({ font }) => {
     const ref = useRef(null);
     const [failed, setFailed] = useState(false);
     useEffect(() => {
-        let active = true;
+        // A minta rajzolása (Verovio) tableten több száz ms: a Beállítások lap előbb megjelenik, a minták utána, egyenként
+        let active = true, timer = null;
         loadVerovio()
+            .then(vrv => new Promise(resolve => { timer = setTimeout(() => resolve(vrv), fontSamples.has(font) ? 0 : 50 + SCORE_FONTS.findIndex(f => f.id === font) * 50); }))
             .then(vrv => { if (active && ref.current) ref.current.innerHTML = renderFontSample(vrv, font); })
             .catch(err => { console.info(err.message); if (active) setFailed(true); });
-        return () => { active = false; };
+        return () => { active = false; clearTimeout(timer); };
     }, [font]);
     if (failed) return <div className="font-sample font-sample-missing">A minta most nem jeleníthető meg</div>;
     return <div ref={ref} className="font-sample" aria-hidden="true"></div>;
 };
 
-const SettingsView = ({ settings, onUpdateSettings }) => (
+const SettingsRow = ({ title, hint, children }) => (
+    <div className="card card-row">
+        <div className="card-decoration"></div>
+        <div className="setting-label">
+            <div className="font-bold text-ink">{title}</div>
+            {hint && <div className="text-xs text-gray-500">{hint}</div>}
+        </div>
+        {children}
+    </div>
+);
+
+// Színminta a színséma-választóban: oldalsáv, háttér és akcentus
+const ThemeSwatch = ({ theme }) => (
+    <span className="theme-swatch" aria-hidden="true" style={{'--swatch-bg': theme.bg, '--swatch-side': theme.sidebar, '--swatch-accent': theme.accent}} />
+);
+const themeLabel = (theme) => <span className="swatch-label"><ThemeSwatch theme={theme} />{theme.name}</span>;
+
+// A betűtípus-választók menüjében minden betűtípus a saját mintájával látszik
+const uiFontOption = (font) => (
+    <span className="font-option">
+        <span className="ui-font-sample" style={{fontFamily: uiFontStack(font.id)}}>
+            <span className="ui-font-sample-title">42 Mint a szép, híves patakra</span>
+            <span className="ui-font-sample-text">Aki nem jár hitlenek tanácsán, és meg nem áll a bűnösök útján…</span>
+        </span>
+        <span className="font-option-name"><span className="font-choice-name">{font.family}</span> <span className="font-choice-hint">{font.hint}</span></span>
+    </span>
+);
+const serifFontOption = (font) => (
+    <span className="font-option">
+        <span className="serif-font-sample" style={{fontFamily: serifFontStack(font.id)}}>
+            <span className="serif-font-sample-number">489</span>
+            <span className="serif-font-sample-title">Református Kottagyűjtemény</span>
+        </span>
+        <span className="font-option-name"><span className="font-choice-name">{font.family}</span> <span className="font-choice-hint">{font.hint}</span></span>
+    </span>
+);
+
+const SettingsView = ({ settings, onUpdateSettings }) => {
+    const set = (patch) => onUpdateSettings({ ...settings, ...patch });
+    return (
     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
         <div className="header centered">
              <h1 className="header-title main page-title">Beállítások</h1>
         </div>
-        
+
         <div className="main-content" style={{padding:'2rem', overflowY:'auto'}}>
+            {/* Széles kijelzőn (pl. fekvő tableten) két oszlop: balra a Megjelenés, jobbra a kottanézet és a kottagrafika */}
             <div className="settings-page">
-
+              <div className="settings-column">
                 <SettingsSection title="Megjelenés">
-                    <div className="card card-row">
-                        <div className="card-decoration"></div>
-                        <div className="setting-label">
-                            <div className="font-bold text-ink">Háttér téma</div>
-                            <div className="text-xs text-gray-500">Válassz megjelenítési módot</div>
-                        </div>
-                        <select className="input" style={{width:'auto', minWidth:'150px'}} value={settings.theme} onChange={(e) => onUpdateSettings({...settings, theme: e.target.value})}>
-                            <option value="pergamen">Pergamen</option>
-                            <option value="papyrus">Papirusz</option>
-                            <option value="dark-papyrus">Sötét papirusz</option>
-                            <option value="white">Törtfehér</option>
-                        </select>
-                    </div>
+                    <SettingsRow title="Színséma" hint="Az oldal színei">
+                        <CustomSelect items={THEMES} currentId={settings.theme} onChange={(theme) => set({ theme })} allowEmpty={false}
+                            width="190px" menuMinWidth={0} ariaLabel="Színséma" renderOption={themeLabel} renderValue={themeLabel} />
+                    </SettingsRow>
 
-                    <div className="card card-stack">
-                        <div className="card-decoration"></div>
-                        <div className="setting-label">
-                            <div className="font-bold text-ink">Betűtípus</div>
-                            <div className="text-xs text-gray-500">A feliratok és az énekszövegek betűi</div>
-                        </div>
-                        <div className="font-choices" role="radiogroup" aria-label="Betűtípus">
-                            {UI_FONTS.map(font => (
-                                <button key={font.id} type="button" role="radio" aria-checked={settings.uiFont === font.id}
-                                    className={`font-choice${settings.uiFont === font.id ? ' selected' : ''}`}
-                                    onClick={() => onUpdateSettings({...settings, uiFont: font.id})}>
-                                    <span className="ui-font-sample" style={{fontFamily: uiFontStack(font.id)}}>
-                                        <span className="ui-font-sample-title">42 Mint a szép, híves patakra</span>
-                                        <span className="ui-font-sample-text">Aki nem jár hitlenek tanácsán, és meg nem áll a bűnösök útján…</span>
-                                    </span>
-                                    <span className="font-choice-label">
-                                        <span className="font-choice-text">
-                                            <span className="font-choice-name">{font.family}</span> <span className="font-choice-hint">{font.hint}</span>
-                                        </span>
-                                    </span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                    <SettingsRow title="Háttér" hint="Egyszínű, enyhe átmenet vagy textúra">
+                        <CustomSelect items={BACKGROUNDS} currentId={settings.background} onChange={(background) => set({ background })} allowEmpty={false}
+                            subLabelKey="hint" width="190px" ariaLabel="Háttér" />
+                    </SettingsRow>
 
-                    <div className="card card-stack">
-                        <div className="card-decoration"></div>
-                        <div className="setting-label">
-                            <div className="font-bold text-ink">Énekszámok és oldalcímek</div>
-                            <div className="text-xs text-gray-500">Talpas betű, a régi korálkönyvek mintájára</div>
-                        </div>
-                        <div className="font-choices" role="radiogroup" aria-label="Énekszámok és oldalcímek betűtípusa">
-                            {SERIF_FONTS.map(font => (
-                                <button key={font.id} type="button" role="radio" aria-checked={settings.serifFont === font.id}
-                                    className={`font-choice${settings.serifFont === font.id ? ' selected' : ''}`}
-                                    onClick={() => onUpdateSettings({...settings, serifFont: font.id})}>
-                                    <span className="serif-font-sample" style={{fontFamily: serifFontStack(font.id)}}>
-                                        <span className="serif-font-sample-number">489</span>
-                                        <span className="serif-font-sample-title">Református Kottagyűjtemény</span>
-                                    </span>
-                                    <span className="font-choice-label">
-                                        <span className="font-choice-text">
-                                            <span className="font-choice-name">{font.family}</span> <span className="font-choice-hint">{font.hint}</span>
-                                        </span>
-                                    </span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                    <SettingsRow title="Betűtípus" hint="A feliratok és az énekszövegek betűi">
+                        <CustomSelect items={UI_FONTS} currentId={settings.uiFont} onChange={(uiFont) => set({ uiFont })} allowEmpty={false}
+                            labelKey="family" width="230px" menuMinWidth={360} menuMaxHeight={560} menuClassName="font-select-menu" ariaLabel="Betűtípus"
+                            renderOption={uiFontOption} renderValue={(f) => <span style={{fontFamily: uiFontStack(f.id)}}>{f.family}</span>} />
+                    </SettingsRow>
 
-                    <div className="card card-row">
-                        <div className="card-decoration"></div>
-                        <div className="setting-label">
-                             <div className="font-bold text-ink">Oldalmenü helye</div>
-                             <div className="text-xs text-gray-500">Bal vagy jobb oldalon legyen a menü</div>
-                        </div>
+                    <SettingsRow title="Énekszámok és oldalcímek" hint="Talpas betű, a régi korálkönyvek mintájára">
+                        <CustomSelect items={SERIF_FONTS} currentId={settings.serifFont} onChange={(serifFont) => set({ serifFont })} allowEmpty={false}
+                            labelKey="family" width="230px" menuMinWidth={360} menuMaxHeight={560} menuClassName="font-select-menu"
+                            ariaLabel="Énekszámok és oldalcímek betűtípusa" renderOption={serifFontOption}
+                            renderValue={(f) => <span className="serif-font-value" style={{fontFamily: serifFontStack(f.id)}}>{f.family}</span>} />
+                    </SettingsRow>
+
+                    <SettingsRow title="Oldalmenü helye" hint="Bal vagy jobb oldalon legyen a menü">
                         <div className="flex flex-wrap gap-2">
-                             <button onClick={() => onUpdateSettings({...settings, sidebarSide: 'left'})} className={`btn ${settings.sidebarSide === 'left' ? 'btn-primary' : 'btn-ghost'}`}>Bal</button>
-                             <button onClick={() => onUpdateSettings({...settings, sidebarSide: 'right'})} className={`btn ${settings.sidebarSide === 'right' ? 'btn-primary' : 'btn-ghost'}`}>Jobb</button>
+                             <button onClick={() => set({ sidebarSide: 'left' })} className={`btn ${settings.sidebarSide === 'left' ? 'btn-primary' : 'btn-ghost'}`}>Bal</button>
+                             <button onClick={() => set({ sidebarSide: 'right' })} className={`btn ${settings.sidebarSide === 'right' ? 'btn-primary' : 'btn-ghost'}`}>Jobb</button>
                         </div>
-                    </div>
+                    </SettingsRow>
                 </SettingsSection>
+              </div>
 
+              <div className="settings-column">
                 <SettingsSection title="Kottanézet és lejátszó">
-                    <div className="card card-row">
-                        <div className="card-decoration"></div>
-                        <div className="setting-label">
-                            <div className="font-bold text-ink">Szövegpanel megjelenítése</div>
-                            <div className="text-xs text-gray-500">Kotta mellett a szöveg láthatósága</div>
-                        </div>
-                        <button onClick={() => onUpdateSettings({...settings, showLyrics: !settings.showLyrics})} className="btn-ghost" style={{color: settings.showLyrics ? 'var(--col-accent-text)' : 'var(--col-ink-muted, #999)'}}>
+                    <SettingsRow title="Szövegpanel megjelenítése" hint="Kotta mellett a szöveg láthatósága">
+                        <button onClick={() => set({ showLyrics: !settings.showLyrics })} className="btn-ghost" style={{color: settings.showLyrics ? 'var(--col-accent-text)' : 'var(--col-ink-muted, #999)'}}>
                             {settings.showLyrics ? <Icons.Eye size={24}/> : <Icons.EyeOff size={24}/>}
                         </button>
-                    </div>
+                    </SettingsRow>
 
-                    <div className="card card-row">
-                        <div className="card-decoration"></div>
-                        <div className="setting-label">
-                            <div className="font-bold text-ink">Oldalsáv szélessége</div>
-                            <div className="text-xs text-gray-500">Ha oldalt van a szöveg</div>
-                        </div>
+                    <SettingsRow title="Oldalsáv szélessége" hint="Ha oldalt van a szöveg (alapméret; énekenként a panelen át is méretezhető)">
                         <div className="flex flex-wrap gap-2">
-                             <button onClick={() => onUpdateSettings({...settings, lyricsWidth: '15%'})} className={`btn ${settings.lyricsWidth === '15%' ? 'btn-primary' : 'btn-ghost'}`}>15%</button>
-                             <button onClick={() => onUpdateSettings({...settings, lyricsWidth: '20%'})} className={`btn ${settings.lyricsWidth === '20%' ? 'btn-primary' : 'btn-ghost'}`}>20%</button>
-                             <button onClick={() => onUpdateSettings({...settings, lyricsWidth: '25%'})} className={`btn ${settings.lyricsWidth === '25%' ? 'btn-primary' : 'btn-ghost'}`}>25%</button>
-                             <button onClick={() => onUpdateSettings({...settings, lyricsWidth: '30%'})} className={`btn ${settings.lyricsWidth === '30%' ? 'btn-primary' : 'btn-ghost'}`}>30%</button>
+                            {['15%', '20%', '25%', '30%'].map(w => (
+                                <button key={w} onClick={() => set({ lyricsWidth: w })} className={`btn ${settings.lyricsWidth === w ? 'btn-primary' : 'btn-ghost'}`}>{w}</button>
+                            ))}
                         </div>
-                    </div>
+                    </SettingsRow>
 
-                    <div className="card card-row">
-                        <div className="card-decoration"></div>
-                        <div className="setting-label">
-                            <div className="font-bold text-ink">Kotta szélessége</div>
-                            <div className="text-xs text-gray-500">Maximális szélesség</div>
-                        </div>
-                        <select className="input" style={{width:'auto', minWidth:'150px'}} value={settings.scoreMaxWidth || '80%'} onChange={(e) => onUpdateSettings({...settings, scoreMaxWidth: e.target.value})}>
-                            <option value="100%">100%</option>
-                            <option value="90%">90%</option>
-                            <option value="80%">80%</option>
-                            <option value="70%">70%</option>
-                            <option value="60%">60%</option>
-                            <option value="50%">50%</option>
-                        </select>
-                    </div>
+                    <SettingsRow title="Kotta szélessége" hint="Maximális szélesség">
+                        <CustomSelect items={SCORE_WIDTHS} currentId={settings.scoreMaxWidth || '80%'} onChange={(scoreMaxWidth) => set({ scoreMaxWidth })}
+                            allowEmpty={false} width="110px" menuMinWidth={0} ariaLabel="Kotta szélessége" />
+                    </SettingsRow>
 
-                    <div className="card card-row">
-                        <div className="card-decoration"></div>
-                        <div className="setting-label">
-                            <div className="font-bold text-ink">Óra a lejátszóban</div>
-                            <div className="text-xs text-gray-500">A lejátszó jobb felső sarkában</div>
-                        </div>
-                        <button onClick={() => onUpdateSettings({...settings, showClock: !settings.showClock})} className="btn-ghost" title={settings.showClock ? 'Óra elrejtése' : 'Óra megjelenítése'} style={{color: settings.showClock ? 'var(--col-accent-text)' : 'var(--col-ink-muted, #999)'}}>
+                    <SettingsRow title="Óra a lejátszóban" hint="A lejátszó jobb felső sarkában">
+                        <button onClick={() => set({ showClock: !settings.showClock })} className="btn-ghost" title={settings.showClock ? 'Óra elrejtése' : 'Óra megjelenítése'} style={{color: settings.showClock ? 'var(--col-accent-text)' : 'var(--col-ink-muted, #999)'}}>
                             {settings.showClock ? <Icons.Eye size={24}/> : <Icons.EyeOff size={24}/>}
                         </button>
-                    </div>
+                    </SettingsRow>
                 </SettingsSection>
 
                 {/* A kotta rajzolatának beállításai (Verovio); ide kerülnek a további kottagrafikai beállítások is */}
@@ -1029,7 +1096,7 @@ const SettingsView = ({ settings, onUpdateSettings }) => (
                             {SCORE_FONTS.map(font => (
                                 <button key={font.id} type="button" role="radio" aria-checked={settings.scoreFont === font.id}
                                     className={`font-choice${settings.scoreFont === font.id ? ' selected' : ''}`}
-                                    onClick={() => onUpdateSettings({...settings, scoreFont: font.id})}>
+                                    onClick={() => set({ scoreFont: font.id })}>
                                     <FontSample font={font.id} />
                                     <span className="font-choice-label">
                                         <span className="font-choice-text">
@@ -1041,11 +1108,12 @@ const SettingsView = ({ settings, onUpdateSettings }) => (
                         </div>
                     </div>
                 </SettingsSection>
-
+              </div>
             </div>
         </div>
     </div>
-);
+    );
+};
 
 // --- VEROVIO KOTTARAJZOLÓ ---
 // A kottákat (MusicXML, MEI) a Verovio rajzolja: libs/verovio/ (LGPL-3.0, lásd az ottani README-t). A motor nagy
@@ -1473,9 +1541,57 @@ const LyricsRefrain = ({ lines }) => (
     </div>
 );
 
-const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyricsWidth, scoreMaxWidth, scoreFont, onNext, onPrev }) => {
-    const [textPosition, setTextPosition] = useState('bottom');
-    const [textLayout, setTextLayout] = useState('columns');
+// --- A szövegpanel elrendezése énekenként ---
+// Énekszámonként megjegyezzük, amit a szövegpanelen állítottak: a helyét (lent/oldalt), a nézetét (oszlopok/folyó
+// szöveg), a méretét (a kottanézet magasságának, ill. szélességének hányada; null: alapméret) és a betűméretét.
+// Csak az alapértéktől eltérő mezők kerülnek a tárolóba.
+const LYRICS_LAYOUT_DEFAULT = { position: 'bottom', layout: 'columns', height: null, width: null, fontScale: 1 };
+const LYRICS_FONT_SCALES = [0.8, 0.9, 1, 1.1, 1.25, 1.4, 1.6, 1.8, 2];
+const loadLyricsLayouts = () => {
+    const all = loadJSON(STORAGE_KEYS.lyricsLayouts, {});
+    return all && typeof all === 'object' && !Array.isArray(all) ? all : {};
+};
+const lyricsLayoutOf = (hymnNumber) => {
+    const saved = hymnNumber != null ? loadLyricsLayouts()[hymnNumber] : null;
+    const layout = { ...LYRICS_LAYOUT_DEFAULT, ...(saved && typeof saved === 'object' ? saved : {}) };
+    if (!['bottom', 'right'].includes(layout.position)) layout.position = LYRICS_LAYOUT_DEFAULT.position;
+    if (!['columns', 'block'].includes(layout.layout)) layout.layout = LYRICS_LAYOUT_DEFAULT.layout;
+    const fraction = (v) => (typeof v === 'number' && v > 0.02 && v < 0.98 ? v : null);
+    layout.height = fraction(layout.height);
+    layout.width = fraction(layout.width);
+    if (!LYRICS_FONT_SCALES.includes(layout.fontScale)) layout.fontScale = LYRICS_LAYOUT_DEFAULT.fontScale;
+    return layout;
+};
+const saveLyricsLayout = (hymnNumber, layout) => {
+    if (hymnNumber == null) return;
+    const all = loadLyricsLayouts();
+    const changed = Object.keys(LYRICS_LAYOUT_DEFAULT).filter(k => layout[k] !== LYRICS_LAYOUT_DEFAULT[k]);
+    if (changed.length) all[hymnNumber] = Object.fromEntries(changed.map(k => [k, layout[k]]));
+    else delete all[hymnNumber];
+    saveJSON(STORAGE_KEYS.lyricsLayouts, all);
+};
+// Átméretezés: a legkisebb méret px-ben, a legnagyobb a kottanézet hányadában (lent a magasság, oldalt a szélesség)
+const LYRICS_RESIZE_LIMITS = { bottom: { min: 64, max: 0.85 }, side: { min: 150, max: 0.7 } };
+
+const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyricsWidth, scoreMaxWidth, scoreFont, hymnNumber, onNext, onPrev }) => {
+    // A szövegpanel elrendezése az aktuális énekhez; ének váltásakor (pl. a lejátszóban lapozva) annak a mentett
+    // elrendezése töltődik be
+    let [lyricsLayout, setLyricsLayout] = useState(() => ({ hymn: hymnNumber, ...lyricsLayoutOf(hymnNumber) }));
+    if (lyricsLayout.hymn !== hymnNumber) {
+        lyricsLayout = { hymn: hymnNumber, ...lyricsLayoutOf(hymnNumber) };
+        setLyricsLayout(lyricsLayout);
+    }
+    const lyricsLayoutRef = useRef(lyricsLayout);
+    lyricsLayoutRef.current = lyricsLayout;
+    const updateLyricsLayout = (patch) => {
+        const next = { ...lyricsLayoutRef.current, ...patch };
+        lyricsLayoutRef.current = next;
+        setLyricsLayout(next);
+        saveLyricsLayout(next.hymn, next);
+    };
+    const rootRef = useRef(null);
+    const panelRef = useRef(null);
+    const lastTapRef = useRef(0);
     const [zoom, setZoom] = useState(1.0);     // a beállított legnagyobb méret
     const [fit, setFit] = useState(null);      // a ténylegesen használt méret: { zoom, scale, cap }
     const [loading, setLoading] = useState(false);
@@ -1517,7 +1633,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
         if (!result) return;
         fittedSizeRef.current = `${pageEl.clientWidth}x${pageEl.clientHeight}`;
         setFit(result);
-    }, [fitRequest, zoom, scoreMaxWidth, pageKey, hasContent, textPosition]);
+    }, [fitRequest, zoom, scoreMaxWidth, pageKey, hasContent, lyricsLayout.position]);
 
     // Ablakméret, tablet elforgatása, szövegpanel áthelyezése: újraillesztés (kis késleltetéssel,
     // hogy átméretezés közben ne tördeljünk feleslegesen)
@@ -1572,43 +1688,95 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
         if (e.currentTarget.style.cursor !== cursor) e.currentTarget.style.cursor = cursor;
     };
 
-    const isSide = textPosition === 'right';
-    const lyricsMode = isSide ? 'side' : textLayout === 'columns' ? 'columns' : 'block';
+    const isSide = lyricsLayout.position === 'right';
+    const lyricsMode = isSide ? 'side' : lyricsLayout.layout === 'columns' ? 'columns' : 'block';
     const { verses, refrain } = lyrics;
-    // Szövegpanel (oldalt vagy lent); kotta nélkül is látszik, szöveg nélkül elmarad. Lent folyó szövegként legfeljebb
-    // a kottanézet 30%-át foglalja el (a többi görgethető), hogy a kottától ne vegye el a helyet.
+    const fontStep = LYRICS_FONT_SCALES.indexOf(lyricsLayout.fontScale);
+    const changeFont = (delta) => {
+        const step = Math.min(LYRICS_FONT_SCALES.length - 1, Math.max(0, fontStep + delta));
+        updateLyricsLayout({ fontScale: LYRICS_FONT_SCALES[step] });
+    };
+
+    // A panel átméretezése a fogantyúval (lent függőlegesen, oldalt vízszintesen). Húzás közben csak a DOM-ot
+    // állítjuk (CSS változó), felengedéskor mentjük a kottanézethez viszonyított hányadot; a kotta a méretváltozás
+    // után igazodik (ResizeObserver). Dupla koppintás vagy dupla kattintás: vissza az alapméretre.
+    const startResize = (e) => {
+        if (e.button !== 0) return;
+        const panel = panelRef.current, root = rootRef.current;
+        if (!panel || !root) return;
+        e.preventDefault();
+        const handle = e.currentTarget, side = isSide;
+        handle.setPointerCapture(e.pointerId);
+        const total = side ? root.clientWidth : root.clientHeight;
+        const limits = LYRICS_RESIZE_LIMITS[side ? 'side' : 'bottom'];
+        const startPos = side ? e.clientX : e.clientY;
+        const startSize = side ? panel.offsetWidth : panel.offsetHeight;
+        let size = startSize, moved = false;
+        const move = (ev) => {
+            const delta = (side ? ev.clientX : ev.clientY) - startPos;
+            if (Math.abs(delta) > 3) moved = true;
+            if (!moved) return;
+            size = Math.round(Math.min(total * limits.max, Math.max(limits.min, startSize - delta)));
+            panel.style.setProperty('--drag-size', `${size}px`);
+            panel.classList.add('resizing');
+        };
+        const end = () => {
+            handle.removeEventListener('pointermove', move);
+            handle.removeEventListener('pointerup', end);
+            handle.removeEventListener('pointercancel', end);
+            if (moved) {
+                const fraction = Math.round(size / total * 1000) / 1000;
+                ReactDOM.flushSync(() => updateLyricsLayout(side ? { width: fraction } : { height: fraction }));
+                lastTapRef.current = 0;
+            } else {
+                // koppintás: a második gyors koppintás visszaállítja az alapméretet
+                const now = Date.now();
+                if (now - lastTapRef.current < 400) { updateLyricsLayout(side ? { width: null } : { height: null }); lastTapRef.current = 0; }
+                else lastTapRef.current = now;
+            }
+            panel.classList.remove('resizing');
+            panel.style.removeProperty('--drag-size');
+        };
+        handle.addEventListener('pointermove', move);
+        handle.addEventListener('pointerup', end);
+        handle.addEventListener('pointercancel', end);
+    };
+
+    // Szövegpanel (oldalt vagy lent); kotta nélkül is látszik, szöveg nélkül elmarad. Alapméretben lent folyó
+    // szövegként legfeljebb a kottanézet 30%-át, oszlopokban 50%-át foglalja el (a többi görgethető); ha a fogantyúval
+    // átméretezték, a beállított méretben.
+    const panelSize = isSide ? lyricsLayout.width : lyricsLayout.height;
+    const panelStyle = { '--lyrics-scale': lyricsLayout.fontScale };
+    if (isSide) Object.assign(panelStyle, panelSize ? { width: `${panelSize * 100}%`, minWidth: 0 } : { width: lyricsWidth, minWidth: '200px' });
+    else Object.assign(panelStyle, panelSize ? { height: `${panelSize * 100}%`, minHeight: 0, maxHeight: 'none' }
+        : { height: 'auto', minHeight: '150px', maxHeight: lyricsMode === 'block' ? '30%' : '50%' });
+    const resizeHandle = (
+        <div className="lyrics-resize" onPointerDown={startResize} role="separator" aria-orientation={isSide ? 'vertical' : 'horizontal'}
+            aria-label="Szövegpanel átméretezése" title="Húzd a szövegpanel átméretezéséhez (dupla koppintás: alapméret)" />
+    );
     const lyricsPanel = showLyrics && verses.length > 0 && (
-        <div style={{
-            width: isSide ? lyricsWidth : '100%', 
-            minWidth: isSide ? '200px' : '100%', 
-            height: isSide ? '100%' : 'auto',
-            minHeight: isSide ? '100%' : '150px',
-            maxHeight: isSide ? '100%' : lyricsMode === 'block' ? '30%' : '50%',
-            display:'flex', 
-            flexDirection:'column', 
-            borderLeft: isSide ? '1px solid var(--col-border, #ddd)' : 'none', 
-            borderTop: !isSide ? '1px solid var(--col-border, #ddd)' : 'none',
-            backgroundColor:'var(--col-papyrus)', 
-            zIndex:20, 
-            boxShadow: isSide ? '-5px 0 15px rgba(0,0,0,0.1)' : '0 -5px 15px rgba(0,0,0,0.1)'
-        }}>
-            {/* Toolbar */}
-            <div style={{display:'flex', justifyContent:'flex-end', padding:'4px', borderBottom:'1px dashed var(--col-border, #eee)', gap:'4px'}}>
-                 <button onClick={() => setTextPosition(textPosition === 'right' ? 'bottom' : 'right')} className="btn-ghost p-1" title={textPosition === 'right' ? "Lentre tesz" : "Oldalra tesz"}>
-                     {textPosition === 'right' ? <Icons.LayoutBottom size={16}/> : <Icons.LayoutSidebar size={16}/>}
-                 </button>
-                 {textPosition === 'bottom' && (
-                     <button onClick={() => setTextLayout(textLayout === 'block' ? 'columns' : 'block')} className="btn-ghost p-1" title={textLayout === 'block' ? "Oszlopos nézet" : "Folyó szöveg"}>
-                         {textLayout === 'block' ? <Icons.Columns size={16}/> : <Icons.List size={16}/>}
-                     </button>
-                 )}
+        <div ref={panelRef} className={`lyrics-panel ${isSide ? 'side' : 'bottom'}`} style={panelStyle}>
+            <div className="lyrics-toolbar">
+                {isSide ? resizeHandle : <><span />{resizeHandle}</>}
+                <div className="lyrics-toolbar-buttons">
+                    <button onClick={() => changeFont(-1)} disabled={fontStep <= 0} className="lyrics-tool lyrics-font-btn" title="Kisebb betű" aria-label="Kisebb betű">
+                        <span className="lyrics-font-t small">T</span>−
+                    </button>
+                    <button onClick={() => changeFont(1)} disabled={fontStep >= LYRICS_FONT_SCALES.length - 1} className="lyrics-tool lyrics-font-btn" title="Nagyobb betű" aria-label="Nagyobb betű">
+                        <span className="lyrics-font-t">T</span>+
+                    </button>
+                    <span className="lyrics-tool-sep" />
+                    <button onClick={() => updateLyricsLayout({ position: isSide ? 'bottom' : 'right' })} className="lyrics-tool" title={isSide ? "Lentre tesz" : "Oldalra tesz"}>
+                        {isSide ? <Icons.LayoutBottom size={18}/> : <Icons.LayoutSidebar size={18}/>}
+                    </button>
+                    {!isSide && (
+                        <button onClick={() => updateLyricsLayout({ layout: lyricsLayout.layout === 'block' ? 'columns' : 'block' })} className="lyrics-tool" title={lyricsLayout.layout === 'block' ? "Oszlopos nézet" : "Folyó szöveg"}>
+                            {lyricsLayout.layout === 'block' ? <Icons.Columns size={18}/> : <Icons.List size={18}/>}
+                        </button>
+                    )}
+                </div>
             </div>
-            <div className={`lyrics-scroll ${lyricsMode}`} style={{
-                flex: 1, 
-                overflowY: 'auto',
-                overflowX: lyricsMode === 'columns' ? 'auto' : 'hidden',
-                padding: '1rem'
-            }}>
+            <div className={`lyrics-scroll ${lyricsMode}`} style={{ overflowX: lyricsMode === 'columns' ? 'auto' : 'hidden' }}>
                 {lyricsMode === 'columns' ? (
                     <div className="lyrics-columns">
                         {verses.map((v, i) => (
@@ -1624,7 +1792,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
     );
 
     if (!hasContent) return (
-        <div style={{display:'flex', height:'100%', flexDirection: isSide ? 'row' : 'column'}}>
+        <div ref={rootRef} style={{display:'flex', height:'100%', flexDirection: isSide ? 'row' : 'column'}}>
             <div className="score-empty">
                 <Icons.Music size={64}/>
                 <p>Nincs elérhető kotta</p>
@@ -1642,7 +1810,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
     const zoomIn = () => setZoom(Math.min(ZOOM_MAX, Math.floor(Math.round(shownZoom * 1000) / 100 + 1) / 10));
 
     return (
-        <div style={{display:'flex', height:'100%', flexDirection: isSide ? 'row' : 'column'}}>
+        <div ref={rootRef} style={{display:'flex', height:'100%', flexDirection: isSide ? 'row' : 'column'}}>
             {/* Kotta rész: nem görgethető, az előjáték és a kotta mindig egészben látszik */}
             <div className="score-pane" onClick={handlePaneClick} onMouseMove={handlePaneMouseMove}>
                 <div ref={pageRef} className="score-page">
@@ -1837,12 +2005,151 @@ const ScorebooksView = ({ books, downloads, bookActive, online, onToggle, onDown
     </div>
 );
 
+// --- KÖNYVTÁR: ÉNEKKÁRTYÁK ---
+// Egy ének kártyája: szám és cím, jobbra a kották száma és a kulcsszavak (koppintásra szűrnek). Memo: csak akkor
+// rajzolódik újra, ha a saját adatai (vagy a kulcsszó-szűrő) változnak.
+const NO_SCORES = { variations: 0, preludes: 0 };
+const HymnCard = React.memo(({ hymn, counts, keywordFilter, onOpen, onKeyword }) => (
+    <div onClick={() => onOpen(hymn.number)} className="card list-item hymn-card">
+        <div className="card-decoration"></div>
+        <div className="hymn-card-head">
+            <span className="hymn-card-number hymn-number text-accent">{hymn.number}</span>
+            <span className="hymn-card-title text-ink">{hymn.title}</span>
+        </div>
+        {/* jobbra zárva: a kották száma, alatta a kulcsszavak (koppintásra szűrnek) */}
+        <div className="hymn-card-meta">
+            {counts.variations || counts.preludes
+                ? <span className="hymn-card-counts">{counts.variations} letét · {counts.preludes} előjáték</span>
+                : <span className="hymn-card-counts none">nincs kotta</span>}
+            <span className="hymn-card-keywords">
+                {hymnKeywords(hymn).map((keyword, i) => (
+                    <React.Fragment key={keyword}>
+                        {i > 0 && ', '}
+                        <button type="button" className={`keyword-link${keyword === keywordFilter ? ' active' : ''}`}
+                            title={keyword === keywordFilter ? 'Szűrés törlése' : `Szűrés: ${keyword}`}
+                            onClick={(e) => { e.stopPropagation(); onKeyword(keyword); }}>
+                            {keyword}
+                        </button>
+                    </React.Fragment>
+                ))}
+            </span>
+        </div>
+        <Icons.ChevronRight className="hymn-card-chevron"/>
+    </div>
+));
+
+// A kártyák részletekben kerülnek a lapra: először LIBRARY_BATCH darab (bőven kitölti a képernyőt), a többi görgetés
+// közben, amikor a lista vége a látható rész közelébe ér. Így a Könyvtárra váltás és a keresés gépelés közben is gyors
+// (a teljes, több száz kártyás lista felépítése tableten egy másodpercig is eltarthat).
+const LIBRARY_BATCH = 50;
+const HymnList = ({ hymns, scoreCounts, keywordFilter, onOpen, onKeyword }) => {
+    const [shown, setShown] = useState({ hymns, count: LIBRARY_BATCH });
+    let count = shown.count;
+    if (shown.hymns !== hymns) { count = LIBRARY_BATCH; setShown({ hymns, count }); } // új találati lista: elölről
+    const sentinelRef = useRef(null);
+    const topRef = useRef(null);
+    // új keresés vagy szűrés: a lista elejére (a legjobb találatokhoz) görgetünk
+    useLayoutEffect(() => {
+        const scroller = topRef.current && topRef.current.closest('.library-scroll');
+        if (scroller) scroller.scrollTop = 0;
+    }, [hymns]);
+    useEffect(() => {
+        const el = sentinelRef.current;
+        if (!el) return;
+        const observer = new IntersectionObserver((entries) => {
+            if (entries.some(e => e.isIntersecting)) setShown(prev => ({ ...prev, count: prev.count + LIBRARY_BATCH }));
+        }, { root: el.closest('.library-scroll'), rootMargin: '0px 0px 800px 0px' });
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [count, hymns]);
+    return (
+        <>
+            <div ref={topRef} hidden />
+            {hymns.slice(0, count).map(h => (
+                <HymnCard key={h.number} hymn={h} counts={scoreCounts.get(String(h.scoreId ?? h.number)) || NO_SCORES}
+                    keywordFilter={keywordFilter} onOpen={onOpen} onKeyword={onKeyword} />
+            ))}
+            {count < hymns.length && <div ref={sentinelRef} className="library-more" aria-hidden="true" />}
+        </>
+    );
+};
+
+// Átrendezés húzással, egérrel és érintéssel is (Pointer Events; a HTML5 drag&drop érintőképernyőn nem működik).
+// Érintéssel a fogantyúnál kell megfogni (máshol a lista görgethető), egérrel az elem bárhol megfogható. Húzás közben
+// az elem követi az ujjat, a többi félrehúzódik; a görgethető terület szélén a lista magától görget.
+const DRAG_START_DISTANCE = 5;   // px; ennyi elmozdulás után indul a húzás
+const DRAG_SCROLL_EDGE = 60;     // px; a görgethető terület ilyen közel lévő szélén görget
+const DRAG_SCROLL_SPEED = 14;    // px képkockánként, a szélén
+
 const PlaylistEditor = ({ playlist, onRemoveItem, onAddItem, onPlay, onReorder, getScoreInfo }) => {
-    const [dragItem, setDragItem] = useState(null);
-    const [dragOverItem, setDragOverItem] = useState(null);
-    const handleDragStart = (e, index) => { setDragItem(index); e.dataTransfer.effectAllowed = "move"; };
-    const handleDragEnter = (e, index) => { setDragOverItem(index); };
-    const handleDragEnd = () => { if (dragItem !== null && dragOverItem !== null && dragItem !== dragOverItem) { onReorder(dragItem, dragOverItem); } setDragItem(null); setDragOverItem(null); };
+    const [drag, setDrag] = useState(null);   // { from, to, dy, shift } a kirajzoláshoz
+    const dragRef = useRef(null);
+    const listRef = useRef(null);
+    const scrollRef = useRef(null);
+
+    const updateDrag = () => {
+        const d = dragRef.current, scroller = scrollRef.current;
+        if (!d || !scroller) return;
+        const dy = d.lastY - d.startY + scroller.scrollTop - d.startScroll;
+        const center = d.mids[d.from] + dy;
+        const to = d.mids.filter((mid, i) => i !== d.from && mid < center).length;
+        d.to = to;
+        setDrag({ from: d.from, to, dy, shift: d.shift });
+    };
+    const autoScroll = () => {
+        const d = dragRef.current, scroller = scrollRef.current;
+        if (!d || !scroller) return;
+        const r = scroller.getBoundingClientRect();
+        const speed = d.lastY < r.top + DRAG_SCROLL_EDGE ? -DRAG_SCROLL_SPEED * (1 - Math.max(0, d.lastY - r.top) / DRAG_SCROLL_EDGE)
+            : d.lastY > r.bottom - DRAG_SCROLL_EDGE ? DRAG_SCROLL_SPEED * (1 - Math.max(0, r.bottom - d.lastY) / DRAG_SCROLL_EDGE) : 0;
+        if (speed) {
+            const before = scroller.scrollTop;
+            scroller.scrollTop += speed;
+            if (scroller.scrollTop !== before) updateDrag();
+        }
+        d.frame = requestAnimationFrame(autoScroll);
+    };
+    const handlePointerDown = (e, index) => {
+        if (dragRef.current || (e.pointerType === 'mouse' && e.button !== 0) || e.target.closest('button')) return;
+        if (e.pointerType !== 'mouse' && !e.target.closest('.playlist-editor-grip')) return; // érintés: csak a fogantyúval
+        e.preventDefault();
+        const items = [...listRef.current.children];
+        const rects = items.map(el => el.getBoundingClientRect());
+        const gap = rects.length > 1 ? rects[1].top - rects[0].bottom : 0;
+        dragRef.current = {
+            from: index, to: index, pointerId: e.pointerId, startY: e.clientY, lastY: e.clientY, active: false,
+            startScroll: scrollRef.current.scrollTop, mids: rects.map(r => r.top + r.height / 2), shift: rects[index].height + gap, frame: null
+        };
+        e.currentTarget.setPointerCapture(e.pointerId);
+    };
+    const handlePointerMove = (e) => {
+        const d = dragRef.current;
+        if (!d || e.pointerId !== d.pointerId) return;
+        d.lastY = e.clientY;
+        if (!d.active) {
+            if (Math.abs(e.clientY - d.startY) < DRAG_START_DISTANCE) return;
+            d.active = true;
+            d.frame = requestAnimationFrame(autoScroll);
+        }
+        updateDrag();
+    };
+    const handlePointerEnd = (e) => {
+        const d = dragRef.current;
+        if (!d || e.pointerId !== d.pointerId) return;
+        cancelAnimationFrame(d.frame);
+        dragRef.current = null;
+        if (d.active && e.type === 'pointerup' && d.to !== d.from) onReorder(d.from, d.to);
+        setDrag(null);
+    };
+    useEffect(() => () => { if (dragRef.current) cancelAnimationFrame(dragRef.current.frame); }, []);
+    // a húzott elem az egérrel/ujjal mozog, a többi a helyére húzódik
+    const itemOffset = (idx) => {
+        if (!drag) return 0;
+        if (idx === drag.from) return drag.dy;
+        if (drag.from < drag.to && idx > drag.from && idx <= drag.to) return -drag.shift;
+        if (drag.to < drag.from && idx >= drag.to && idx < drag.from) return drag.shift;
+        return 0;
+    };
 
     if (!playlist) return null;
     return (
@@ -1859,7 +2166,7 @@ const PlaylistEditor = ({ playlist, onRemoveItem, onAddItem, onPlay, onReorder, 
                  </div>
             </div>
             
-            <div className="main-content" style={{padding:'2rem', overflowY:'auto'}}>
+            <div ref={scrollRef} className="main-content" style={{padding:'2rem', overflowY:'auto'}}>
                 {playlist.items.length === 0 ? (
                     <div className="playlist-editor-empty">
                         <Icons.ListMusic size={64} className="icon"/>
@@ -1867,20 +2174,19 @@ const PlaylistEditor = ({ playlist, onRemoveItem, onAddItem, onPlay, onReorder, 
                         <button onClick={onAddItem} className="text-accent font-bold hover:underline mt-2">Adj hozzá egy éneket!</button>
                     </div>
                 ) : (
-                    <div style={{maxWidth:'1000px', width:'100%', margin:'0 auto', display:'flex', flexDirection:'column', gap:'10px'}}>
+                    <div ref={listRef} className={`playlist-editor-list${drag ? ' reordering' : ''}`}>
                          {playlist.items.map((item, idx) => {
-                             const isDragging = idx === dragItem;
-                             const isDragOver = idx === dragOverItem;
                              const { variationName, preludeName } = getScoreInfo(item.hymn.scoreId, item.variationId, item.preludeId);
-                             
+                             const offset = itemOffset(idx);
                              return (
-                                <div key={item.id} draggable onDragStart={(e) => handleDragStart(e, idx)} onDragEnter={(e) => handleDragEnter(e, idx)} onDragEnd={handleDragEnd} onDragOver={(e) => e.preventDefault()} 
-                                     className="playlist-editor-item"
-                                     style={{opacity: isDragging ? 0.5 : 1, borderTop: isDragOver && !isDragging ? '2px solid var(--col-accent)' : '1px solid var(--col-border, #ddd)'}}>
-                                    <div style={{display:'flex', alignItems:'center', gap:'1rem'}}>
-                                        <div style={{cursor:'move', color:'var(--col-border-dark, #ccc)'}}><Icons.GripVertical size={20} /></div>
-                                        <div style={{fontWeight:'bold', color:'var(--col-ink-muted, #6b7280)', width:'20px'}}>{idx + 1}.</div>
-                                        <div>
+                                <div key={item.id} className={`playlist-editor-item${drag && idx === drag.from ? ' dragging' : ''}`}
+                                     style={offset ? { transform: `translateY(${offset}px)` } : undefined}
+                                     onPointerDown={(e) => handlePointerDown(e, idx)} onPointerMove={handlePointerMove}
+                                     onPointerUp={handlePointerEnd} onPointerCancel={handlePointerEnd}>
+                                    <div style={{display:'flex', alignItems:'center', gap:'0.75rem', minWidth:0}}>
+                                        <div className="playlist-editor-grip" title="Húzd az átrendezéshez"><Icons.GripVertical size={20} /></div>
+                                        <div style={{fontWeight:'bold', color:'var(--col-ink-muted, #6b7280)', width:'20px', flex:'none'}}>{idx + 1}.</div>
+                                        <div style={{minWidth:0}}>
                                             <div><span className="hymn-number text-accent">{item.hymn.number}</span> <span className="font-bold text-ink">{item.hymn.title}</span></div>
                                             <div style={{fontSize:'12px', color:'var(--col-ink-muted, #666)', marginTop:'2px'}}>
                                                 {preludeName ? <span className="text-accent">Előjáték: {preludeName} + </span> : ''}
@@ -2110,9 +2416,23 @@ function OrganistApp() {
         setPlayerIndex(s.playerIndex || 0);
     }, []);
 
+    // A depth a programon belüli előzmények száma: ha nagyobb nullánál, a history.back() a program előző lapjára visz
     const navigate = (state) => {
-        window.history.pushState(state, '');
-        applyNavState(state);
+        const next = { ...state, depth: ((window.history.state && window.history.state.depth) || 0) + 1 };
+        window.history.pushState(next, '');
+        applyNavState(next);
+    };
+    // A könyvtár kártyáinak kezelői; állandók, hogy a kártyák (HymnCard, memo) feleslegesen ne rajzolódjanak újra
+    const openHymnCard = useCallback((number) => navigate({ activeTab: 'library', selectedHymnNumber: number }), []);
+    const toggleKeywordFilter = useCallback((keyword) => setKeywordFilter(prev => (prev === keyword ? '' : keyword)), []);
+    // Oldalmenü: a Beállítások gomb a beállításokban újra megnyomva oda lép vissza, ahonnan jöttünk
+    const handleTabChange = (tab) => {
+        if (tab === 'settings' && activeTab === 'settings') {
+            if ((window.history.state && window.history.state.depth) > 0) window.history.back();
+            else navigate({ activeTab: 'library' });
+            return;
+        }
+        navigate({ activeTab: tab });
     };
 
     useEffect(() => {
@@ -2267,16 +2587,9 @@ function OrganistApp() {
     if (view === 'playlist_editor' && !selectedPlaylist) view = 'playlists';
     if (view === 'player' && playerQueue.length === 0) view = 'playlists';
 
-    // Apply Themes
-    // A Pergamen színei a style.css-ben vannak (--pergamen-*), a további szerepeit a .theme-pergamen osztály adja
-    const themeColors = {
-        'pergamen': { bg: 'var(--pergamen-bg)', text: 'var(--pergamen-ink)', sidebar: 'var(--pergamen-teal-dark)', accent: 'var(--pergamen-gold)', accentText: 'var(--pergamen-gold-text)' },
-        'papyrus': { bg: '#FDF6E3', text: '#2a2a2a', sidebar: '#002B36', accent: '#B58900', accentText: '#8a6800' },
-        'dark-papyrus': { bg: '#d4cebc', text: '#1a1a1a', sidebar: '#001e26', accent: '#8a6800', accentText: '#6b5000' },
-        'white': { bg: '#f9fafb', text: '#111827', sidebar: '#1f2937', accent: '#2563eb', accentText: '#2563eb' }
-    };
-    const themeName = themeColors[settings.theme] ? settings.theme : 'pergamen';
-    const currentTheme = themeColors[themeName];
+    // Színséma (THEMES); a további szerepeket a .theme-* osztály adja
+    const currentTheme = THEMES.find(t => t.id === settings.theme) || THEMES[0];
+    const themeName = currentTheme.id;
 
     // A betöltő képernyő és a böngésző „túlgörgetett” széle is a téma színét kapja
     useEffect(() => { document.body.style.backgroundColor = currentTheme.sidebar; }, [currentTheme.sidebar]);
@@ -2322,7 +2635,7 @@ function OrganistApp() {
     const keywordOptions = useMemo(() => {
         const counts = new Map();
         hymnBook.forEach(h => hymnKeywords(h).forEach(k => counts.set(k, (counts.get(k) || 0) + 1)));
-        return [...counts].sort((a, b) => a[0].localeCompare(b[0], 'hu'));
+        return [...counts].sort((a, b) => a[0].localeCompare(b[0], 'hu')).map(([name, count]) => ({ id: name, name, count }));
     }, [hymnBook]);
     // Énekenként a letétek és az előjátékok száma (a használható, bekapcsolt könyvekből)
     const scoreCounts = useMemo(() => {
@@ -2395,10 +2708,10 @@ function OrganistApp() {
     
     // --- RENDER ---
     return (
-        <div className={`app-root theme-${themeName}`} style={{ '--col-papyrus': currentTheme.bg, '--col-ink': currentTheme.text, '--col-galaxy-blue': currentTheme.sidebar, '--col-accent': currentTheme.accent, '--col-accent-text': currentTheme.accentText }}>
+        <div className={`app-root theme-${themeName} bg-${settings.background}`} style={{ '--col-papyrus': currentTheme.bg, '--col-ink': currentTheme.text, '--col-galaxy-blue': currentTheme.sidebar, '--col-accent': currentTheme.accent, '--col-accent-text': currentTheme.accentText }}>
             <NavigationSidebar
                 activeTab={view}
-                onTabChange={(t) => navigate({ activeTab: t })}
+                onTabChange={handleTabChange}
                 menuSide={settings.sidebarSide}
                 toggleFullScreen={FULLSCREEN_SUPPORTED ? toggleFullScreen : null} 
             />
@@ -2483,7 +2796,7 @@ function OrganistApp() {
                             </div>
                         </div>
                         <div style={{flex:1, overflow:'hidden'}}>
-                            <ScoreViewer score={getScoreById(selectedHymn.scoreId)} variationId={currentVariationId} preludeId={currentPreludeId} lyrics={lyricsOf(selectedHymn)} showLyrics={settings.showLyrics} lyricsWidth={settings.lyricsWidth} scoreMaxWidth={settings.scoreMaxWidth} scoreFont={settings.scoreFont}/>
+                            <ScoreViewer score={getScoreById(selectedHymn.scoreId)} variationId={currentVariationId} preludeId={currentPreludeId} hymnNumber={selectedHymn.number} lyrics={lyricsOf(selectedHymn)} showLyrics={settings.showLyrics} lyricsWidth={settings.lyricsWidth} scoreMaxWidth={settings.scoreMaxWidth} scoreFont={settings.scoreFont}/>
                         </div>
                     </div>
                 ) : (
@@ -2496,49 +2809,19 @@ function OrganistApp() {
                                 <Icons.Search className="library-search-icon" size={20}/>
                                 <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && filteredHymns.length > 0) navigate({ activeTab: 'library', selectedHymnNumber: filteredHymns[0].number }); }} placeholder="Keresés számra, címre vagy szövegre..." className="input"/>
                             </div>
-                            <select className={`input library-keyword${keywordFilter ? ' active' : ''}`} value={keywordFilter} onChange={(e) => setKeywordFilter(e.target.value)} aria-label="Szűrés kulcsszóra">
-                                <option value="">Minden kulcsszó</option>
-                                {keywordOptions.map(([keyword, count]) => <option key={keyword} value={keyword}>{keyword} ({count})</option>)}
-                            </select>
+                            <CustomSelect items={keywordOptions} currentId={keywordFilter || null} onChange={(k) => setKeywordFilter(k || '')}
+                                placeholder="Minden kulcsszó" width="190px" menuMaxHeight={420} ariaLabel="Szűrés kulcsszóra"
+                                className={`library-keyword${keywordFilter ? ' active' : ''}`}
+                                renderOption={(k) => <span className="keyword-option"><span className="keyword-option-name">{k.name}</span><span className="keyword-option-count">{k.count}</span></span>} />
                         </div>
-                        <div style={{flex:1, overflowY:'auto', padding:'1rem'}}>
+                        <div className="library-scroll" style={{flex:1, overflowY:'auto', padding:'1rem'}}>
                             {(keywordFilter || searchQuery.trim()) && (
                                 <div className="library-result-count">
                                     {filteredHymns.length} ének
                                     {keywordFilter && <button type="button" className="btn-ghost library-clear" onClick={() => setKeywordFilter('')}>Szűrés törlése</button>}
                                 </div>
                             )}
-                            {filteredHymns.map(h => {
-                                const counts = scoreCounts.get(String(h.scoreId ?? h.number)) || { variations: 0, preludes: 0 };
-                                return (
-                                    <div key={h.number} onClick={() => navigate({ activeTab: 'library', selectedHymnNumber: h.number })} className="card list-item hymn-card">
-                                        <div className="card-decoration"></div>
-                                        <div className="hymn-card-head">
-                                            <span className="hymn-card-number hymn-number text-accent">{h.number}</span>
-                                            <span className="hymn-card-title text-ink">{h.title}</span>
-                                        </div>
-                                        {/* jobbra zárva: a kották száma, alatta a kulcsszavak (koppintásra szűrnek) */}
-                                        <div className="hymn-card-meta">
-                                            {counts.variations || counts.preludes
-                                                ? <span className="hymn-card-counts">{counts.variations} letét · {counts.preludes} előjáték</span>
-                                                : <span className="hymn-card-counts none">nincs kotta</span>}
-                                            <span className="hymn-card-keywords">
-                                                {hymnKeywords(h).map((keyword, i) => (
-                                                    <React.Fragment key={keyword}>
-                                                        {i > 0 && ', '}
-                                                        <button type="button" className={`keyword-link${keyword === keywordFilter ? ' active' : ''}`}
-                                                            title={keyword === keywordFilter ? 'Szűrés törlése' : `Szűrés: ${keyword}`}
-                                                            onClick={(e) => { e.stopPropagation(); setKeywordFilter(keyword === keywordFilter ? '' : keyword); }}>
-                                                            {keyword}
-                                                        </button>
-                                                    </React.Fragment>
-                                                ))}
-                                            </span>
-                                        </div>
-                                        <Icons.ChevronRight className="hymn-card-chevron"/>
-                                    </div>
-                                );
-                            })}
+                            <HymnList hymns={filteredHymns} scoreCounts={scoreCounts} keywordFilter={keywordFilter} onOpen={openHymnCard} onKeyword={toggleKeywordFilter} />
                             {filteredHymns.length === 0 && <p className="library-empty">Nincs a keresésnek megfelelő ének.</p>}
                         </div>
                     </div>
@@ -2572,7 +2855,7 @@ function OrganistApp() {
                                             </div>
                                         </div>
                                         <div style={{flex:1, overflowY:'auto', padding:'0.5rem'}}>
-                                            {pl.items.map(resolveItem).map((it, idx) => (<div key={it.id} className="playlist-card-item"><span className="text-accent font-bold">{idx+1}.</span><span className="hymn-number">{it.hymn.number}</span> <span>{it.hymn.title}</span></div>))}
+                                            {pl.items.map(resolveItem).map(it => (<div key={it.id} className="playlist-card-item"><span className="hymn-number text-accent">{it.hymn.number}</span><span className="playlist-card-item-title">{it.hymn.title}</span></div>))}
                                         </div>
                                         <div style={{padding:'1rem', borderTop:'1px solid var(--col-border, #ddd)'}}>
                                             <button onClick={(e) => { e.stopPropagation(); startPlaylist(pl); }} className="btn playlist-card-start-btn"><Icons.Play /> INDÍTÁS</button>
@@ -2627,6 +2910,7 @@ function OrganistApp() {
                                 score={getScoreById(playerItem.hymn.scoreId)}
                                 variationId={playerItem.variationId}
                                 preludeId={playerItem.preludeId}
+                                hymnNumber={playerItem.hymn.number}
                                 lyrics={lyricsOf(playerItem.hymn, playerItem.verses)}
                                 showLyrics={settings.showLyrics}
                                 lyricsWidth={settings.lyricsWidth}
