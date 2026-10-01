@@ -160,8 +160,12 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
 - A +/− gomb a legnagyobb méretet állítja 10%-os lépésekben, a felirat a ténylegesen látott méretet
   mutatja. A + nem használható, ha a kotta nagyobban már nem férne ki (képes kottánál: ha elérte a
   teljes szélességet).
-- A szövegpanelen versszakonként a szám, mellette soronként a szöveg; a hosszú sor behúzással törik a
-  következő sorba. Kotta nélküli énekeknél is látszik; szöveg nélküli énekeknél nincs panel.
+- A szövegpanel a kotta mellett vagy alatt lehet (a panel jobb felső sarkának gombjai). Kotta nélküli énekeknél is látszik;
+  szöveg nélküli énekeknél nincs panel.
+  - Oldalt: a versszakok és bennük a sorok egymás alatt; a hosszú sor behúzással törik a következő sorba.
+  - Lent, egymás mellett (alapértelmezett): a versszakok oszlopokban, a sorok egymás alatt, törés nélkül: egy
+    versszak oszlopa olyan széles, mint a leghosszabb sora (ha nem fér ki minden versszak, oldalra görgethető).
+  - Lent, egymás alatt („Folyó szöveg” gomb): a versszakok egymás alatt, a soraik folyó szövegként egymás után.
 - A lejátszó fejlécében balra a lista sorszáma (pl. `1/4`), utána az énekszám és a cím; jobbra az óra.
   Az óra a beállításokban kikapcsolható („Óra a lejátszóban”, alapból látszik).
 - **Gyors megnyitás:** az óra melletti (számbillentyűzet ikonos) gomb énekválasztót nyit.

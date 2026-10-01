@@ -1387,12 +1387,29 @@ const hotspotAt = (el, clientX) => {
 const ZOOM_MIN = 0.4;
 const ZOOM_MAX = 2.5;
 
-// Egy versszak a szövegpanelen: a száma, mellette soronként a szöveg. A refrén („Refr.” után) dőlt betűs.
-const LyricsVerse = ({ verse, column }) => {
+// Egy versszak a szövegpanelen, a refrén („Refr.” után) dőlt betűs. Három nézet:
+//  - side: oldalt, a sorok egymás alatt, a hosszú sor behúzással törik;
+//  - columns: lent, a versszakok egymás mellett, a sorok egymás alatt, törés nélkül (az oszlop olyan széles,
+//    mint a leghosszabb sora);
+//  - block: lent, a versszakok egymás alatt, a sorok folyó szövegként egymás után.
+const LyricsVerse = ({ verse, mode }) => {
     const refrain = verse.lines.findIndex(l => l.startsWith('Refr.'));
+    if (mode === 'block') {
+        const body = refrain < 0 ? verse.lines : verse.lines.slice(0, refrain);
+        return (
+            <div className="lyrics-verse block">
+                <p className="lyrics-paragraph"><span className="lyrics-verse-label">{verse.label}</span> {body.join(' ')}</p>
+                {refrain >= 0 && (
+                    <p className="lyrics-paragraph lyrics-refrain">
+                        <span className="lyrics-refrain-label">{verse.lines[refrain]}</span> {verse.lines.slice(refrain + 1).join(' ')}
+                    </p>
+                )}
+            </div>
+        );
+    }
     const lineClass = (i) => refrain < 0 || i < refrain ? 'lyrics-line' : i === refrain ? 'lyrics-line lyrics-refrain-label' : 'lyrics-line lyrics-refrain';
     return (
-        <div className={`lyrics-verse${column ? ' column' : ''}`}>
+        <div className={`lyrics-verse ${mode}`}>
             <span className="lyrics-verse-label">{verse.label}</span>
             <div className="lyrics-verse-lines">
                 {verse.lines.map((line, i) => <div key={i} className={lineClass(i)}>{line}</div>)}
@@ -1501,6 +1518,7 @@ const ScoreViewer = ({ score, variationId, preludeId, verses, showLyrics, lyrics
     };
 
     const isSide = textPosition === 'right';
+    const lyricsMode = isSide ? 'side' : textLayout === 'columns' ? 'columns' : 'block';
     // Szövegpanel (oldalt vagy lent); kotta nélkül is látszik, szöveg nélkül elmarad
     const lyricsPanel = showLyrics && verses.length > 0 && (
         <div style={{
@@ -1530,16 +1548,12 @@ const ScoreViewer = ({ score, variationId, preludeId, verses, showLyrics, lyrics
             </div>
             <div style={{
                 flex: 1, 
-                overflowY: (!isSide && textLayout === 'columns') ? 'hidden' : 'auto',
-                overflowX: (!isSide && textLayout === 'columns') ? 'auto' : 'hidden',
+                overflowY: 'auto',
+                overflowX: lyricsMode === 'columns' ? 'auto' : 'hidden',
                 padding: '1rem'
             }}>
-                <div style={
-                    !isSide && textLayout === 'columns' 
-                    ? { display: 'flex', flexDirection: 'row', gap: '2rem', height: '100%' } 
-                    : {}
-                }>
-                    {verses.map(v => <LyricsVerse key={v.index} verse={v} column={!isSide && textLayout === 'columns'} />)}
+                <div className={lyricsMode === 'columns' ? 'lyrics-columns' : undefined}>
+                    {verses.map(v => <LyricsVerse key={v.index} verse={v} mode={lyricsMode} />)}
                 </div>
             </div>
         </div>
