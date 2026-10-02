@@ -11,7 +11,7 @@ const APP_CACHE = 'orgonatar-app-v2'; // új számnál a készülékek a régi m
 const NETWORK_TIMEOUT = 4000; // ms: rossz (pl. templomi) hálózaton ennyi után a mentett változat jön
 const SLOW_NETWORK_PAUSE = 30000; // ms: időtúllépés után ennyi ideig nem várunk a hálózatra, rögtön a mentett jön
 const APP_FILES = ['./', 'index.html', 'app.min.js', 'style.css', 'libs/react.js', 'libs/react-dom.js',
-    'libs/verovio/verovio-toolkit-wasm.js', 'fonts/figtree/figtree-latin.woff2', 'fonts/figtree/figtree-latin-ext.woff2',
+    'libs/qr/qrcode.min.js', 'libs/qr/jsQR.min.js', 'libs/verovio/verovio-toolkit-wasm.js', 'fonts/figtree/figtree-latin.woff2', 'fonts/figtree/figtree-latin-ext.woff2',
     'fonts/old-standard-tt/old-standard-tt-latin.woff2', 'fonts/old-standard-tt/old-standard-tt-latin-ext.woff2',
     'data/enek.json', 'data/kottakonyvek.json'];
 const CACHE_FIRST = /^(libs\/verovio|fonts)\//;

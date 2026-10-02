@@ -46,6 +46,9 @@ nyilvánossá kell tenni.
 - `libs/`: `react.js` és `react-dom.js` (React 18 UMD build); a `babel.js` csak a `dev.html`-hez kell.
 - `libs/verovio/`: a kottarajzoló (Verovio 6.3.0, LGPL-3.0), a licencek és a frissítés leírása
   (`libs/verovio/README.md`).
+- `libs/qr/`: a listák megosztásához a QR-kód rajzolása (qrcode-generator 2.0.4, MIT) és olvasása (jsQR 1.4.0,
+  Apache-2.0; csak ha a böngészőnek nincs saját felismerője), a licencekkel (`libs/qr/README.md`). Igény szerint
+  töltődnek be; a service worker előre elmenti őket, így internet nélkül is működnek.
 - `fonts/`: a feliratok, az énekszövegek, valamint az énekszámok és az oldalcímek betűtípusai
   (SIL Open Font License, `fonts/README.md`).
 - `data/enek.json`: az énekek.
@@ -176,7 +179,10 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
 
 ## Listák
 
-- A lista kártyáján az énekek száma (talpas betűvel, jobbra zárt oszlopban) és kezdősora, egy alapvonalon.
+- A lista kártyáján az énekek száma (talpas betűvel, jobbra zárt oszlopban), utána a kiválasztott versszakok
+  tömören (egymást követők intervallumként, a többi felsorolva: `1-5`, `1,4`, `1-3,5`), majd a kezdősor, egy
+  alapvonalon. A szerkesztőben is így: „Versszakok: 1-3,5”.
+- **Átnevezés:** a lista szerkesztőjében a név melletti ceruzával (a dátumgomb itt is működik).
 - A lista szerkesztőjében az énekek húzással rendezhetők át, egérrel és érintéssel is. Érintéssel a bal oldali
   fogantyúnál (⋮⋮) kell megfogni (máshol a lista görgethető); húzás közben a többi ének félrehúzódik, a képernyő
   széléhez érve a lista magától görget.
@@ -185,6 +191,31 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
   álló dátum cserélődik, a többi marad. A Hozzáadás ablak „+ Új lista…” mezőjében is így működik.
 - Az Új lista és a Hozzáadás ablak nem középen, hanem a képernyő felső harmadában nyílik meg, hogy a tablet
   képernyő-billentyűzete ne takarja el az alját.
+
+### Megosztás és importálás
+
+- **Megosztás** (a lista kártyáján vagy a szerkesztő fejlécében): a lista neve és tartalma egyetlen
+  karakterláncban (a lista kódja), mellette QR-kód. A kódhoz: **Másolás** (vágólapra), **E-mail** (a levélben az
+  énekek listája versszakokkal és a megnyitó link), **Mentés** (`<a lista neve>.txt`: a lista, a link és a kód), és
+  ha a készülék tudja (telefon, tablet), **Küldés…** más alkalmazással (pl. üzenetben).
+- A QR-kódban a **megosztási link** van (`…/orgonatar/#import=<kód>`): egy másik eszköz kamerájával lefotózva
+  megnyílik a program az importálással. Koppintásra a QR-kód az egész képernyőt kitölti (hosszú listánál így
+  biztosabban olvasható); Escape vagy koppintás zárja.
+- **Importálás** (Listák → Importálás): a kód vagy a link beillesztése (szöveg közepéből, több sorra tördelve is
+  felismeri), **Fájl megnyitása** (a mentett `.txt`, vagy fénykép, képernyőkép a QR-kódról), vagy **Kamera** (a
+  hátlapi kamerával beolvassa a QR-kódot). Előnézetben látszanak az énekek; a név átírható. Az importált lista
+  új listaként kerül a többi mellé, és megnyílik a szerkesztőben.
+  - Az énekeskönyvben nem található ének kimarad (az előnézet jelzi). Ha a választott letét vagy előjáték ezen az
+    eszközön nem érhető el (pl. nincs letöltve a könyve), az előnézet szól; a lista megjegyzi a választást, a
+    könyv letöltése után már az jelenik meg (addig az első elérhető letét, előjáték nélkül).
+  - A kamerához https kell (GitHub Pages) és a kamera engedélyezése. iPaden, iPhone-on a kezdőképernyőre tett
+    program külön tárolót kap: oda a programon belül, a Kamera gombbal (vagy a kód beillesztésével) érdemes
+    importálni, mert a telefon kamerájából megnyitott link a Safariban nyílik meg.
+- **A kód formátuma:** `OT1:<énekek száma>:<név>;<ének>;<ének>…`, egy ének `<énekszám>:<letét>:<előjáték>:<versszakok>`
+  (a végéről az üres mezők elmaradnak). A névben és az azonosítókban a betűk (az ékezetesek is), a számjegyek és a
+  `- _ . ~ ,` jelek maradnak, a szóköz `+`, minden más `%XX` (UTF-8). A versszakok 1-től számozva, tömören. Például:
+  `OT1:3:2026-10-04+Vasárnapi+istentisztelet;42:genfikoralkonyv_42::1-3,5;165:fazekas_kottak_165:fazekas_kottak_pre_165;90`.
+  A linkben (és a QR-kódban) ugyanez, csupa ASCII-jellel (az ékezetes betűk `%XX`-ként).
 
 ## Kottanézet és lejátszó
 

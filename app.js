@@ -40,6 +40,15 @@ const Icons = {
     </IconBase>,
     Calendar: (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></IconBase>,
     Backspace: (props) => <IconBase {...props}><path d="M20 5H9l-7 7 7 7h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z"/><line x1="18" x2="12" y1="9" y2="15"/><line x1="12" x2="18" y1="9" y2="15"/></IconBase>,
+    Share: (props) => <IconBase {...props}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></IconBase>,
+    Import: (props) => <IconBase {...props}><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4"/></IconBase>,
+    Copy: (props) => <IconBase {...props}><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></IconBase>,
+    Mail: (props) => <IconBase {...props}><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></IconBase>,
+    Download: (props) => <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></IconBase>,
+    Send: (props) => <IconBase {...props}><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></IconBase>,
+    Camera: (props) => <IconBase {...props}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></IconBase>,
+    File: (props) => <IconBase {...props}><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></IconBase>,
+    Check: (props) => <IconBase {...props}><polyline points="20 6 9 17 4 12"/></IconBase>,
 };
 
 // Az ének versszakai soronként (enek.json: "verses": [["1. versszak 1. sora", "2. sora", …], [2. versszak], …]).
@@ -68,6 +77,30 @@ const lyricsOf = (hymn, selected = []) => {
     const all = verseList(hymn);
     const refrain = all.reduce((best, v) => v.refrain && v.refrain.length > (best ? best.length : 0) ? v.refrain : best, null);
     return { verses: selected.length ? all.filter(v => selected.includes(v.index)) : all, refrain };
+};
+
+// A kiválasztott versszakok tömören, 1-től számozva: az egymást követők intervallumként, a többi felsorolva
+// ([0,1,2,4] → "1-3,5"; [0,3] → "1,4"); és vissza ("1-3,5" → [0,1,2,4], a hibás részeket kihagyja)
+const formatVerses = (indices) => {
+    const nums = [...new Set((indices || []).filter(i => Number.isInteger(i) && i >= 0))].sort((a, b) => a - b).map(i => i + 1);
+    const parts = [];
+    for (let i = 0; i < nums.length; i++) {
+        let j = i;
+        while (j + 1 < nums.length && nums[j + 1] === nums[j] + 1) j++;
+        parts.push(j > i ? `${nums[i]}-${nums[j]}` : String(nums[i]));
+        i = j;
+    }
+    return parts.join(',');
+};
+const MAX_VERSE = 200;
+const parseVerses = (text) => {
+    const out = new Set();
+    for (const [, a, b] of String(text || '').matchAll(/(\d+)(?:-(\d+))?/g)) {
+        const from = +a, to = b ? +b : +a;
+        if (from < 1 || to < from || to > MAX_VERSE) continue;
+        for (let n = from; n <= to; n++) out.add(n - 1);
+    }
+    return [...out].sort((x, y) => x - y);
 };
 
 // --- TÁROLÁS (localStorage) ---
@@ -696,23 +729,407 @@ const ListNameInput = ({ value, onChange, onEnter, inputRef, placeholder, style 
     );
 };
 
-const CreatePlaylistModal = ({ isOpen, onClose, onConfirm }) => {
+// A lista nevének megadása: új lista vagy átnevezés. A név elé naptárral dátum tehető, a mező X-szel törölhető.
+const PlaylistNameModal = ({ isOpen, title, initialName = '', confirmLabel, onClose, onConfirm }) => {
     const [name, setName] = useState('');
     const inputRef = useRef(null);
-    useEffect(() => { if(isOpen) { setName(''); setTimeout(() => inputRef.current?.focus(), 100); } }, [isOpen]);
+    useEffect(() => {
+        if (!isOpen) return;
+        setName(initialName);
+        const timer = setTimeout(() => {
+            const el = inputRef.current;
+            if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+        }, 100);
+        return () => clearTimeout(timer);
+    }, [isOpen]);
     if (!isOpen) return null;
     const confirm = () => { if (name.trim()) onConfirm(name.trim()); };
 
     return (
-        <Modal title="Új lista létrehozása" onClose={onClose} placement="upper" footer={
+        <Modal title={title} onClose={onClose} placement="upper" footer={
             <>
                 <button onClick={onClose} className="btn">Mégse</button>
-                <button onClick={confirm} disabled={!name.trim()} className="btn btn-primary">Létrehozás</button>
+                <button onClick={confirm} disabled={!name.trim()} className="btn btn-primary">{confirmLabel}</button>
             </>
         }>
             <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Lista neve</label>
                 <ListNameInput inputRef={inputRef} placeholder="pl. 2026-10-04 Vasárnapi istentisztelet" value={name} onChange={setName} onEnter={confirm} />
+            </div>
+        </Modal>
+    );
+};
+const CreatePlaylistModal = (props) => <PlaylistNameModal {...props} title="Új lista létrehozása" confirmLabel="Létrehozás" />;
+
+// --- LISTÁK MEGOSZTÁSA ÉS IMPORTÁLÁSA ---
+// Egy lista egyetlen, szóköz nélküli karakterláncban (kód): OT1:<énekek száma>:<név>;<ének>;<ének>…, ahol egy ének
+// <énekszám>:<letét>:<előjáték>:<versszakok> (a végéről az üres mezők elmaradnak), pl.
+// OT1:2:2026-10-04+Vasárnapi+istentisztelet;42:gk_s42::1-3,5;90. A névben és az azonosítókban a betűk (az ékezetesek
+// is), a számjegyek és a - _ . ~ , jelek maradnak, a szóköz „+”, minden más %XX (UTF-8; így bennük nem lehet „:” és
+// „;”), a versszakok tömören („1-3,5”). Ugyanez a kód van a megosztási linkben (…#import=<kód>, csupa ASCII-jellel) és
+// a QR-kódban is: a telefon kamerája a linket felismeri, és megnyitja vele a programot az importálással.
+const LIST_CODE_MAX_ITEMS = 300;
+const LIST_CODE_CHARS = /^[\p{L}\p{M}\p{N}\-_.~,+%:;]*/u; // a kód karakterei (minden más a kódon kívül van)
+const encodeCodeField = (v) => Array.from(v == null ? '' : String(v), c => c === ' ' ? '+'
+    : /[\p{L}\p{M}\p{N}\-_.~,]/u.test(c) ? c
+    : Array.from(new TextEncoder().encode(c), b => `%${b.toString(16).toUpperCase().padStart(2, '0')}`).join('')).join('');
+const decodeCodeField = (v) => { try { return decodeURIComponent(v.replace(/\+/g, ' ')); } catch (e) { return v; } };
+const encodeListCode = (playlist) => {
+    const items = playlist.items.map(it => {
+        const fields = [encodeCodeField(it.hymnNumber), encodeCodeField(it.variationId), encodeCodeField(it.preludeId), formatVerses(it.verses)];
+        while (fields.length > 1 && !fields[fields.length - 1]) fields.pop();
+        return fields.join(':');
+    });
+    return [`OT1:${items.length}:${encodeCodeField(playlist.name)}`, ...items].join(';');
+};
+const parseListCode = (code) => {
+    const parts = code.split(';');
+    const head = parts[0].match(/^OT1:(\d+):(.*)$/);
+    if (!head) return null;
+    const count = +head[1];
+    if (count > LIST_CODE_MAX_ITEMS || parts.length < count + 1) return null; // hiányos kód
+    const items = [];
+    for (let i = 1; i <= count; i++) {
+        const [num = '', variation = '', prelude = '', verses = ''] = parts[i].split(':');
+        if (!num) return null;
+        items.push({ hymnNumber: decodeCodeField(num), variationId: decodeCodeField(variation) || null, preludeId: decodeCodeField(prelude) || null,
+            verses: parseVerses((verses.match(/^[\d,-]*/) || [''])[0]) });
+    }
+    return { name: decodeCodeField(head[2]).trim().slice(0, 200), items };
+};
+// A kód kikeresése bármilyen szövegből (beillesztett kód vagy link, a mentett fájl, e-mail). Először egyben keressük
+// (a link is kódolva érkezhet: OT1%3A…); ha a kód több sorra tördelődött, a szóközök és sortörések nélkül.
+const decodeListCode = (text) => {
+    const s = String(text || '');
+    for (const [found] of s.matchAll(/OT1(?::|%3[Aa])\S*/g)) {
+        let code = found;
+        if (!code.startsWith('OT1:')) { try { code = decodeURIComponent(code); } catch (e) { continue; } }
+        const list = parseListCode(code.match(LIST_CODE_CHARS)[0].replace(/[.,:;]+$/, ''));
+        if (list) return list;
+    }
+    const at = s.indexOf('OT1:');
+    return at < 0 ? null : parseListCode(s.slice(at).replace(/\s+/g, '').match(LIST_CODE_CHARS)[0]);
+};
+// a link csupa ASCII-jellel (az ékezetes betűk %XX-ként), hogy minden levelező és QR-olvasó egyben kezelje
+const shareLinkOf = (code) => `${window.location.origin}${window.location.pathname}#import=${code.replace(/[^\x00-\x7F]/gu, c => encodeURIComponent(c))}`;
+// Az e-mailbe és az üzenetbe: olvasható lista és a link; a mentett fájlba a kód is
+const shareTextOf = (name, rows, link, code) => [
+    `Református OrgonaTár – liturgikus lista: ${name}`,
+    '',
+    ...rows.map(r => `  ${r.number}${r.verses ? ` (${r.verses})` : ''}  ${r.title}`),
+    '',
+    'Megnyitás az OrgonaTárban:',
+    link,
+    '',
+    ...(code
+        ? ['Vagy a programban: Listák → Importálás, és ott illeszd be ezt a kódot (vagy a fenti linket), illetve nyisd meg ezt a fájlt:', code]
+        : ['Vagy a programban: Listák → Importálás, és ott illeszd be a fenti linket.']),
+    ''
+].join('\n');
+const safeFileName = (name) => (name.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim() || 'lista').slice(0, 80);
+
+// Külső könyvtárak igény szerint (libs/qr): QR-kód rajzolása és – ha a böngésző nem ismeri fel magától – olvasása
+const scriptPromises = new Map();
+const loadScript = (src) => {
+    if (!scriptPromises.has(src)) {
+        scriptPromises.set(src, new Promise((resolve, reject) => {
+            const el = document.createElement('script');
+            el.src = src; el.async = true;
+            el.onload = resolve;
+            el.onerror = () => { scriptPromises.delete(src); reject(new Error(`Nem sikerült betölteni: ${src}`)); };
+            document.head.appendChild(el);
+        }));
+    }
+    return scriptPromises.get(src);
+};
+const loadQrGenerator = () => (window.qrcode ? Promise.resolve(window.qrcode) : loadScript('libs/qr/qrcode.min.js').then(() => window.qrcode));
+const loadQrReader = () => (window.jsQR ? Promise.resolve(window.jsQR) : loadScript('libs/qr/jsQR.min.js').then(() => window.jsQR));
+// A böngésző saját QR-felismerője (pl. androidos Chrome), ha van
+const nativeQrDetector = async () => {
+    try {
+        if ('BarcodeDetector' in window && (await window.BarcodeDetector.getSupportedFormats()).includes('qr_code')) {
+            return new window.BarcodeDetector({ formats: ['qr_code'] });
+        }
+    } catch (e) { /* nincs vagy nem működik: jsQR */ }
+    return null;
+};
+// QR-kód felismerése egy képből (a kamera képkockájából vagy egy fényképből); a talált szöveg vagy null. A jsQR-nek
+// a kép legfeljebb maxSize képpontosra kicsinyítve megy (a kamera képkockáinál a sebesség miatt).
+const readQrFromSource = async (source, width, height, detector, canvas, maxSize = 1000) => {
+    if (detector) {
+        const codes = await detector.detect(source);
+        return codes.length ? codes[0].rawValue : null;
+    }
+    const jsQR = await loadQrReader();
+    const scale = Math.min(1, maxSize / Math.max(width, height));
+    const w = Math.max(1, Math.round(width * scale)), h = Math.max(1, Math.round(height * scale));
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(source, 0, 0, w, h);
+    const found = jsQR(ctx.getImageData(0, 0, w, h).data, w, h);
+    return found ? found.data : null;
+};
+// Fénykép vagy képernyőkép: ha kicsinyítve nem található benne a QR-kód (pl. kicsi a képen), nagyobb felbontásban is
+const readQrFromImage = async (img) => {
+    const detector = await nativeQrDetector();
+    const canvas = document.createElement('canvas');
+    const found = await readQrFromSource(img, img.width, img.height, detector, canvas);
+    if (found || detector || Math.max(img.width, img.height) <= 1000) return found;
+    return readQrFromSource(img, img.width, img.height, null, canvas, 2400);
+};
+
+// QR-kód SVG-ben: fekete modulok fehér alapon, 4 modulnyi csendes zónával (így olvasható a legbiztosabban)
+const QrCode = ({ text, className = '' }) => {
+    const [qr, setQr] = useState(null);
+    const [failed, setFailed] = useState(false);
+    useEffect(() => {
+        let active = true;
+        loadQrGenerator().then(qrcode => {
+            if (!active) return;
+            const code = qrcode(0, 'M');
+            code.addData(text);
+            code.make();
+            const n = code.getModuleCount();
+            let d = '';
+            for (let r = 0; r < n; r++) {
+                for (let c = 0; c < n; c++) {
+                    if (!code.isDark(r, c)) continue;
+                    let len = 1;
+                    while (c + len < n && code.isDark(r, c + len)) len++;
+                    d += `M${c + 4} ${r + 4}h${len}v1h-${len}z`;
+                    c += len - 1;
+                }
+            }
+            setQr({ size: n + 8, d });
+        }).catch(() => { if (active) setFailed(true); });
+        return () => { active = false; };
+    }, [text]);
+    if (failed) return <div className={`qr-code qr-missing ${className}`}>A QR-kód most nem jeleníthető meg</div>;
+    if (!qr) return <div className={`qr-code ${className}`} aria-busy="true" />;
+    return (
+        <svg className={`qr-code ${className}`} viewBox={`0 0 ${qr.size} ${qr.size}`} shapeRendering="crispEdges" role="img" aria-label="A lista QR-kódja">
+            <rect width={qr.size} height={qr.size} fill="#fff"/>
+            <path d={qr.d} fill="#000"/>
+        </svg>
+    );
+};
+
+// Kamera élőképe, amelyen a program QR-kódot keres (a hátlapi kamerával, ha van). A talált szöveget az onResult
+// kapja; ha az false-t ad vissza (nem lista kódja), keres tovább.
+const QrScanner = ({ onResult, onError }) => {
+    const videoRef = useRef(null);
+    const callbacks = useRef({});
+    callbacks.current = { onResult, onError };
+    useEffect(() => {
+        let stream = null, stopped = false, timer = null;
+        const canvas = document.createElement('canvas');
+        (async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+                if (stopped) return;
+                const video = videoRef.current;
+                video.srcObject = stream;
+                await video.play();
+                const detector = await nativeQrDetector();
+                if (!detector) await loadQrReader();
+                const tick = async () => {
+                    if (stopped) return;
+                    let text = null;
+                    try {
+                        if (video.readyState >= 2 && video.videoWidth) text = await readQrFromSource(video, video.videoWidth, video.videoHeight, detector, canvas);
+                    } catch (e) { /* egy képkocka hibája nem baj */ }
+                    if (stopped) return;
+                    if (text && callbacks.current.onResult(text) !== false) return;
+                    timer = setTimeout(tick, 200);
+                };
+                tick();
+            } catch (err) {
+                if (!stopped) callbacks.current.onError(err);
+            }
+        })();
+        return () => {
+            stopped = true;
+            clearTimeout(timer);
+            if (stream) stream.getTracks().forEach(t => t.stop());
+        };
+    }, []);
+    return <video ref={videoRef} className="qr-video" playsInline muted />;
+};
+
+// Megosztás: a lista kódja, QR-kódja (a megosztási linkkel), másolás, e-mail, mentés fájlba (és ha a készülék
+// tudja: küldés más alkalmazással)
+const ShareListModal = ({ playlist, rows, onClose }) => {
+    const code = useMemo(() => encodeListCode(playlist), [playlist]);
+    const link = shareLinkOf(code);
+    const message = shareTextOf(playlist.name, rows, link);
+    const [copied, setCopied] = useState(false);
+    const [zoomed, setZoomed] = useState(false);
+    const codeRef = useRef(null);
+    useEffect(() => { if (!copied) return; const t = setTimeout(() => setCopied(false), 2000); return () => clearTimeout(t); }, [copied]);
+    useEffect(() => {
+        if (!zoomed) return;
+        const onKey = (e) => { if (e.key === 'Escape') setZoomed(false); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [zoomed]);
+    const copy = async () => {
+        try { await navigator.clipboard.writeText(code); setCopied(true); return; } catch (e) { /* régebbi böngésző */ }
+        const el = codeRef.current;
+        el.focus(); el.select();
+        try { if (document.execCommand('copy')) setCopied(true); } catch (e) { /* marad kijelölve, kézzel másolható */ }
+    };
+    const save = () => {
+        const url = URL.createObjectURL(new Blob([shareTextOf(playlist.name, rows, link, code)], { type: 'text/plain;charset=utf-8' }));
+        const a = document.createElement('a');
+        a.href = url; a.download = `${safeFileName(playlist.name)}.txt`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
+    const subject = `OrgonaTár lista: ${playlist.name}`;
+    const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+    const canShare = typeof navigator.share === 'function';
+    const sendOther = () => { navigator.share({ title: subject, text: message }).catch(() => {}); };
+
+    return (
+        <Modal title="Lista megosztása" onClose={onClose} maxWidth="760px" footer={<button onClick={onClose} className="btn">Bezárás</button>}>
+            <div className="share-list">
+                <div className="share-qr">
+                    <button type="button" className="share-qr-btn" onClick={() => setZoomed(true)} title="Nagyítás" aria-label="A QR-kód nagyítása"><QrCode text={link} /></button>
+                    <p className="share-hint">Egy másik eszköz kamerájával lefotózva megnyílik az importálás. Koppints rá a nagyításhoz.</p>
+                </div>
+                <div className="share-main">
+                    <div className="share-name">{playlist.name}</div>
+                    <div className="share-count">{playlist.items.length} ének</div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1" htmlFor="share-code">A lista kódja</label>
+                    <textarea id="share-code" ref={codeRef} className="input share-code" readOnly value={code} rows={4} onFocus={e => e.target.select()} />
+                    <div className="share-actions">
+                        <button onClick={copy} className="btn btn-primary">{copied ? <><Icons.Check size={18}/> Kimásolva</> : <><Icons.Copy size={18}/> Másolás</>}</button>
+                        <a href={mailto} className="btn btn-outline"><Icons.Mail size={18}/> E-mail</a>
+                        <button onClick={save} className="btn btn-outline"><Icons.Download size={18}/> Mentés</button>
+                        {canShare && <button onClick={sendOther} className="btn btn-outline"><Icons.Send size={18}/> Küldés…</button>}
+                    </div>
+                    <p className="share-hint">Importálás egy másik eszközön: Listák → Importálás, és ott illeszd be a kódot, nyisd meg
+                        a mentett fájlt, vagy olvasd be a QR-kódot a kamerával.</p>
+                </div>
+            </div>
+            {zoomed && (
+                <div className="qr-zoom" onClick={() => setZoomed(false)} role="dialog" aria-label="A lista QR-kódja nagyítva">
+                    <QrCode text={link} />
+                    <p>{playlist.name} – koppints a bezáráshoz</p>
+                </div>
+            )}
+        </Modal>
+    );
+};
+
+// Importálás: kód vagy link beillesztése, fájl megnyitása (a mentett szövegfájl vagy a QR-kódról készült kép), vagy
+// a QR-kód beolvasása a kamerával. Előnézet után új listaként kerül a többi mellé.
+const CAMERA_SUPPORTED = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.isSecureContext);
+const ImportListModal = ({ initialText = '', hymnByNumber, scoresAvailable, onClose, onImport }) => {
+    const [text, setText] = useState(initialText);
+    const [name, setName] = useState(null);       // a felhasználó által átírt név (null: a kódban lévő)
+    const [scanning, setScanning] = useState(false);
+    const [message, setMessage] = useState(null); // { kind: 'error' | 'info', text }
+    const fileRef = useRef(null);
+    const decoded = useMemo(() => decodeListCode(text), [text]);
+    const known = decoded ? decoded.items.filter(it => hymnByNumber.has(String(it.hymnNumber))) : [];
+    const unknown = decoded ? decoded.items.filter(it => !hymnByNumber.has(String(it.hymnNumber))) : [];
+    const missingScores = known.filter(it => !scoresAvailable(it)).length;
+    const finalName = (name ?? (decoded ? decoded.name : '')).trim();
+    const canImport = !!decoded && known.length > 0 && finalName.length > 0;
+
+    // a kamera talált egy QR-kódot: ha egy lista kódja, kész; ha nem, keres tovább
+    const accept = (value) => {
+        if (!decodeListCode(value)) {
+            const notList = 'Ez a QR-kód nem OrgonaTár lista.';
+            setMessage(m => (m && m.text === notList ? m : { kind: 'error', text: notList }));
+            return false;
+        }
+        setText(value); setName(null); setScanning(false);
+        setMessage({ kind: 'info', text: 'A QR-kód beolvasva.' });
+        return true;
+    };
+    const openFile = async (e) => {
+        const file = e.target.files && e.target.files[0];
+        e.target.value = '';
+        if (!file) return;
+        setMessage(null);
+        try {
+            if (file.type.startsWith('image/')) {
+                // QR-kódról készült kép (fénykép, képernyőkép)
+                const value = await readQrFromImage(await createImageBitmap(file));
+                if (value && decodeListCode(value)) { setText(value); setName(null); }
+                else setMessage({ kind: 'error', text: 'A képen nem található OrgonaTár lista QR-kódja.' });
+            } else {
+                const content = await file.text();
+                if (decodeListCode(content)) { setText(content); setName(null); }
+                else setMessage({ kind: 'error', text: 'A fájlban nem található OrgonaTár lista kódja.' });
+            }
+        } catch (err) {
+            setMessage({ kind: 'error', text: 'A fájlt nem sikerült beolvasni.' });
+        }
+    };
+    const cameraError = (err) => {
+        setScanning(false);
+        const reason = err && err.name;
+        setMessage({ kind: 'error', text: reason === 'NotAllowedError' || reason === 'SecurityError'
+            ? 'A kamera használata nincs engedélyezve. Engedélyezd a böngésző beállításaiban, vagy fotózd le a QR-kódot, és nyisd meg a képet.'
+            : reason === 'NotFoundError' || reason === 'OverconstrainedError' ? 'Ezen az eszközön nem található kamera.'
+            : 'A kamerát nem sikerült elindítani.' });
+    };
+    const doImport = () => { if (canImport) onImport(finalName, known); };
+
+    return (
+        <Modal title="Lista importálása" onClose={onClose} maxWidth="640px" placement="upper" footer={
+            <>
+                <button onClick={onClose} className="btn">Mégse</button>
+                <button onClick={doImport} disabled={!canImport} className="btn btn-primary">Importálás</button>
+            </>
+        }>
+            <div className="import-list">
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1" htmlFor="import-code">Kód vagy link</label>
+                <textarea id="import-code" className="input import-code" rows={3} value={text} placeholder="Illeszd be a lista kódját (OT1:…) vagy a megosztási linket"
+                    onChange={e => { setText(e.target.value); setName(null); setMessage(null); }} />
+                <div className="import-actions">
+                    <button onClick={() => fileRef.current.click()} className="btn btn-outline"><Icons.File size={18}/> Fájl megnyitása</button>
+                    {CAMERA_SUPPORTED && (
+                        <button onClick={() => { setMessage(null); setScanning(!scanning); }} className={`btn ${scanning ? 'btn-primary' : 'btn-outline'}`}>
+                            <Icons.Camera size={18}/> {scanning ? 'Kamera leállítása' : 'Kamera'}
+                        </button>
+                    )}
+                    <input ref={fileRef} type="file" accept=".txt,text/plain,image/*" className="import-file-input" onChange={openFile} tabIndex={-1} aria-hidden="true" />
+                </div>
+                {scanning && (
+                    <div className="import-camera">
+                        <QrScanner onResult={accept} onError={cameraError} />
+                        <p className="share-hint">Tartsd a QR-kódot a keretbe.</p>
+                    </div>
+                )}
+                {message && <p className={`import-message ${message.kind}`}>{message.text}</p>}
+                {text.trim() && !decoded && !message && <p className="import-message error">Ebben nem található OrgonaTár lista kódja.</p>}
+                {decoded && (
+                    <div className="import-preview">
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">A lista neve</label>
+                        <ListNameInput placeholder="A lista neve" value={name ?? decoded.name} onChange={setName} onEnter={doImport} />
+                        <div className="import-items">
+                            {known.map((it, i) => {
+                                const hymn = hymnByNumber.get(String(it.hymnNumber));
+                                const verses = formatVerses(it.verses);
+                                return (
+                                    <div key={i} className="playlist-card-item">
+                                        <span className="hymn-number text-accent">{hymn.number}</span>
+                                        {verses && <span className="playlist-card-item-verses">{verses}</span>}
+                                        <span className="playlist-card-item-title">{hymn.title}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        {unknown.length > 0 && <p className="import-message error">Nem található az énekeskönyvben, kimarad: {unknown.map(it => it.hymnNumber).join(', ')}</p>}
+                        {missingScores > 0 && <p className="import-message info">{missingScores} éneknél a választott letét vagy előjáték ezen az eszközön nem
+                            érhető el (pl. nincs letöltve vagy ki van kapcsolva a könyve). Addig a hiányzó letét helyett az első elérhető jelenik meg, a hiányzó
+                            előjáték pedig elmarad.</p>}
+                    </div>
+                )}
             </div>
         </Modal>
     );
@@ -2189,7 +2606,7 @@ const DRAG_START_DISTANCE = 5;   // px; ennyi elmozdulás után indul a húzás
 const DRAG_SCROLL_EDGE = 60;     // px; a görgethető terület ilyen közel lévő szélén görget
 const DRAG_SCROLL_SPEED = 14;    // px képkockánként, a szélén
 
-const PlaylistEditor = ({ playlist, onRemoveItem, onAddItem, onPlay, onReorder, getScoreInfo }) => {
+const PlaylistEditor = ({ playlist, onRemoveItem, onAddItem, onPlay, onReorder, onRename, onShare, getScoreInfo }) => {
     const [drag, setDrag] = useState(null);   // { from, to, dy, shift } a kirajzoláshoz
     const dragRef = useRef(null);
     const listRef = useRef(null);
@@ -2266,11 +2683,13 @@ const PlaylistEditor = ({ playlist, onRemoveItem, onAddItem, onPlay, onReorder, 
                  <div style={{flex:1, display:'flex', justifyContent:'flex-start'}}>
                     <button onClick={() => window.history.back()} style={{color: 'var(--col-papyrus)'}}><Icons.ChevronLeft size={24}/></button>
                  </div>
-                 <div style={{flex:2, display:'flex', justifyContent:'center'}}>
+                 <div className="playlist-editor-title">
                     <h1 className="header-title main">{playlist.name}</h1>
+                    <button onClick={onRename} className="header-icon-btn" title="Átnevezés" aria-label="Lista átnevezése"><Icons.Edit size={18}/></button>
                  </div>
-                 <div style={{flex:1, display:'flex', justifyContent:'flex-end'}}>
-                    <button onClick={() => onPlay(playlist)} className="btn btn-success"><Icons.Play size={20} /> Lejátszás</button>
+                 <div className="header-actions">
+                    <button onClick={onShare} className="header-icon-btn" title="Megosztás" aria-label="Lista megosztása"><Icons.Share size={20}/></button>
+                    <button onClick={() => onPlay(playlist)} className="btn btn-success" aria-label="Lejátszás"><Icons.Play size={20} /><span className="btn-label">Lejátszás</span></button>
                  </div>
             </div>
             
@@ -2298,7 +2717,7 @@ const PlaylistEditor = ({ playlist, onRemoveItem, onAddItem, onPlay, onReorder, 
                                             <div><span className="hymn-number text-accent">{item.hymn.number}</span> <span className="font-bold text-ink">{item.hymn.title}</span></div>
                                             <div style={{fontSize:'12px', color:'var(--col-ink-muted, #666)', marginTop:'2px'}}>
                                                 {preludeName ? <span className="text-accent">Előjáték: {preludeName} + </span> : ''}
-                                                Változat: {variationName} • {item.verses.length} versszak
+                                                Változat: {variationName}{item.verses.length > 0 && <> • Versszakok: {formatVerses(item.verses)}</>}
                                             </div>
                                         </div>
                                     </div>
@@ -2361,6 +2780,9 @@ function OrganistApp() {
     const [pendingHymnToAdd, setPendingHymnToAdd] = useState(null);
     const [itemToDelete, setItemToDelete] = useState(null);
     const [playlistToDelete, setPlaylistToDelete] = useState(null);
+    const [renamingPlaylistId, setRenamingPlaylistId] = useState(null);
+    const [sharingPlaylistId, setSharingPlaylistId] = useState(null);
+    const [importText, setImportText] = useState(null); // az importálás ablaka a kezdő szöveggel (null: zárva)
     const [alertMessage, setAlertMessage] = useState(null);
     const [isFullscreenModalOpen, setIsFullscreenModalOpen] = useState(() => FULLSCREEN_SUPPORTED && !isFullscreen() && !settings.skipFullscreenPrompt);
 
@@ -2552,6 +2974,24 @@ function OrganistApp() {
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
     }, [applyNavState]);
+
+    // Megosztási link (…#import=<kód>, pl. a QR-kódból): az énekek betöltése után az importálás ablaka nyílik meg vele.
+    // A kód lekerül a címsorból, így újratöltéskor nem nyílik meg újra.
+    useEffect(() => {
+        if (loading) return;
+        const openFromHash = () => {
+            const hash = window.location.hash;
+            if (!hash.startsWith('#import=')) return;
+            // a mezőbe a kód olvasható alakja kerül (a böngésző a linkben az ékezetes betűket %XX-ként adja)
+            const text = hash.slice('#import='.length);
+            const list = decodeListCode(text);
+            setImportText(list ? encodeListCode(list) : text);
+            window.history.replaceState(window.history.state || { activeTab: 'library' }, '', window.location.pathname + window.location.search);
+        };
+        openFromHash();
+        window.addEventListener('hashchange', openFromHash);
+        return () => window.removeEventListener('hashchange', openFromHash);
+    }, [loading]);
 
     const goToPlayerIndex = (index) => {
         setPlayerIndex(index);
@@ -2783,6 +3223,28 @@ function OrganistApp() {
     const confirmDeletePlaylist = () => { if (!playlistToDelete) return; setPlaylists(prev => prev.filter(p => !sameId(p.id, playlistToDelete.id))); setPlaylistToDelete(null); }
     const handleRemoveItemRequest = (playlistId, itemId) => { setItemToDelete({ playlistId, itemId }); };
     const handleRemovePlaylistRequest = (playlist) => { setPlaylistToDelete(playlist); }
+    const renamingPlaylist = playlists.find(p => sameId(p.id, renamingPlaylistId)) || null;
+    const handleRenamePlaylist = (name) => {
+        setPlaylists(prev => prev.map(p => sameId(p.id, renamingPlaylistId) ? { ...p, name } : p));
+        setRenamingPlaylistId(null);
+    };
+
+    // Megosztás és importálás
+    const sharingPlaylist = playlists.find(p => sameId(p.id, sharingPlaylistId)) || null;
+    const shareRows = (pl) => pl.items.map(resolveItem).map(it => ({ number: it.hymn.number, verses: formatVerses(it.verses), title: it.hymn.title }));
+    // Megvan-e ezen az eszközön a kódban szereplő letét és előjáték (be van-e kapcsolva, le van-e töltve a könyvük)
+    const scoresAvailable = (item) => {
+        const hymn = hymnByNumber.get(String(item.hymnNumber));
+        const score = hymn && getScoreById(hymn.scoreId);
+        return (!item.variationId || !!(score && score.variations.some(v => v.id === item.variationId)))
+            && (!item.preludeId || !!(score && score.preludes.some(p => p.id === item.preludeId)));
+    };
+    const handleImportPlaylist = (name, items) => {
+        const playlist = { id: Date.now(), name, items: items.map(it => ({ id: newItemId(), hymnNumber: String(it.hymnNumber), variationId: it.variationId, preludeId: it.preludeId, verses: it.verses })) };
+        setPlaylists(prev => [...prev, playlist]);
+        setImportText(null);
+        openPlaylistEditor(playlist);
+    };
     const handleReorderPlaylist = (fromIndex, toIndex) => {
         setPlaylists(prev => prev.map(p => {
             if (!sameId(p.id, selectedPlaylistId)) return p;
@@ -2836,6 +3298,13 @@ function OrganistApp() {
                     }} 
                 />
                 <CreatePlaylistModal isOpen={isCreateListModalOpen} onClose={() => setIsCreateListModalOpen(false)} onConfirm={handleCreatePlaylist} />
+                <PlaylistNameModal isOpen={!!renamingPlaylist} title="Lista átnevezése" confirmLabel="Mentés" initialName={renamingPlaylist ? renamingPlaylist.name : ''}
+                    onClose={() => setRenamingPlaylistId(null)} onConfirm={handleRenamePlaylist} />
+                {sharingPlaylist && <ShareListModal playlist={sharingPlaylist} rows={shareRows(sharingPlaylist)} onClose={() => setSharingPlaylistId(null)} />}
+                {importText !== null && (
+                    <ImportListModal key={importText} initialText={importText} hymnByNumber={hymnByNumber} scoresAvailable={scoresAvailable}
+                        onClose={() => setImportText(null)} onImport={handleImportPlaylist} />
+                )}
                 <HymnSelectorModal isOpen={isHymnSelectorOpen} onClose={() => setIsHymnSelectorOpen(false)} onSelect={handleHymnSelected} hymnBook={hymnBook} />
                 <HymnSelectorModal isOpen={isQuickOpenOpen} onClose={() => setIsQuickOpenOpen(false)} onSelect={handleQuickOpen} hymnBook={hymnBook} title="Gyors megnyitás" action="megnyitása" ItemIcon={Icons.ChevronRight} />
                 <DeleteConfirmModal isOpen={!!itemToDelete} onClose={() => setItemToDelete(null)} onConfirm={confirmDeleteItem} title="Ének törlése" message="Biztosan el szeretnéd távolítani ezt az éneket a listáról?" />
@@ -2874,7 +3343,8 @@ function OrganistApp() {
                     </div>
                 )}
 
-                {view === 'playlist_editor' && <PlaylistEditor playlist={selectedPlaylist} onRemoveItem={(itemId) => handleRemoveItemRequest(selectedPlaylist.id, itemId)} onAddItem={handleAddHymnToEditor} onPlay={startPlaylist} onReorder={handleReorderPlaylist} getScoreInfo={getScoreInfo} />}
+                {view === 'playlist_editor' && <PlaylistEditor playlist={selectedPlaylist} onRemoveItem={(itemId) => handleRemoveItemRequest(selectedPlaylist.id, itemId)} onAddItem={handleAddHymnToEditor} onPlay={startPlaylist} onReorder={handleReorderPlaylist}
+                    onRename={() => setRenamingPlaylistId(selectedPlaylist.id)} onShare={() => setSharingPlaylistId(selectedPlaylist.id)} getScoreInfo={getScoreInfo} />}
 
                 {view === 'library' && (selectedHymn ? (
                     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
@@ -2945,8 +3415,11 @@ function OrganistApp() {
                         <div className="header">
                             <div style={{flex:1}}></div>
                             <h1 className="header-title main page-title">Liturgikus listák</h1>
-                            <div style={{flex:1, display:'flex', justifyContent:'flex-end'}}>
-                                <button onClick={() => setIsCreateListModalOpen(true)} className="btn btn-primary"><Icons.Plus size={20}/> Új lista</button>
+                            <div className="header-actions">
+                                <button onClick={() => setImportText('')} className="btn btn-on-dark" title="Lista importálása (kód, link, fájl vagy QR-kód)" aria-label="Lista importálása">
+                                    <Icons.Import size={20}/><span className="btn-label">Importálás</span>
+                                </button>
+                                <button onClick={() => setIsCreateListModalOpen(true)} className="btn btn-primary" aria-label="Új lista"><Icons.Plus size={20}/><span className="btn-label">Új lista</span></button>
                             </div>
                         </div>
                         {playlists.length === 0 ? (
@@ -2954,6 +3427,7 @@ function OrganistApp() {
                                 <Icons.ListMusic size={64} className="icon"/>
                                 <p>Még nincsenek listák</p>
                                 <button onClick={() => setIsCreateListModalOpen(true)} className="text-accent font-bold hover:underline mt-2">Hozz létre egyet!</button>
+                                <p className="playlist-empty-import">vagy <button onClick={() => setImportText('')} className="text-accent font-bold hover:underline">importálj</button> egy megosztott listát</p>
                             </div>
                         ) : (
                             <div className="playlist-grid">
@@ -2963,12 +3437,22 @@ function OrganistApp() {
                                         <div className="playlist-card-header">
                                             <h3 className="font-bold text-galaxy">{pl.name}</h3>
                                             <div className="flex gap-2">
+                                                <button onClick={(e) => { e.stopPropagation(); setSharingPlaylistId(pl.id); }} className="btn-ghost" title="Megosztás" aria-label="Lista megosztása"><Icons.Share size={18}/></button>
                                                 <button onClick={(e) => { e.stopPropagation(); openPlaylistEditor(pl); }} className="btn-ghost" title="Szerkesztés"><Icons.Edit size={18}/></button>
                                                 <button onClick={(e) => { e.stopPropagation(); handleRemovePlaylistRequest(pl); }} className="btn-danger" title="Törlés"><Icons.Trash2 size={18}/></button>
                                             </div>
                                         </div>
                                         <div style={{flex:1, overflowY:'auto', padding:'0.5rem'}}>
-                                            {pl.items.map(resolveItem).map(it => (<div key={it.id} className="playlist-card-item"><span className="hymn-number text-accent">{it.hymn.number}</span><span className="playlist-card-item-title">{it.hymn.title}</span></div>))}
+                                            {pl.items.map(resolveItem).map(it => {
+                                                const verses = formatVerses(it.verses);
+                                                return (
+                                                    <div key={it.id} className="playlist-card-item">
+                                                        <span className="hymn-number text-accent">{it.hymn.number}</span>
+                                                        {verses && <span className="playlist-card-item-verses" title="Versszakok">{verses}</span>}
+                                                        <span className="playlist-card-item-title">{it.hymn.title}</span>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                         <div style={{padding:'1rem', borderTop:'1px solid var(--col-border, #ddd)'}}>
                                             <button onClick={(e) => { e.stopPropagation(); startPlaylist(pl); }} className="btn playlist-card-start-btn"><Icons.Play /> INDÍTÁS</button>
