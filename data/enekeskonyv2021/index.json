@@ -4,7 +4,8 @@
   "description": "A 2021-ben kiadott új református énekeskönyv. Kották forrása: enekeskonyv.reformatus.hu",
   "cover": "cover-enekeskonyv.jpg",
   "scores": [
-        { "id": "1", "composer": "", "voiceCount": 1, "year": "", "xmlUrl": "001-enek.mxl" },
+    { "id": "1", "composer": "", "voiceCount": 1, "year": "", "xmlUrl": "001-enek.mxl" },
+    { "id": "2", "composer": "", "voiceCount": 1, "year": "", "xmlUrl": "002-enek.mxl" }
   ],
   "preludes": []
 }
