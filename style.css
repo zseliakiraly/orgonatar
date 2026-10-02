@@ -626,6 +626,21 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     color: var(--col-border-dark, #ccc); touch-action: none;
 }
 .playlist-editor-item:hover .playlist-editor-grip { color: var(--col-ink-muted, #666); }
+/* az ének gombjai: szerkesztés (versszakok, letét, előjáték) és törlés; a sorra kattintva is a szerkesztés nyílik meg */
+.playlist-editor-item:hover { border-color: var(--col-border-dark, #bbb); }
+.playlist-editor-item-actions { flex: none; display: flex; align-items: center; gap: 2px; }
+.playlist-editor-item-btn { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 0.375rem; }
+.playlist-editor-item-btn.btn-danger:hover { background-color: rgba(0, 0, 0, 0.05); }
+.edit-missing-score { margin-top: -0.5rem; }
+.playlist-editor-scroll { padding: 2rem; overflow-y: auto; }
+.playlist-editor-item-main { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
+/* telefonon keskenyebb szegély, fogantyú és gombok, hogy az ének címének több hely jusson */
+@media (max-width: 640px) {
+    .playlist-editor-scroll { padding: 1rem 0.75rem; }
+    .playlist-editor-item-main { gap: 0.4rem; }
+    .playlist-editor-grip { width: 30px; }
+    .playlist-editor-item-btn { width: 34px; }
+}
 /* húzás közben: a megfogott elem kiemelve, a többi simán húzódik a helyére */
 .playlist-editor-list.reordering .playlist-editor-item { transition: transform 0.15s ease; }
 .playlist-editor-list.reordering .playlist-editor-item.dragging {

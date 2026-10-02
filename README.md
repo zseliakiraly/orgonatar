@@ -46,6 +46,8 @@ nyilvánossá kell tenni.
 - `libs/`: `react.js` és `react-dom.js` (React 18 UMD build); a `babel.js` csak a `dev.html`-hez kell.
 - `libs/verovio/`: a kottarajzoló (Verovio 6.3.0, LGPL-3.0), a licencek és a frissítés leírása
   (`libs/verovio/README.md`).
+- `libs/fflate/`: a listák kódjának tömörítése (fflate 0.8.2, MIT; csak a `deflateSync` és az `inflateSync`,
+  `libs/fflate/README.md`). Az oldal a program előtt tölti be.
 - `libs/qr/`: a listák megosztásához a QR-kód rajzolása (qrcode-generator 2.0.4, MIT) és olvasása (jsQR 1.4.0,
   Apache-2.0; csak ha a böngészőnek nincs saját felismerője), a licencekkel (`libs/qr/README.md`). Igény szerint
   töltődnek be; a service worker előre elmenti őket, így internet nélkül is működnek.
@@ -183,6 +185,11 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
   tömören (egymást követők intervallumként, a többi felsorolva: `1-5`, `1,4`, `1-3,5`), majd a kezdősor, egy
   alapvonalon. A szerkesztőben is így: „Versszakok: 1-3,5”.
 - **Átnevezés:** a lista szerkesztőjében a név melletti ceruzával (a dátumgomb itt is működik).
+- **Az énekek szerkesztése:** a lista szerkesztőjében az ének melletti ceruzával, vagy az énekre koppintva: a
+  versszakok, a letét és az előjáték módosítható (a Hozzáadás ablaka, „Ének szerkesztése” címmel, a mostani
+  beállításokkal). Ha a választott letét vagy előjáték ezen az eszközön nem érhető el (pl. egy importált listánál nincs
+  letöltve a könyve), az ablak jelzi, és megmarad, amíg mást nem választunk; az előjáték az „Előjáték nélkül” gombbal
+  elhagyható. Húzás után, és a fogantyúra kattintva nem nyílik meg.
 - A lista szerkesztőjében az énekek húzással rendezhetők át, egérrel és érintéssel is. Érintéssel a bal oldali
   fogantyúnál (⋮⋮) kell megfogni (máshol a lista görgethető); húzás közben a többi ének félrehúzódik, a képernyő
   széléhez érve a lista magától görget.
@@ -194,10 +201,10 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
 
 ### Megosztás és importálás
 
-- **Megosztás** (a lista kártyáján vagy a szerkesztő fejlécében): a lista neve és tartalma egyetlen
-  karakterláncban (a lista kódja), mellette QR-kód. A kódhoz: **Másolás** (vágólapra), **E-mail** (a levélben az
-  énekek listája versszakokkal és a megnyitó link), **Mentés** (`<a lista neve>.txt`: a lista, a link és a kód), és
-  ha a készülék tudja (telefon, tablet), **Küldés…** más alkalmazással (pl. üzenetben).
+- **Megosztás** (a lista kártyáján vagy a szerkesztő fejlécében): a lista neve és tartalma egyetlen, tömörített
+  karakterláncban (a lista kódja, pl. `OT28AzIZPo4uvSXW…`), mellette QR-kód. A kódhoz: **Másolás** (vágólapra),
+  **E-mail** (a levélben az énekek listája versszakokkal és a megnyitó link), **Mentés** (`<a lista neve>.txt`: a
+  lista, a link és a kód), és ha a készülék tudja (telefon, tablet), **Küldés…** más alkalmazással (pl. üzenetben).
 - A QR-kódban a **megosztási link** van (`…/orgonatar/#import=<kód>`): egy másik eszköz kamerájával lefotózva
   megnyílik a program az importálással. Koppintásra a QR-kód az egész képernyőt kitölti (hosszú listánál így
   biztosabban olvasható); Escape vagy koppintás zárja.
@@ -211,11 +218,18 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
   - A kamerához https kell (GitHub Pages) és a kamera engedélyezése. iPaden, iPhone-on a kezdőképernyőre tett
     program külön tárolót kap: oda a programon belül, a Kamera gombbal (vagy a kód beillesztésével) érdemes
     importálni, mert a telefon kamerájából megnyitott link a Safariban nyílik meg.
-- **A kód formátuma:** `OT1:<énekek száma>:<név>;<ének>;<ének>…`, egy ének `<énekszám>:<letét>:<előjáték>:<versszakok>`
-  (a végéről az üres mezők elmaradnak). A névben és az azonosítókban a betűk (az ékezetesek is), a számjegyek és a
-  `- _ . ~ ,` jelek maradnak, a szóköz `+`, minden más `%XX` (UTF-8). A versszakok 1-től számozva, tömören. Például:
-  `OT1:3:2026-10-04+Vasárnapi+istentisztelet;42:genfikoralkonyv_42::1-3,5;165:fazekas_kottak_165:fazekas_kottak_pre_165;90`.
-  A linkben (és a QR-kódban) ugyanez, csupa ASCII-jellel (az ékezetes betűk `%XX`-ként).
+- **A kód formátuma:** `OT2` és utána csak betűk és számjegyek (0–9, A–Z, a–z), így a levelezők linkfelismerője
+  nem vág le belőle, és dupla kattintással egyben kijelölhető. Belül:
+  - a lista szövegként: `<név>` RS `<ének>` RS `<ének>` …, egy ének `<énekszám>` US `<letét>` US `<előjáték>` US
+    `<versszakok>` (RS = 0x1E, US = 0x1F; a versszakok 1-től számozva, tömören, pl. `1-3,5`; a végéről az üres mezők
+    elmaradnak);
+  - ez UTF-8-ban, DEFLATE-tel tömörítve (`libs/fflate/`), elé a szöveg CRC-32-jének alsó 24 bitje (3 bájt): a sérült
+    vagy csonka kódot így gyakorlatilag mindig felismeri (kb. 16 millióból egy eset csúszhatna át), és nem ad belőle
+    hibás listát;
+  - a bájtok 62-es számrendszerben: 5 bájtonként 7 jel (a végén 1–4 bájt 2, 3, 5, 6 jellel).
+
+  Egy 6 énekes lista kódja kb. 200, egy 20 énekesé kb. 270 jel. A linkben és a QR-kódban ugyanez a kód van. A
+  korábbi, olvasható kódokat (`OT1:<énekek száma>:<név>;…`) és linkjeiket is elfogadja.
 
 ## Kottanézet és lejátszó
 

@@ -762,56 +762,139 @@ const PlaylistNameModal = ({ isOpen, title, initialName = '', confirmLabel, onCl
 const CreatePlaylistModal = (props) => <PlaylistNameModal {...props} title="Új lista létrehozása" confirmLabel="Létrehozás" />;
 
 // --- LISTÁK MEGOSZTÁSA ÉS IMPORTÁLÁSA ---
-// Egy lista egyetlen, szóköz nélküli karakterláncban (kód): OT1:<énekek száma>:<név>;<ének>;<ének>…, ahol egy ének
-// <énekszám>:<letét>:<előjáték>:<versszakok> (a végéről az üres mezők elmaradnak), pl.
-// OT1:2:2026-10-04+Vasárnapi+istentisztelet;42:gk_s42::1-3,5;90. A névben és az azonosítókban a betűk (az ékezetesek
-// is), a számjegyek és a - _ . ~ , jelek maradnak, a szóköz „+”, minden más %XX (UTF-8; így bennük nem lehet „:” és
-// „;”), a versszakok tömören („1-3,5”). Ugyanez a kód van a megosztási linkben (…#import=<kód>, csupa ASCII-jellel) és
-// a QR-kódban is: a telefon kamerája a linket felismeri, és megnyitja vele a programot az importálással.
+// Egy lista egyetlen, csak betűkből és számjegyekből álló karakterláncban (kód), pl. OT2k3Fz9QpL…: az „OT2” után a
+// lista tömörítve. Belül a név és az énekek egy szövegben (vezérlőjelekkel elválasztva, így a névben bármi lehet):
+//   <név> RS <ének> RS <ének> …, egy ének: <énekszám> US <letét> US <előjáték> US <versszakok> („1-3,5”; a végéről az
+//   üres mezők elmaradnak).
+// Ez UTF-8-ban, DEFLATE-tel tömörítve (libs/fflate), elé a szöveg CRC-32-jének alsó 24 bitje (így a sérült vagy csonka
+// kódot gyakorlatilag mindig felismeri), az egész 62-es számrendszerben (0–9, A–Z, a–z; 5 bájtonként 7 jel). Mivel a kódban nincs
+// írásjel, a levelezők linkfelismerője nem vág le belőle, és dupla kattintással egyben kijelölhető. Ugyanez a kód van a
+// megosztási linkben (…#import=<kód>) és a QR-kódban is: a telefon kamerája a linket felismeri, és megnyitja vele a
+// programot az importálással. A korábbi, olvasható kódokat (OT1:<db>:<név>;…) is elfogadja.
 const LIST_CODE_MAX_ITEMS = 300;
-const LIST_CODE_CHARS = /^[\p{L}\p{M}\p{N}\-_.~,+%:;]*/u; // a kód karakterei (minden más a kódon kívül van)
-const encodeCodeField = (v) => Array.from(v == null ? '' : String(v), c => c === ' ' ? '+'
-    : /[\p{L}\p{M}\p{N}\-_.~,]/u.test(c) ? c
-    : Array.from(new TextEncoder().encode(c), b => `%${b.toString(16).toUpperCase().padStart(2, '0')}`).join('')).join('');
-const decodeCodeField = (v) => { try { return decodeURIComponent(v.replace(/\+/g, ' ')); } catch (e) { return v; } };
-const encodeListCode = (playlist) => {
-    const items = playlist.items.map(it => {
-        const fields = [encodeCodeField(it.hymnNumber), encodeCodeField(it.variationId), encodeCodeField(it.preludeId), formatVerses(it.verses)];
-        while (fields.length > 1 && !fields[fields.length - 1]) fields.pop();
-        return fields.join(':');
-    });
-    return [`OT1:${items.length}:${encodeCodeField(playlist.name)}`, ...items].join(';');
+const LIST_CODE_MAX_LENGTH = 20000;  // jel; ennél hosszabb kódot nem bontunk ki
+const LIST_NAME_MAX = 200;
+const CODE_RS = '\x1e', CODE_US = '\x1f';
+const BASE62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+const BASE62_WIDTH = [0, 2, 3, 5, 6, 7];  // ennyi jel kell 0–5 bájtra (62^7 > 2^40)
+const toBase62 = (bytes) => {
+    let out = '';
+    for (let i = 0; i < bytes.length; i += 5) {
+        const chunk = bytes.subarray(i, i + 5);
+        let v = 0, digits = '';
+        for (const b of chunk) v = v * 256 + b;
+        for (let k = BASE62_WIDTH[chunk.length]; k > 0; k--) { digits = BASE62[v % 62] + digits; v = Math.floor(v / 62); }
+        out += digits;
+    }
+    return out;
 };
-const parseListCode = (code) => {
+const fromBase62 = (text) => {
+    const tail = BASE62_WIDTH.indexOf(text.length % 7);  // a végén ennyi bájt (előtte 5 bájtos csoportok)
+    if (tail < 0) return null;
+    const bytes = new Uint8Array(Math.floor(text.length / 7) * 5 + tail);
+    for (let i = 0, pos = 0; i < text.length; ) {
+        const n = i + 7 <= text.length ? 5 : tail, width = BASE62_WIDTH[n];
+        let v = 0;
+        for (let k = 0; k < width; k++) {
+            const d = BASE62.indexOf(text[i + k]);
+            if (d < 0) return null;
+            v = v * 62 + d;
+        }
+        if (v >= 2 ** (8 * n)) return null;
+        for (let k = n - 1; k >= 0; k--) { bytes[pos + k] = v % 256; v = Math.floor(v / 256); }
+        pos += n; i += width;
+    }
+    return bytes;
+};
+let crcTable = null;
+const crc32 = (bytes) => {
+    if (!crcTable) crcTable = Array.from({ length: 256 }, (_, n) => {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+        return c >>> 0;
+    });
+    let c = 0xFFFFFFFF;
+    for (const b of bytes) c = crcTable[(c ^ b) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+};
+const codeField = (v) => String(v == null ? '' : v).replace(/[\x00-\x1f\x7f]/g, ' ');
+const encodeListCode = (playlist) => {
+    const rows = playlist.items.map(it => {
+        const fields = [codeField(it.hymnNumber), codeField(it.variationId), codeField(it.preludeId), formatVerses(it.verses)];
+        while (fields.length > 1 && !fields[fields.length - 1]) fields.pop();
+        return fields.join(CODE_US);
+    });
+    const text = new TextEncoder().encode([codeField(playlist.name).trim().slice(0, LIST_NAME_MAX), ...rows].join(CODE_RS));
+    const packed = window.fflate.deflateSync(text, { level: 9 });
+    const crc = crc32(text);
+    const bytes = new Uint8Array(3 + packed.length);
+    bytes.set([(crc >>> 16) & 255, (crc >>> 8) & 255, crc & 255]);
+    bytes.set(packed, 3);
+    return `OT2${toBase62(bytes)}`;
+};
+// a tömörített kód (az OT2 utáni rész) kibontása; hibás, sérült vagy csonka kódnál null
+const parseCompactCode = (code) => {
+    const bytes = code.length <= LIST_CODE_MAX_LENGTH ? fromBase62(code) : null;
+    if (!bytes || bytes.length < 4) return null;
+    let s;
+    try {
+        const text = window.fflate.inflateSync(bytes.subarray(3));
+        const crc = crc32(text);
+        if (bytes[0] !== ((crc >>> 16) & 255) || bytes[1] !== ((crc >>> 8) & 255) || bytes[2] !== (crc & 255)) return null;
+        s = new TextDecoder('utf-8', { fatal: true }).decode(text);
+    } catch (e) { return null; }
+    const [name, ...rows] = s.split(CODE_RS);
+    if (rows.length > LIST_CODE_MAX_ITEMS) return null;
+    const items = [];
+    for (const row of rows) {
+        const [num = '', variation = '', prelude = '', verses = ''] = row.split(CODE_US);
+        if (!num) return null;
+        items.push({ hymnNumber: num, variationId: variation || null, preludeId: prelude || null, verses: parseVerses(verses) });
+    }
+    return { name: name.trim().slice(0, LIST_NAME_MAX), items };
+};
+// A régi, olvasható kód: OT1:<énekek száma>:<név>;<énekszám>:<letét>:<előjáték>:<versszakok>;… (a mezők URL-kódolva,
+// a szóköz „+”)
+const LEGACY_CODE_CHARS = /^[\p{L}\p{M}\p{N}\-_.~,+%:;]*/u;
+const legacyField = (v) => { try { return decodeURIComponent(v.replace(/\+/g, ' ')); } catch (e) { return v; } };
+const parseLegacyCode = (code) => {
     const parts = code.split(';');
     const head = parts[0].match(/^OT1:(\d+):(.*)$/);
-    if (!head) return null;
-    const count = +head[1];
-    if (count > LIST_CODE_MAX_ITEMS || parts.length < count + 1) return null; // hiányos kód
+    if (!head || +head[1] > LIST_CODE_MAX_ITEMS || parts.length < +head[1] + 1) return null;
     const items = [];
-    for (let i = 1; i <= count; i++) {
+    for (let i = 1; i <= +head[1]; i++) {
         const [num = '', variation = '', prelude = '', verses = ''] = parts[i].split(':');
         if (!num) return null;
-        items.push({ hymnNumber: decodeCodeField(num), variationId: decodeCodeField(variation) || null, preludeId: decodeCodeField(prelude) || null,
+        items.push({ hymnNumber: legacyField(num), variationId: legacyField(variation) || null, preludeId: legacyField(prelude) || null,
             verses: parseVerses((verses.match(/^[\d,-]*/) || [''])[0]) });
     }
-    return { name: decodeCodeField(head[2]).trim().slice(0, 200), items };
+    return { name: legacyField(head[2]).trim().slice(0, LIST_NAME_MAX), items };
 };
-// A kód kikeresése bármilyen szövegből (beillesztett kód vagy link, a mentett fájl, e-mail). Először egyben keressük
-// (a link is kódolva érkezhet: OT1%3A…); ha a kód több sorra tördelődött, a szóközök és sortörések nélkül.
+// A kód kikeresése bármilyen szövegből (beillesztett kód vagy link, a mentett fájl, e-mail). Ha a kód több sorra
+// tördelődött (pl. e-mailben), a következő sorok elejéről is hozzáveszi a kód jeleit, amíg az ellenőrzés nem stimmel.
 const decodeListCode = (text) => {
     const s = String(text || '');
+    for (const m of s.matchAll(/OT2([0-9A-Za-z]+)/g)) {
+        let code = m[1], rest = s.slice(m.index + m[0].length);
+        for (;;) {
+            const list = parseCompactCode(code);
+            if (list) return list;
+            const next = rest.match(/^[ \t]*\r?\n[ \t>]*([0-9A-Za-z]+)/);
+            if (!next || code.length > LIST_CODE_MAX_LENGTH) break;
+            code += next[1];
+            rest = rest.slice(next[0].length);
+        }
+    }
     for (const [found] of s.matchAll(/OT1(?::|%3[Aa])\S*/g)) {
         let code = found;
         if (!code.startsWith('OT1:')) { try { code = decodeURIComponent(code); } catch (e) { continue; } }
-        const list = parseListCode(code.match(LIST_CODE_CHARS)[0].replace(/[.,:;]+$/, ''));
+        const list = parseLegacyCode(code.match(LEGACY_CODE_CHARS)[0].replace(/[.,:;]+$/, ''));
         if (list) return list;
     }
     const at = s.indexOf('OT1:');
-    return at < 0 ? null : parseListCode(s.slice(at).replace(/\s+/g, '').match(LIST_CODE_CHARS)[0]);
+    return at < 0 ? null : parseLegacyCode(s.slice(at).replace(/\s+/g, '').match(LEGACY_CODE_CHARS)[0]);
 };
-// a link csupa ASCII-jellel (az ékezetes betűk %XX-ként), hogy minden levelező és QR-olvasó egyben kezelje
-const shareLinkOf = (code) => `${window.location.origin}${window.location.pathname}#import=${code.replace(/[^\x00-\x7F]/gu, c => encodeURIComponent(c))}`;
+const shareLinkOf = (code) => `${window.location.origin}${window.location.pathname}#import=${code}`;
 // Az e-mailbe és az üzenetbe: olvasható lista és a link; a mentett fájlba a kód is
 const shareTextOf = (name, rows, link, code) => [
     `Református OrgonaTár – liturgikus lista: ${name}`,
@@ -959,8 +1042,9 @@ const QrScanner = ({ onResult, onError }) => {
 // Megosztás: a lista kódja, QR-kódja (a megosztási linkkel), másolás, e-mail, mentés fájlba (és ha a készülék
 // tudja: küldés más alkalmazással)
 const ShareListModal = ({ playlist, rows, onClose }) => {
-    const code = useMemo(() => encodeListCode(playlist), [playlist]);
-    const link = shareLinkOf(code);
+    // a tömörítő (libs/fflate) nélkül nincs kód: akkor csak egy hibaüzenet jelenik meg
+    const code = useMemo(() => { try { return encodeListCode(playlist); } catch (e) { return null; } }, [playlist]);
+    const link = code ? shareLinkOf(code) : '';
     const message = shareTextOf(playlist.name, rows, link);
     const [copied, setCopied] = useState(false);
     const [zoomed, setZoomed] = useState(false);
@@ -990,6 +1074,11 @@ const ShareListModal = ({ playlist, rows, onClose }) => {
     const canShare = typeof navigator.share === 'function';
     const sendOther = () => { navigator.share({ title: subject, text: message }).catch(() => {}); };
 
+    if (!code) return (
+        <Modal title="Lista megosztása" onClose={onClose} footer={<button onClick={onClose} className="btn">Bezárás</button>}>
+            <p className="import-message error">A lista kódja most nem készíthető el. Töltsd újra az oldalt, és próbáld újra.</p>
+        </Modal>
+    );
     return (
         <Modal title="Lista megosztása" onClose={onClose} maxWidth="760px" footer={<button onClick={onClose} className="btn">Bezárás</button>}>
             <div className="share-list">
@@ -1088,7 +1177,7 @@ const ImportListModal = ({ initialText = '', hymnByNumber, scoresAvailable, onCl
         }>
             <div className="import-list">
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1" htmlFor="import-code">Kód vagy link</label>
-                <textarea id="import-code" className="input import-code" rows={3} value={text} placeholder="Illeszd be a lista kódját (OT1:…) vagy a megosztási linket"
+                <textarea id="import-code" className="input import-code" rows={3} value={text} placeholder="Illeszd be a lista kódját (OT2…) vagy a megosztási linket"
                     onChange={e => { setText(e.target.value); setName(null); setMessage(null); }} />
                 <div className="import-actions">
                     <button onClick={() => fileRef.current.click()} className="btn btn-outline"><Icons.File size={18}/> Fájl megnyitása</button>
@@ -1282,13 +1371,24 @@ const CustomSelect = ({ items, currentId, onChange, labelKey = "name", subLabelK
 const NEW_PLAYLIST = '__new__';
 
 // Csak nyitott állapotban csatoljuk, ezért a kezdőértékeket egyszer, a megnyitáskor számoljuk ki
-const AddToPlaylistModal = ({ onClose, onConfirm, playlists, initialVariationId, initialPreludeId, hymn, variations, preludes, lockPlaylistId }) => {
+// Ének hozzáadása egy listához, vagy (mode="edit") a listában lévő ének szerkesztése: letét, előjáték, versszakok.
+// Szerkesztéskor a lista már adott, és a mostani beállítások látszanak. Ha a választott letét vagy előjáték ezen az
+// eszközön nem érhető el (pl. nincs letöltve a könyve), megmarad, amíg mást nem választunk.
+const AddToPlaylistModal = ({ onClose, onConfirm, playlists, initialVariationId, initialPreludeId, initialVerses = null, hymn, variations, preludes, lockPlaylistId, mode = 'add' }) => {
+    const isEdit = mode === 'edit';
     const parsedVerses = useMemo(() => verseList(hymn), [hymn]);
     const [targetId, setTargetId] = useState(() => lockPlaylistId ?? (playlists.length > 0 ? playlists[0].id : NEW_PLAYLIST));
     const [newName, setNewName] = useState('');
-    const [selectedVariationId, setSelectedVariationId] = useState(() => variations.some(v => v.id === initialVariationId) ? initialVariationId : (variations.length > 0 ? variations[0].id : null));
-    const [selectedPreludeId, setSelectedPreludeId] = useState(() => preludes.some(p => p.id === initialPreludeId) ? initialPreludeId : null);
-    const [selectedVerses, setSelectedVerses] = useState(() => parsedVerses.map(v => v.index));
+    const [selectedVariationId, setSelectedVariationId] = useState(() => variations.some(v => v.id === initialVariationId) || (isEdit && initialVariationId)
+        ? initialVariationId : (variations.length > 0 ? variations[0].id : null));
+    const [selectedPreludeId, setSelectedPreludeId] = useState(() => preludes.some(p => p.id === initialPreludeId) || (isEdit && initialPreludeId) ? initialPreludeId : null);
+    // a versszakok: szerkesztéskor a mostaniak (az üres választás = mind), egyébként mind
+    const [selectedVerses, setSelectedVerses] = useState(() => {
+        const kept = (initialVerses || []).filter(i => parsedVerses.some(v => v.index === i));
+        return isEdit && kept.length > 0 ? kept : parsedVerses.map(v => v.index);
+    });
+    const variationMissing = !!selectedVariationId && !variations.some(v => v.id === selectedVariationId);
+    const preludeMissing = !!selectedPreludeId && !preludes.some(p => p.id === selectedPreludeId);
     const newNameRef = useRef(null);
 
     const isNewList = targetId === NEW_PLAYLIST;
@@ -1313,7 +1413,7 @@ const AddToPlaylistModal = ({ onClose, onConfirm, playlists, initialVariationId,
         .concat([{ id: NEW_PLAYLIST, name: '+ Új lista…' }]), [playlists]);
 
     return (
-        <Modal title="Hozzáadás" onClose={onClose} maxWidth="600px" placement="upper" footer={
+        <Modal title={isEdit ? 'Ének szerkesztése' : 'Hozzáadás'} onClose={onClose} maxWidth="600px" placement="upper" footer={
             <>
                 <button onClick={onClose} className="btn">Mégse</button>
                 <button onClick={handleConfirm} disabled={!canSave} className="btn btn-primary">Mentés</button>
@@ -1350,6 +1450,13 @@ const AddToPlaylistModal = ({ onClose, onConfirm, playlists, initialVariationId,
                         <CustomSelect items={variations} currentId={selectedVariationId} onChange={setSelectedVariationId} placeholder="Változat választása" width="100%" />
                     </div>
                 </div>
+                {(variationMissing || preludeMissing) && (
+                    <p className="import-message info edit-missing-score">
+                        A választott {variationMissing && preludeMissing ? 'letét és előjáték' : variationMissing ? 'letét' : 'előjáték'} ezen az eszközön
+                        nem érhető el (pl. nincs letöltve vagy ki van kapcsolva a könyve); ha nem választasz mást, megmarad.
+                        {preludeMissing && <> <button type="button" className="text-accent font-bold hover:underline" onClick={() => setSelectedPreludeId(null)}>Előjáték nélkül</button></>}
+                    </p>
+                )}
 
                 <div>
                     <div className="flex justify-between items-end mb-1">
@@ -2606,9 +2713,10 @@ const DRAG_START_DISTANCE = 5;   // px; ennyi elmozdulás után indul a húzás
 const DRAG_SCROLL_EDGE = 60;     // px; a görgethető terület ilyen közel lévő szélén görget
 const DRAG_SCROLL_SPEED = 14;    // px képkockánként, a szélén
 
-const PlaylistEditor = ({ playlist, onRemoveItem, onAddItem, onPlay, onReorder, onRename, onShare, getScoreInfo }) => {
+const PlaylistEditor = ({ playlist, onRemoveItem, onEditItem, onAddItem, onPlay, onReorder, onRename, onShare, getScoreInfo }) => {
     const [drag, setDrag] = useState(null);   // { from, to, dy, shift } a kirajzoláshoz
     const dragRef = useRef(null);
+    const suppressClickRef = useRef(false);   // húzás (vagy a fogantyú megnyomása) után a kattintás nem nyitja meg az éneket
     const listRef = useRef(null);
     const scrollRef = useRef(null);
 
@@ -2643,6 +2751,7 @@ const PlaylistEditor = ({ playlist, onRemoveItem, onAddItem, onPlay, onReorder, 
         const gap = rects.length > 1 ? rects[1].top - rects[0].bottom : 0;
         dragRef.current = {
             from: index, to: index, pointerId: e.pointerId, startY: e.clientY, lastY: e.clientY, active: false,
+            onGrip: !!e.target.closest('.playlist-editor-grip'),
             startScroll: scrollRef.current.scrollTop, mids: rects.map(r => r.top + r.height / 2), shift: rects[index].height + gap, frame: null
         };
         e.currentTarget.setPointerCapture(e.pointerId);
@@ -2664,7 +2773,16 @@ const PlaylistEditor = ({ playlist, onRemoveItem, onAddItem, onPlay, onReorder, 
         cancelAnimationFrame(d.frame);
         dragRef.current = null;
         if (d.active && e.type === 'pointerup' && d.to !== d.from) onReorder(d.from, d.to);
+        if (d.active || d.onGrip) {
+            suppressClickRef.current = true;
+            setTimeout(() => { suppressClickRef.current = false; }, 0);
+        }
         setDrag(null);
+    };
+    // az énekre kattintva (koppintva) a szerkesztése nyílik meg
+    const handleItemClick = (e, item) => {
+        if (suppressClickRef.current || e.target.closest('button, .playlist-editor-grip')) return;
+        onEditItem(item);
     };
     useEffect(() => () => { if (dragRef.current) cancelAnimationFrame(dragRef.current.frame); }, []);
     // a húzott elem az egérrel/ujjal mozog, a többi a helyére húzódik
@@ -2693,7 +2811,7 @@ const PlaylistEditor = ({ playlist, onRemoveItem, onAddItem, onPlay, onReorder, 
                  </div>
             </div>
             
-            <div ref={scrollRef} className="main-content" style={{padding:'2rem', overflowY:'auto'}}>
+            <div ref={scrollRef} className="main-content playlist-editor-scroll">
                 {playlist.items.length === 0 ? (
                     <div className="playlist-editor-empty">
                         <Icons.ListMusic size={64} className="icon"/>
@@ -2709,8 +2827,8 @@ const PlaylistEditor = ({ playlist, onRemoveItem, onAddItem, onPlay, onReorder, 
                                 <div key={item.id} className={`playlist-editor-item${drag && idx === drag.from ? ' dragging' : ''}`}
                                      style={offset ? { transform: `translateY(${offset}px)` } : undefined}
                                      onPointerDown={(e) => handlePointerDown(e, idx)} onPointerMove={handlePointerMove}
-                                     onPointerUp={handlePointerEnd} onPointerCancel={handlePointerEnd}>
-                                    <div style={{display:'flex', alignItems:'center', gap:'0.75rem', minWidth:0}}>
+                                     onPointerUp={handlePointerEnd} onPointerCancel={handlePointerEnd} onClick={(e) => handleItemClick(e, item)}>
+                                    <div className="playlist-editor-item-main">
                                         <div className="playlist-editor-grip" title="Húzd az átrendezéshez"><Icons.GripVertical size={20} /></div>
                                         <div style={{fontWeight:'bold', color:'var(--col-ink-muted, #6b7280)', width:'20px', flex:'none'}}>{idx + 1}.</div>
                                         <div style={{minWidth:0}}>
@@ -2721,7 +2839,10 @@ const PlaylistEditor = ({ playlist, onRemoveItem, onAddItem, onPlay, onReorder, 
                                             </div>
                                         </div>
                                     </div>
-                                    <button onClick={() => onRemoveItem(item.id)} className="btn-danger"><Icons.Trash2 size={20} /></button>
+                                    <div className="playlist-editor-item-actions">
+                                        <button onClick={() => onEditItem(item)} className="btn-ghost playlist-editor-item-btn" title="Szerkesztés (versszakok, letét, előjáték)" aria-label="Ének szerkesztése"><Icons.Edit size={20} /></button>
+                                        <button onClick={() => onRemoveItem(item.id)} className="btn-danger playlist-editor-item-btn" title="Törlés" aria-label="Ének törlése"><Icons.Trash2 size={20} /></button>
+                                    </div>
                                 </div>
                              );
                          })}
@@ -2781,6 +2902,7 @@ function OrganistApp() {
     const [itemToDelete, setItemToDelete] = useState(null);
     const [playlistToDelete, setPlaylistToDelete] = useState(null);
     const [renamingPlaylistId, setRenamingPlaylistId] = useState(null);
+    const [editingItem, setEditingItem] = useState(null);   // { playlistId, itemId }: a szerkesztett ének
     const [sharingPlaylistId, setSharingPlaylistId] = useState(null);
     const [importText, setImportText] = useState(null); // az importálás ablaka a kezdő szöveggel (null: zárva)
     const [alertMessage, setAlertMessage] = useState(null);
@@ -3223,6 +3345,17 @@ function OrganistApp() {
     const confirmDeletePlaylist = () => { if (!playlistToDelete) return; setPlaylists(prev => prev.filter(p => !sameId(p.id, playlistToDelete.id))); setPlaylistToDelete(null); }
     const handleRemoveItemRequest = (playlistId, itemId) => { setItemToDelete({ playlistId, itemId }); };
     const handleRemovePlaylistRequest = (playlist) => { setPlaylistToDelete(playlist); }
+    // A listában lévő ének szerkesztése (letét, előjáték, versszakok)
+    const handleEditItem = ({ variationId, preludeId, verses }) => {
+        const { playlistId, itemId } = editingItem;
+        setPlaylists(prev => prev.map(p => sameId(p.id, playlistId)
+            ? { ...p, items: p.items.map(it => it.id === itemId ? { ...it, variationId, preludeId, verses } : it) } : p));
+        setEditingItem(null);
+    };
+    const editedPlaylist = editingItem ? playlists.find(p => sameId(p.id, editingItem.playlistId)) : null;
+    const editedRaw = editedPlaylist ? editedPlaylist.items.find(it => it.id === editingItem.itemId) : null;
+    const editedItem = editedRaw ? resolveItem(editedRaw) : null;
+    const editedScore = editedItem ? getScoreById(editedItem.hymn.scoreId) : null;
     const renamingPlaylist = playlists.find(p => sameId(p.id, renamingPlaylistId)) || null;
     const handleRenamePlaylist = (name) => {
         setPlaylists(prev => prev.map(p => sameId(p.id, renamingPlaylistId) ? { ...p, name } : p));
@@ -3311,6 +3444,12 @@ function OrganistApp() {
                 <DeleteConfirmModal isOpen={!!playlistToDelete} onClose={() => setPlaylistToDelete(null)} onConfirm={confirmDeletePlaylist} title="Lista törlése" message={`Biztosan törölni szeretnéd a(z) "${playlistToDelete?.name}" listát?`} />
                 <DeleteConfirmModal isOpen={!!bookToDelete} onClose={() => setBookToDelete(null)} onConfirm={confirmDeleteBook} title="Letöltött könyv törlése" message={`A(z) „${bookToDelete?.title}” kottái törlődnek erről a készülékről, és addig nem jelennek meg, amíg újra le nem töltöd.`} />
                 
+                {editedItem && (
+                    <AddToPlaylistModal key={editedItem.id} mode="edit" onClose={() => setEditingItem(null)} onConfirm={handleEditItem}
+                        playlists={playlists} lockPlaylistId={editedPlaylist.id} hymn={editedItem.hymn}
+                        variations={editedScore ? editedScore.variations : []} preludes={editedScore ? editedScore.preludes : []}
+                        initialVariationId={editedItem.variationId} initialPreludeId={editedItem.preludeId} initialVerses={editedItem.verses} />
+                )}
                 {isAddModalOpen && (pendingHymnToAdd || selectedHymn) && (
                     <AddToPlaylistModal 
                         onClose={() => setIsAddModalOpen(false)} 
@@ -3343,7 +3482,8 @@ function OrganistApp() {
                     </div>
                 )}
 
-                {view === 'playlist_editor' && <PlaylistEditor playlist={selectedPlaylist} onRemoveItem={(itemId) => handleRemoveItemRequest(selectedPlaylist.id, itemId)} onAddItem={handleAddHymnToEditor} onPlay={startPlaylist} onReorder={handleReorderPlaylist}
+                {view === 'playlist_editor' && <PlaylistEditor playlist={selectedPlaylist} onRemoveItem={(itemId) => handleRemoveItemRequest(selectedPlaylist.id, itemId)}
+                    onEditItem={(item) => setEditingItem({ playlistId: selectedPlaylist.id, itemId: item.id })} onAddItem={handleAddHymnToEditor} onPlay={startPlaylist} onReorder={handleReorderPlaylist}
                     onRename={() => setRenamingPlaylistId(selectedPlaylist.id)} onShare={() => setSharingPlaylistId(selectedPlaylist.id)} getScoreInfo={getScoreInfo} />}
 
                 {view === 'library' && (selectedHymn ? (
