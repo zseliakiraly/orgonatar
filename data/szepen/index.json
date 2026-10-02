@@ -4,6 +4,7 @@
   "author": "Parola Csaba",
   "copyright": "Parola Csaba",
   "description": "2025-ben kiadott gyűjtemény, egyszerű letétekkel.",
+  "cover": "cover-szepen.jpg",
   "scores": [
     { "id": "8", "composer": "Parola Csaba", "voiceCount": 3, "year": "2025", "xmlUrl": "008-pcs-3k-2025.mxl" },
     { "id": "23", "composer": "Parola Csaba", "voiceCount": 3, "year": "2025", "xmlUrl": "023a-pcs-3k-2025.mxl" },

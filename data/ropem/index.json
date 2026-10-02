@@ -4,6 +4,7 @@
   "author": " - ",
   "copyright": " - ",
   "description": "A mosonmagyaróvári ökumenikus alkalmakra válogatott énekek.",
+  "cover": "cover-movar.jpg",
   "scores": [
     { "id": "484", "composer": "Beharka Pál", "voiceCount": 2, "year": "1975", "xmlUrl": "beh1-91.mxl" }
     

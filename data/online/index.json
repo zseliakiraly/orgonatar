@@ -4,6 +4,7 @@
   "author": "Bessenyi Mihály, Gárdonyi Zsolt, Sipos Csaba, Szabó Balázs,",
   "copyright": "enekeskonyv.reformatus.hu",
   "description": "A 2021-es énekekönyvhöz készülő korálkönyv digitálisan közzétett letétei. Letölthető az enekeskonyv.reformatus.hu weboldalról. ",
+  "cover": "cover-online.jpg",
   "scores": [
     { "id": "151", "composer": "Bessenyei Mihály", "voiceCount": 3, "year": "2025", "xmlUrl": "151-bm-3k-2025.mxl" },
     { "id": "151", "composer": "Gárdonyi Zsolt", "voiceCount": 3, "year": "2025", "xmlUrl": "151-gzs-3k-2025.mxl" },

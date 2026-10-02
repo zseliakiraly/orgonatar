@@ -1049,31 +1049,37 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .header-title.page-title { font-size: 1.5rem; letter-spacing: 0.01em; }
 
 /* --- Scorebook View --- */
+/* Nagyobb kijelzőn több oszlop: egy kártya legalább 440 px széles (1280 px-es tableten fekve 2, 1600 px-en 3 oszlop) */
 .scorebook-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    max-width: 800px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(440px, 100%), 1fr));
+    gap: 1rem;
+    max-width: 1520px;
     margin: 0 auto;
     width: 100%;
 }
 
+/* Kártya: balra fent a cím és az adatok, alatta a leírás és a letöltés (a sor aljára igazítva, így egy sorban a
+   gombok egy vonalba kerülnek), jobbra a borító. Egy sorban a kártyák egyforma magasak. */
 .card.list-item.scorebook-item {
-    cursor: default;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(140px, 50%, 320px);
+    grid-template-rows: auto 1fr;
+    grid-template-areas: "main cover" "body cover";
     align-items: stretch;
+    min-height: 12rem;
+    margin: 0;
+    padding: 0;
+    cursor: default;
 }
 
 .card.inactive .card-decoration {
     background-color: #999 !important;
 }
 
-.scorebook-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 4px 0;
-}
+.scorebook-main { grid-area: main; display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 0.9rem 0.75rem 0 1.15rem; }
+.scorebook-body { grid-area: body; display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 4px 0.75rem 0.9rem 1.15rem; }
+.scorebook-body > .scorebook-status { margin-top: auto; }
 
 .scorebook-header {
     display: flex;
@@ -1087,6 +1093,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 }
 
 .scorebook-toggle {
+    flex: none;
     transform: scale(0.8);
     margin: 0;
 }
@@ -1130,6 +1137,88 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .scorebook-warning { font-size: 0.8rem; color: var(--col-red); }
 .scorebook-progress { height: 4px; margin-top: 4px; border-radius: 2px; overflow: hidden; background-color: var(--col-border, #ddd); }
 .scorebook-progress > div { height: 100%; background-color: var(--col-accent); transition: width 0.2s; }
+
+/* Borító. A kép a kártya jobb felében középen, teljes egészében látszik; mögötte ugyanaz a kép elmosva, halványan,
+   balra elfogyva tölti ki a helyet. Kép nélkül rajzolt, bőrkötéses borító (a cím, az alcím és az évszám aranyozva),
+   mögötte a kötés színének halvány árnyalata. */
+.scorebook-cover { grid-area: cover; position: relative; overflow: hidden; }
+.scorebook-cover-bg {
+    position: absolute; inset: 0; overflow: hidden;
+    background-color: var(--book-color, transparent); opacity: 0.13;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 45%);
+    mask-image: linear-gradient(to right, transparent, #000 45%);
+}
+.scorebook-cover.has-image .scorebook-cover-bg { background-color: transparent; opacity: 0.5; }
+.scorebook-cover-bg img {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    object-fit: cover; filter: blur(14px) saturate(1.2); transform: scale(1.25);
+}
+.scorebook-cover-img {
+    position: absolute; top: 16px; left: 16px; width: calc(100% - 32px); height: calc(100% - 32px);
+    object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
+}
+.scorebook-cover-book {
+    position: absolute; top: 16px; bottom: 16px; left: 50%; transform: translateX(-50%);
+    width: 62%; /* ha a böngésző nem ismeri az aspect-ratio-t */
+    border-radius: 2px 5px 5px 2px;
+    background-color: var(--book-color, #0e3d46);
+    /* gerinc: sötétebb sáv, fénycsík, majd a borító enyhe domborulata */
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0.38), rgba(255, 255, 255, 0.10) 4%, rgba(0, 0, 0, 0.10) 8%,
+        rgba(0, 0, 0, 0) 13%, rgba(255, 255, 255, 0.05) 60%, rgba(0, 0, 0, 0.14));
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.28), 0 1px 3px rgba(0, 0, 0, 0.25);
+    color: #d8b862;
+    font-family: var(--font-serif);
+    text-align: center;
+    container-type: inline-size;
+}
+.bg-texture .scorebook-cover-book {
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0.38), rgba(255, 255, 255, 0.10) 4%, rgba(0, 0, 0, 0.10) 8%,
+        rgba(0, 0, 0, 0) 13%, rgba(255, 255, 255, 0.05) 60%, rgba(0, 0, 0, 0.14)), var(--tex-leather);
+    background-blend-mode: normal, soft-light;
+}
+/* a felirat helye a kereten belül (a százalékok a könyv méretéhez képest értendők) */
+.scorebook-cover-face {
+    position: absolute; inset: 15% 13% 24% 19%; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+/* aranyozott dupla keret */
+.scorebook-cover-book::before {
+    content: ""; position: absolute; inset: 5% 6% 5% 11%; pointer-events: none;
+    border: 1px solid currentColor; box-shadow: inset 0 0 0 2px var(--book-color, #0e3d46), inset 0 0 0 3px currentColor;
+    opacity: 0.7;
+}
+/* A betűméret a könyv szélességéhez igazodik: --size a szélesség századrészében (cqi), az app.js számolja a felirat
+   hosszából. Ahol a böngésző nem ismeri a cqi-t, egy kb. 110 px széles könyvhöz illő méret. */
+.scorebook-cover-title { font-weight: 700; font-size: calc(var(--size, 12.5) * 1.1px); line-height: 1.12; overflow-wrap: break-word; max-width: 100%; }
+.scorebook-cover-subtitle { margin-top: 0.45em; font-size: calc(var(--size, 8) * 1.1px); line-height: 1.15; overflow-wrap: break-word; max-width: 100%; opacity: 0.9; }
+.scorebook-cover-rule { flex: none; width: 24%; height: 1px; margin-top: 0.8em; background-color: currentColor; opacity: 0.75; }
+.scorebook-cover-year { position: absolute; left: 11%; right: 6%; bottom: 10%; font-size: 9px; letter-spacing: 0.08em; }
+@supports (font-size: 1cqi) {
+    .scorebook-cover-title { font-size: calc(var(--size, 12.5) * 1cqi); }
+    .scorebook-cover-subtitle { font-size: calc(var(--size, 8) * 1cqi); }
+    .scorebook-cover-year { font-size: 8cqi; }
+    .scorebook-cover-rule { margin-top: 7cqi; }
+}
+@supports (aspect-ratio: 1) {
+    .scorebook-cover-book { width: auto; max-width: calc(100% - 32px); aspect-ratio: 2 / 3; }
+}
+/* ahol lehet: a könyv akkora, amekkora a helyre torzítás nélkül befér (magas, keskeny helyen is 2:3 marad) */
+@supports (width: 1cqh) {
+    .scorebook-cover { container-type: size; }
+    .scorebook-cover-book { top: 50%; bottom: auto; width: min(100cqw - 32px, (100cqh - 32px) * 2 / 3); max-width: none; transform: translate(-50%, -50%); }
+}
+
+/* Telefonon a borító kis kép jobbra fent, a szöveg körbefolyja (alatta már a teljes szélességet kapja) */
+@media (max-width: 640px) {
+    .card.list-item.scorebook-item { display: block; display: flow-root; min-height: 0; padding: 0.75rem 0.75rem 0.75rem 1rem; }
+    .scorebook-main, .scorebook-body { display: block; padding: 0; }
+    .scorebook-main > * + *, .scorebook-body > *, .scorebook-body > .scorebook-status { margin-top: 4px; }
+    .scorebook-cover { float: right; width: 60px; margin: 0 0 6px 10px; container-type: normal; overflow: visible; }
+    .scorebook-cover-bg { display: none; }
+    .scorebook-cover-img { position: static; display: block; width: 100%; height: auto; max-height: 100px; }
+    .scorebook-cover-book { position: relative; top: auto; bottom: auto; left: auto; transform: none; width: 60px; height: 90px; max-width: none; aspect-ratio: auto; }
+    .scorebook-cover-book > * { display: none; }
+}
 /* --- Ének fejléce (könyvtár) --- */
 .hymn-header { gap: 0.75rem; }
 .hymn-header-title { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
