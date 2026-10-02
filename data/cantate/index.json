@@ -1,0 +1,12 @@
+{
+  "id": "cantate",
+  "title": "Cantate Domino!",
+  "author": "Bessenyei Mihály",
+  "copyright": " - ",
+  "description": "Intonációk a Református énekeskönyv egyes darabjaihoz",
+  "scores": [
+    { "id": "484", "composer": "Bessenyei Mihály", "voiceCount": 2, "year": "2013", "xmlUrl": "beh1-91.mxl" }
+    
+  ],
+  "preludes": []
+}
