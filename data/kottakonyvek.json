@@ -1,6 +1,9 @@
 [
   { "folder": "enekeskonyv2021", "builtin": true },
   { "folder": "fazekas" },
+  { "folder": "kk59" },
+  { "folder": "szepen" },
+  { "folder": "online" },
   { "folder": "genfi" },
-  { "folder": "kk59" }
+  { "folder": "altern" }
 ]
