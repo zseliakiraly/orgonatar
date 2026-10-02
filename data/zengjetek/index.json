@@ -4,9 +4,10 @@
   "author": " - ",
   "copyright": "egyhazzene.reformatus.hu",
   "description": "Válogatott intonációk Sepsy Károly könyvéből",
+  "cover": "cover-zengjetek.jpg",
   "scores": [],
   "preludes": [
-    { "id": "23", "composer": "Sepsy Károly", "voiceCount": 3, "year": "2013", "xmlUrl": "23c-e-sk.mxl" }
+    { "id": "23", "composer": "Sepsy Károly", "voiceCount": 3, "year": "2013", "xmlUrl": "23c-e-sk.mxl" },
     { "id": "23", "composer": "Sepsy Károly", "voiceCount": 4, "year": "2013", "xmlUrl": "23e-e-sk.mxl" }
     
   ]

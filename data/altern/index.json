@@ -4,6 +4,7 @@
   "author": "Karasszon Dezső",
   "copyright": "egyhazzene.reformatus.hu",
   "description": "Letétek Karasszon Dezső a 2016-ben kiadott koráliskolájából. Letölthető az egyhazzene.reformatus.hu weboldalról. ",
+  "cover": "cover-altern.jpg",
   "scores": [
     { "id": "1", "composer": "Karasszon Dezső", "voiceCount": 3, "year": "2010", "xmlUrl": "001a-kd-3k-2016.mxl" }
     

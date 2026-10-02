@@ -4,6 +4,7 @@
   "author": "Bessenyi Mihály, Gárdonyi Zsolt, Karasszon Dezső,",
   "copyright": "egyhazzene.reformatus.hu",
   "description": "A 2010-ben kiadott korálkönyv a genfi zsoltárokkal. Letölthető az egyhazzene.reformatus.hu weboldalról. ",
+  "cover": "cover-genfi.jpg",
   "scores": [
     { "id": "1", "composer": "Bessenyei Mihály", "voiceCount": 3, "year": "2010", "xmlUrl": "001-bm-3k-2010.mxl" },
     { "id": "2", "composer": "szgy", "voiceCount": 3, "year": "2010", "xmlUrl": "002-szgy-3k-2010.mxl" },

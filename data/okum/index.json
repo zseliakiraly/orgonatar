@@ -4,6 +4,7 @@
   "author": " - ",
   "copyright": " - ",
   "description": "Válogatott letétek az 1983-as, sárga táblás kis ökumenikus énekeskönyvből.",
+  "cover": "cover-okum.jpg",
   "scores": [
     { "id": "225", "composer": "-", "voiceCount": 4, "year": "1983", "xmlUrl": "225o.mxl" }
     
