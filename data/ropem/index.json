@@ -1,0 +1,12 @@
+{
+  "id": "ropem",
+  "title": "Mosonmagyaróvári ökumené",
+  "author": " - ",
+  "copyright": " - ",
+  "description": "A mosonmagyaróvári ökumenikus alkalmakra válogatott énekek.",
+  "scores": [
+    { "id": "484", "composer": "Beharka Pál", "voiceCount": 2, "year": "1975", "xmlUrl": "beh1-91.mxl" }
+    
+  ],
+  "preludes": []
+}
