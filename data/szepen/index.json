@@ -1,0 +1,13 @@
+{
+  "id": "szepenzengjenek",
+  "title": "Szépen zengjenek hangszereitek (2025)",
+  "author": "Parola Csaba",
+  "copyright": "Parola Csaba",
+  "description": "2025-ben kiadott gyűjtemény, egyszerű letétekkel.",
+  "scores": [
+    { "id": "8", "composer": "Parola Csaba", "voiceCount": 3, "year": "2025", "xmlUrl": "008-pcs-3k-2025.mxl" },
+    { "id": "23", "composer": "Parola Csaba", "voiceCount": 3, "year": "2025", "xmlUrl": "023a-pcs-3k-2025.mxl" },
+    { "id": "23", "composer": "Parola Csaba", "voiceCount": 3, "year": "2025", "xmlUrl": "023b-pcs-3k-2025.mxl" }
+  ],
+  "preludes": []
+}
