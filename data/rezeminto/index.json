@@ -1,0 +1,11 @@
+{
+  "id": "rezeminto",
+  "title": "ReZem intonáció gyűjtemény",
+  "author": " - ",
+  "copyright": "egyhazzene.reformatus.hu",
+  "description": "A válogatást a ReZeM engedélyével az Intonáció Gyűjtemény (ReZeM 016 Budapest 1993) alapján Dr. Karasszon Dezső készítette",
+  "scores": [],
+  "preludes": [
+    { "id": "19", "composer": "Gárdonyi Zoltán", "voiceCount": 2, "year": "1993", "xmlUrl": "019-e-gz.mxl" }
+  ]
+}
