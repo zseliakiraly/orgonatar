@@ -80,21 +80,27 @@ nyilvánossá kell tenni.
   A sorrend a Kottakönyvek oldal sorrendje. A `"builtin": true` könyv beépített: mindig
   elérhető, és magától mentődik a készülékre. A többit a felhasználó töltheti le.
 - `<mappa>/index.json`: egy könyv: `id`, `title`, `author`, `description`, `copyright`,
-  `active` (`false` = alapból elrejtve), `scores` és `preludes`. A letét és az előjáték
+  `cover` (borítókép, nem kötelező, lásd lent), `active` (`false` = alapból elrejtve), `scores` és `preludes`. A letét és az előjáték
   `scoreId` mezője (ennek hiányában az `id`) köti a kottát az énekhez (`enek.json` → `scoreId`).
   További mezők: `name`, `xmlUrl`, `voiceCount`, `composer`, `year`.
   - Az `xmlUrl` a könyv mappájához képest értendő: `"165fm-3k-2017.svg"`, másik könyv
     mappájából `"../genfi/001-bm-3k-2010.mxl"`. A régi `data/...` és `/data/...` alak is működik.
   - A könyv `id`-je ne változzon: a listák ehhez kötik a kiválasztott változatot.
+  - `cover`: a borítókép fájlja, az `xmlUrl`-hez hasonlóan a könyv mappájához képest: `"cover": "borito.jpg"`
+    (a kép a `data/<mappa>/borito.jpg`), vagy almappából `"kepek/borito.jpg"`. JPEG, PNG, WebP vagy SVG; elég
+    kb. 400–600 képpont magas, 100 kB alatti kép. A letöltött könyvvel együtt a készülékre kerül. Ha nincs megadva,
+    vagy nem tölthető be, a program a könyv címéből rajzol borítót (lásd: Kottakönyvek oldal).
+  - A szerző (`author`) végére került vesszőt a kártya nem mutatja; a `"-"` (ismeretlen) szerző nem jelenik meg.
 
 ### Új könyv, új kották
 
 1. Új könyvhöz új mappa a `data/` alatt (pl. `data/kk59/`), benne az `index.json` és a kottafájlok.
 2. A mappa neve a `data/kottakonyvek.json`-ba: `{ "folder": "kk59" }`.
+3. Borítókép (nem kötelező): a képfájl a könyv mappájába, a neve az `index.json`-ba: `"cover": "borito.jpg"`.
 
 Ha egy meglévő könyvbe kerül új kotta, elég a fájlt feltölteni és az `index.json`-t bővíteni.
 A letöltött könyvnél a Kottakönyvek oldalon megjelenik a „Frissítés” gomb, a beépített könyv
-magától frissül. A program az `index.json` változásából veszi észre a frissítést. Ha egy kottát
+magától frissül. A program az `index.json` változásából veszi észre a frissítést. Ha egy kottát (vagy a borítóképet)
 ugyanazzal a fájlnévvel cserélsz le, az `index.json`-ban is változtass valamit, például a
 könyv `"version"` mezőjét (`"version": "2026-10-01"`). Frissítéskor a lecserélt fájl is letöltődik.
 
@@ -147,10 +153,23 @@ regisztrációk a böngésző localStorage-ában vannak (`orgonista_playlists`, 
 letöltött kottakönyvek a böngésző
 Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönként külön tárolódik.
 
+## Kottakönyvek oldal
+
+- A könyvek kártyái nagyobb kijelzőn több oszlopban állnak. Egy kártya legalább 440 képpont széles, így kb. 1000
+  képpont széles ablaktól 2 oszlop fér el (pl. fekvő tableten, 1024–1280 képpont, és a legtöbb laptopon), kb. 1460-tól 3
+  (pl. 1600 és 1920 képpont; a lista legfeljebb 1520 képpont széles). Állított tableten és telefonon 1 oszlop marad.
+  Egy sorban a kártyák egyforma magasak, a letöltés gombjai egy vonalban vannak.
+- A kártya bal felén a könyv adatai (cím, kapcsoló, a letétek és előjátékok száma, szerző, leírás, letöltés), a jobb
+  felén a borító. A borítókép (`cover`, lásd fent) teljes egészében látszik, mögötte ugyanaz a kép elmosva, halványan
+  tölti ki a helyet. Borítókép nélkül a program bőrkötéses borítót rajzol: aranyozott keret, a cím, a „ - ” utáni
+  rész alcímként, és a cím végén zárójelben álló évszám (pl. „Korálkönyv - Genfi zsoltárok (2010)”). A kötés színe a
+  könyv mappájának nevéből adódik, így könyvenként más, de mindig ugyanaz.
+- Telefonon a borító kis kép a kártya jobb felső sarkában, a szöveg körbefolyja.
+
 ## Kottakönyvek letöltése, offline működés
 
 - **Letöltés:** a Kottakönyvek oldalon a beépített könyv mindig elérhető. A többit a „Letöltés”
-  gomb menti a készülékre, és csak a letöltött könyvek kottái jelennek meg. A letöltés
+  gomb menti a készülékre (a kottákat és a borítóképet), és csak a letöltött könyvek kottái jelennek meg. A letöltés
   megszakítható, a letöltött könyv törölhető.
 - **Internet nélkül:** a letöltött könyvek és maga az oldal is működik (`sw.js`, service
   worker). Ha a hálózat nem válaszol (pl. van WiFi, de nincs internet), néhány másodperc
@@ -158,7 +177,8 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
   (tömörítve kb. 2,4 MB), ez is a készüléken marad.
 - **Frissítés:** ha a szerveren megváltozik egy letöltött könyv `index.json`-ja, a kártyán
   „Frissítés” gomb jelenik meg. Ilyenkor csak az új és a megváltozott fájlok töltődnek le.
-  A szerveren hiányzó fájlokat a letöltés kihagyja, és a kártyán jelzi a számukat. Ha ezek
+  A szerveren hiányzó fájlokat a letöltés kihagyja, és a kártyán jelzi a hiányzó kották számát (a hiányzó borítóképet
+  nem számolja, helyette a rajzolt borító látszik). Ha ezek
   később felkerülnek, a program a következő megnyitáskor magától letölti őket (csak ezeket).
 - **iPad, iPhone:** a Safari törölheti a weboldalak tárolt adatait (a letöltött könyveket, a
   listákat és az énekekhez írt megjegyzéseket is), ha az oldalt kb. egy hétig nem nyitod meg. Megbízhatóbb, ha az oldalt a

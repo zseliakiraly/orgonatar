@@ -280,12 +280,17 @@ const resolveBookUrl = (url, folder) => {
     return parts.join('/');
 };
 
-// A könyv összes kottafájlja (ezeket kell letölteni)
+// A könyv borítóképe (az index.json "cover" mezője, a kottákhoz hasonlóan a könyv mappájához képest), ha van
+const bookCoverUrl = (book) => typeof book.cover === 'string' && book.cover.trim() ? resolveBookUrl(book.cover.trim(), book.folder) : null;
+
+// A könyv letöltendő fájljai: a kották és a borítókép
 const bookFiles = (book) => {
     const urls = new Set();
     const add = (item) => { if (item && item.xmlUrl) urls.add(resolveBookUrl(item.xmlUrl, book.folder)); };
     book.scores.forEach(score => { add(score); if (Array.isArray(score.preludes)) score.preludes.forEach(add); });
     book.preludes.forEach(add);
+    const cover = bookCoverUrl(book);
+    if (cover) urls.add(cover);
     return [...urls];
 };
 
@@ -2688,19 +2693,77 @@ const PlayerClock = () => {
 };
 
 // --- KOTTAKÖNYVEK OLDAL ---
+// A szerző a kártyán: a végére került vessző nélkül; a „-” (ismeretlen szerző) nem jelenik meg
+const bookAuthor = (author) => {
+    const text = typeof author === 'string' ? author.trim().replace(/[\s,;]+$/, '') : '';
+    return /^[-–—]*$/.test(text) ? '' : text;
+};
+
+// A rajzolt borító kötésszínei; a könyv mappájának nevéből választunk, így minden könyvnek mindig ugyanaz jut
+const BOOK_COVER_COLORS = ['#0e3d46', '#5c2127', '#22412f', '#24315a', '#4d321f'];
+
+// A rajzolt borító feliratának betűmérete a könyv szélességének századrészében (a CSS-ben cqi): legfeljebb max;
+// akkora, hogy a leghosszabb szó is egy sorba férjen (egy betű kb. 0,6 em, a feliratnak a szélesség 68%-a jut), és
+// hosszú szövegnél kisebb, hogy a felirat a keretbe férjen
+const coverFontSize = (text, max) => {
+    const longestWord = Math.max(1, ...text.split(/\s+/).map(word => word.length));
+    return +Math.min(max, 110 / longestWord, 70 / Math.sqrt(Math.max(1, text.length))).toFixed(2);
+};
+
+// Borító a kártya jobb oldalán. Ha az index.json megad borítóképet ("cover"), az látszik, mögötte a kép elmosott,
+// halvány változata tölti ki a helyet. Ha nincs megadva, vagy nem tölthető be (pl. internet nélkül egy le nem
+// töltött könyvnél), a könyv címéből rajzolunk egy bőrkötéses borítót: cím, alcím (a „ - ” utáni rész) és a
+// cím végén zárójelben álló évszám.
+const BookCover = ({ url, title, folder }) => {
+    const [failedUrl, setFailedUrl] = useState(null);
+    if (url && url !== failedUrl) {
+        return (
+            <div className="scorebook-cover has-image" aria-hidden="true">
+                <div className="scorebook-cover-bg"><img src={url} alt="" loading="lazy" decoding="async" /></div>
+                <img className="scorebook-cover-img" src={url} alt="" loading="lazy" decoding="async" onError={() => setFailedUrl(url)} />
+            </div>
+        );
+    }
+    const yearMatch = /^(.*\S)\s*\((\d{4})\)$/.exec(String(title).trim());
+    const fullName = yearMatch ? yearMatch[1] : String(title).trim();
+    const separator = /\s+[-–—]\s+/.exec(fullName);
+    const name = separator ? fullName.slice(0, separator.index) : fullName;
+    const subtitle = separator ? fullName.slice(separator.index + separator[0].length) : '';
+    const titleSize = coverFontSize(name, 12.5);
+    let hash = 0;
+    for (const ch of folder) hash = (hash * 31 + ch.codePointAt(0)) >>> 0;
+    return (
+        <div className="scorebook-cover" style={{ '--book-color': BOOK_COVER_COLORS[hash % BOOK_COVER_COLORS.length] }} aria-hidden="true">
+            <div className="scorebook-cover-bg"></div>
+            <div className="scorebook-cover-book">
+                <div className="scorebook-cover-face">
+                    <span className="scorebook-cover-title" style={{ '--size': titleSize }}>{name}</span>
+                    {subtitle && <span className="scorebook-cover-subtitle" style={{ '--size': coverFontSize(subtitle, Math.min(8, titleSize * 0.75)) }}>{subtitle}</span>}
+                    <span className="scorebook-cover-rule"></span>
+                </div>
+                {yearMatch && <span className="scorebook-cover-year">{yearMatch[2]}</span>}
+            </div>
+        </div>
+    );
+};
+
 // Egy könyv kártyája: a beépített mindig elérhető, a többit le lehet tölteni, frissíteni és törölni.
+// Balra a könyv adatai, a kapcsoló és a letöltés, jobbra a borító.
 const ScorebookCard = ({ book, download, active, onToggle, onDownload, onCancel, onDelete }) => {
     const data = book.remote ? book.remote.index : book.local ? book.local.index : null;
     const title = (data && data.title) || book.folder;
+    const author = data ? bookAuthor(data.author) : '';
     const usable = book.builtin || !OFFLINE_SUPPORTED ? !!data : !!book.local;
     const progress = download && download.total != null ? download : null;
     const failed = download && download.error;
     const hasUpdate = !!(book.local && book.remote && !sameBookText(book.local.text, book.remote.text));
     const serverProblem = book.remoteError && book.remoteError !== NO_CONNECTION ? book.remoteError : null;
     const local = book.local;
+    // a szerveren hiányzó kották (a hiányzó borítókép nem számít ide)
+    const missingScores = local && local.missing ? local.missing.filter(url => url !== bookCoverUrl(local.index)).length : 0;
     const savedText = local && [
         `${formatBytes(local.bytes)}`,
-        local.missing && local.missing.length ? `${local.missing.length} kotta hiányzik a szerverről` : null
+        missingScores ? `${missingScores} kotta hiányzik a szerverről` : null
     ].filter(Boolean).join(' • ');
 
     let status = null, actions = null;
@@ -2734,7 +2797,9 @@ const ScorebookCard = ({ book, download, active, onToggle, onDownload, onCancel,
     return (
         <div className={`card list-item scorebook-item ${usable && !active ? 'inactive' : ''}`} data-folder={book.folder}>
             <div className="card-decoration"></div>
-            <div className="scorebook-content">
+            {/* elöl, hogy telefonon a szöveg körbefolyhassa (a nagyobb kijelzőn a rács a jobb oldalra teszi) */}
+            <BookCover url={data && bookCoverUrl(data)} title={title} folder={book.folder} />
+            <div className="scorebook-main">
                 <div className="scorebook-header">
                     <h3 className="font-bold text-ink scorebook-title">
                         {title}
@@ -2751,9 +2816,12 @@ const ScorebookCard = ({ book, download, active, onToggle, onDownload, onCancel,
                 {data && (
                     <div className="scorebook-details">
                         <div>{data.scores.length} db letét, {data.preludes.length} db előjáték</div>
-                        {data.author && <strong>{data.author}</strong>}
+                        {author && <strong>{author}</strong>}
                     </div>
                 )}
+            </div>
+
+            <div className="scorebook-body">
                 {data && data.description && <div className="scorebook-description">{data.description}</div>}
 
                 <div className="scorebook-status">
