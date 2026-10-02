@@ -67,6 +67,11 @@ nyilvánossá kell tenni.
     Refrén: egy `"Refr."` sor, utána a refrén sorai (dőlt betűvel jelennek meg). Szöveg nélküli ének: `"verses": []`.
   - A program a régi formát is elfogadja: `"lyrics"` egyetlen szövegként, a versszakok között üres sorral
     (`\n\n`), a sorok között egy sortöréssel (`\n`), a versszak elején a számával (`1. `).
+  - `description` (nem kötelező): az ének himnológiai leírása, a szövegpanel Megjegyzések lapján jelenik meg. A
+    sortörések ugyanúgy, mint a versszakoknál: bekezdések tömbje, egy bekezdés a sorai tömbje, pl.
+    `"description": [["Szöveg: Szenczi Molnár Albert, 1607", "Dallam: Louis Bourgeois, Genf, 1551"], ["Második bekezdés."]]`.
+    Egyszerűbb esetben lehet egyetlen szöveg is (`"Szöveg: …\nDallam: …"`, új bekezdés: üres sor, `\n\n`), vagy sorok
+    tömbje (`["Szöveg: …", "Dallam: …", "", "Új bekezdés"]`, új bekezdés: üres sor).
   - `keywords`: 1–3 kulcsszó a könyvtár kártyáin és kulcsszavas szűrőjében (szabadon bővíthető, új kulcsszó is
     írható; a szűrő magától felveszi). Az első az énekeskönyv témaköre a számtartomány szerint (pl. 401–423:
     „karácsony”, 651–668: „reggel”); a többit (pl. „bizalom”, „bűnbánat”, „dicséret”) a program az énekszövegből
@@ -136,9 +141,10 @@ Színséma (a választóban színmintával): **Pergamen** (alapértelmezett), Pa
 
 ## Tárolás
 
-A listák, a beállítások és a szövegpanel énekenkénti elrendezése a böngésző localStorage-ában vannak
-(`orgonista_playlists`, `orgonista_settings`, `orgonista_lyrics_layouts`; a kottafont-minták rajza:
-`orgonista_font_samples_*`), a letöltött kottakönyvek a böngésző
+A listák, a beállítások, a szövegpanel énekenkénti elrendezése, valamint az énekekhez írt megjegyzések és
+regisztrációk a böngésző localStorage-ában vannak (`orgonista_playlists`, `orgonista_settings`,
+`orgonista_lyrics_layouts`, `orgonista_hymn_notes`; a kottafont-minták rajza: `orgonista_font_samples_*`), a
+letöltött kottakönyvek a böngésző
 Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönként külön tárolódik.
 
 ## Kottakönyvek letöltése, offline működés
@@ -154,8 +160,8 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
   „Frissítés” gomb jelenik meg. Ilyenkor csak az új és a megváltozott fájlok töltődnek le.
   A szerveren hiányzó fájlokat a letöltés kihagyja, és a kártyán jelzi a számukat. Ha ezek
   később felkerülnek, a program a következő megnyitáskor magától letölti őket (csak ezeket).
-- **iPad, iPhone:** a Safari törölheti a weboldalak tárolt adatait (a letöltött könyveket és a
-  listákat is), ha az oldalt kb. egy hétig nem nyitod meg. Megbízhatóbb, ha az oldalt a
+- **iPad, iPhone:** a Safari törölheti a weboldalak tárolt adatait (a letöltött könyveket, a
+  listákat és az énekekhez írt megjegyzéseket is), ha az oldalt kb. egy hétig nem nyitod meg. Megbízhatóbb, ha az oldalt a
   Megosztás → „Főképernyőhöz adás” menüvel a kezdőképernyőre teszed, és onnan indítod. Az
   így indított oldal külön tárolót kap, ott újra le kell tölteni a könyveket.
 - Az offline működéshez https kell (GitHub Pages), vagy helyben a `localhost` cím. Ha az oldalt
@@ -246,7 +252,24 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
   mutatja. A + nem használható, ha a kotta nagyobban már nem férne ki (képes kottánál: ha elérte a
   teljes szélességet).
 - A szövegpanel a kotta mellett vagy alatt lehet (a panel jobb felső sarkának gombjai). Kotta nélküli énekeknél is látszik;
-  szöveg nélküli énekeknél nincs panel.
+  szöveg nélküli énekeknél csak akkor, ha van leírása, megjegyzése vagy regisztrációja.
+  - Két lapja van: **Szöveg** és **Megjegyzések**. A fülek lent a panel eszköztárának sorában balra (a fogantyú
+    középen, a gombok jobbra), oldalt a gombok fölött vannak (telefonon lent is külön sorban). A választott fül a
+    program futása alatt minden éneknél ugyanaz (pl. a lejátszóban lapozva is a Megjegyzések lap marad); a program
+    újraindításakor a Szöveg lap jelenik meg. A panel méretét alapméretben a szöveg adja, a Megjegyzések lap ugyanezt
+    a területet tölti ki (és görgethető), így fülváltáskor a kotta nem mozdul.
+  - **Megjegyzések** lap: lent egymás mellett (ha elfér), oldalt egymás alatt:
+    - **Leírás:** az ének himnológiai leírása az `enek.json`-ból (`description`, lásd fent); csak olvasható.
+    - **Megjegyzés:** koppintásra szerkeszthető szöveg (pl. tempó, az előjáték hossza).
+    - **Regisztráció:** négy mező: 3. manuál, 2. manuál, 1. manuál, pedál; koppintásra szerkeszthető (a megérintett
+      sor kapja a fókuszt; az Enter a következő mezőre lép, az utolsóban ment).
+    - A szerkesztő a képernyő **tetején** nyílik meg, és a látható terület méretéhez igazodik (`visualViewport`), így
+      tableten, telefonon a képernyő-billentyűzet nem takarja el a szöveget. Mentés: a Mentés gombbal, Ctrl+Enterrel
+      vagy a háttérre koppintva; Mégse vagy Escape: a változás elvész. Szerkesztés közben a lapozópedál nem lapoz.
+    - A megjegyzés és a regisztráció énekenként, **csak ezen a készüléken** tárolódik (`orgonista_hymn_notes`); a
+      lejátszóban is az adott énekhez tartozó jelenik meg. Ha egy énekhez van megjegyzés vagy regisztráció, a
+      Megjegyzések fülön pötty jelzi.
+  - A T− / T+ a Megjegyzések lap betűméretét is állítja; az oszlopos / folyó szöveg nézetváltó csak a Szöveg lapon van.
   - Oldalt: a versszakok és bennük a sorok egymás alatt; a hosszú sor behúzással törik a következő sorba.
   - Lent, egymás mellett (alapértelmezett): a versszakok oszlopokban, a sorok egymás alatt, törés nélkül: egy
     versszak oszlopa olyan széles, mint a leghosszabb sora (ha nem fér ki minden versszak, oldalra görgethető).

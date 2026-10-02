@@ -750,6 +750,84 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .lyrics-panel.side .lyrics-resize::before { width: 5px; height: 22px; }
 .lyrics-resize:hover::before, .lyrics-panel.resizing .lyrics-resize::before { background-color: var(--col-accent); }
 .lyrics-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 1rem; font-size: calc(var(--lyrics-scale, 1) * 1rem); }
+/* A fülek (Szöveg / Megjegyzések): lent a gombok sorában balra, oldalt (ahol a sor bal szélén a fogantyú van) a gombok
+   fölött, saját sorban */
+.lyrics-tabs { display: flex; align-items: stretch; gap: 2px; min-width: 0; justify-self: start; }
+.lyrics-tab {
+    height: 30px; padding: 0 10px; border-radius: 6px 6px 0 0; white-space: nowrap;
+    font-size: 13px; font-weight: 600; color: var(--col-ink-muted, #666);
+    border-bottom: 2px solid transparent;
+}
+.lyrics-tab:hover { color: var(--col-ink); background-color: rgba(0, 0, 0, 0.04); }
+.lyrics-tab.active { color: var(--col-ink); border-bottom-color: var(--col-accent); }
+.lyrics-tab-dot { display: inline-block; width: 6px; height: 6px; margin-left: 5px; vertical-align: 2px; border-radius: 50%; background-color: var(--col-accent); }
+.lyrics-panel.side .lyrics-toolbar { flex-wrap: wrap; row-gap: 2px; }
+.lyrics-panel.side .lyrics-tabs { flex: 1 0 100%; }
+/* A panel méretét (alapméretben) a Szöveg lap adja, mint eddig; a Megjegyzések lap ugyanezt a területet tölti ki, és
+   görgethető. A nem látható lap a helyén marad (rejtve), így fülváltáskor a panel mérete nem változik. */
+.lyrics-tabpanes { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; }
+.lyrics-tabpanes > .lyrics-scroll.notes { position: absolute; inset: 0; }
+.lyrics-tabpanes > .lyrics-scroll.inactive { visibility: hidden; }
+
+/* Megjegyzések lap: leírás, megjegyzés, regisztráció; lent egymás mellett (ha elfér), oldalt egymás alatt. A méretek
+   em-ben, hogy a T−/T+ betűmérettel együtt nőjenek. */
+.hymn-notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(14em, 1fr)); gap: 0.9em 1.75em; align-items: start; }
+.lyrics-panel.side .hymn-notes { grid-template-columns: minmax(0, 1fr); }
+.hymn-notes-section { min-width: 0; }
+.hymn-notes-title {
+    margin: 0 0 0.4em; font-size: 0.72em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--col-accent-text, var(--col-accent));
+}
+.hymn-notes-desc { margin: 0 0 0.55em; line-height: 1.4; }
+.hymn-notes-desc:last-child { margin-bottom: 0; }
+.hymn-notes-empty { margin: 0; font-size: 0.9em; font-style: italic; color: var(--col-ink-muted, #666); }
+/* a megjegyzés és a regisztráció koppintásra szerkeszthető */
+.hymn-notes-edit {
+    display: block; width: 100%; padding: 0.45em 0.65em; text-align: left; font: inherit; color: inherit; cursor: text;
+    background-color: var(--col-card-raised, rgba(255, 255, 255, 0.5)); border: 1px dashed var(--col-border-dark, #bbb); border-radius: 0.4em;
+}
+.hymn-notes-edit:hover { border-color: var(--col-accent); }
+.hymn-notes-registration:has(.hymn-notes-reg-row:hover) { border-color: var(--col-accent); } /* (külön: ahol nincs :has, csak ez marad el) */
+.hymn-notes-note { display: block; white-space: pre-wrap; overflow-wrap: break-word; line-height: 1.4; }
+.hymn-notes-registration { padding: 0.15em 0.65em; }
+.hymn-notes-reg-row {
+    display: flex; align-items: baseline; gap: 0.6em; width: 100%; padding: 0.3em 0; text-align: left;
+    font: inherit; color: inherit; cursor: text; border-bottom: 1px dotted var(--col-border, #ddd);
+}
+.hymn-notes-reg-row:last-child { border-bottom: none; }
+.hymn-notes-reg-label { flex: none; width: 5.6em; font-size: 0.85em; color: var(--col-ink-muted, #666); }
+.hymn-notes-reg-value { min-width: 0; overflow-wrap: break-word; line-height: 1.35; }
+.hymn-notes-reg-value.empty { color: var(--col-ink-muted, #999); }
+/* az oldalsó (keskeny) panelen a manuál neve a regisztráció fölött */
+.lyrics-panel.side .hymn-notes-reg-row { flex-direction: column; gap: 0; }
+.lyrics-panel.side .hymn-notes-reg-label { width: auto; font-size: 0.75em; }
+
+/* A megjegyzés és a regisztráció szerkesztője: a látható terület tetején (az app.js a visualViewport szerint helyezi
+   el), így a képernyő-billentyűzet nem takarja; kevés helyen a szövegmező összemegy, a tartalom görgethető */
+.note-sheet-overlay { position: fixed; inset: 0; z-index: 310; background-color: rgba(0, 0, 0, 0.45); }
+.note-sheet {
+    position: absolute; left: 50%; transform: translateX(-50%); width: min(720px, calc(100% - 16px));
+    display: flex; flex-direction: column; overflow: hidden;
+    background-color: var(--col-papyrus); color: var(--col-ink);
+    border: 1px solid var(--col-galaxy-light); border-radius: 0.75rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+}
+.bg-texture .note-sheet { background-image: var(--tex-paper-grain); background-blend-mode: multiply; }
+.note-sheet-header {
+    flex: none; display: flex; align-items: baseline; gap: 0.5rem; padding: 0.55rem 1rem;
+    background-color: var(--col-modal-tint, rgba(238, 232, 213, 0.5)); border-bottom: 1px solid var(--col-border, #d1d5db);
+}
+.note-sheet-header .hymn-number { font-size: 1.35rem; line-height: 1; }
+.note-sheet-hymn { flex: 1; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.note-sheet-kind { flex: none; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--col-accent-text); }
+.note-sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.note-sheet-text { flex: 1 1 auto; height: 11em; min-height: 4.5em; resize: none; line-height: 1.4; padding: 0.6rem 0.75rem; }
+.note-sheet-reg { display: flex; align-items: center; gap: 0.75rem; }
+.note-sheet-reg-label { flex: none; width: 6.2em; font-size: 0.9rem; font-weight: 600; color: var(--col-ink-muted, #666); }
+.note-sheet-reg .input { padding: 0.5rem 0.75rem; }
+.note-sheet-footer {
+    flex: none; display: flex; justify-content: flex-end; gap: 0.75rem; padding: 0.55rem 1rem;
+    background-color: var(--col-modal-tint-soft, rgba(238, 232, 213, 0.3)); border-top: 1px solid var(--col-border, #d1d5db);
+}
 
 /* Szöveg: versszakonként a száma, mellette a szöveg (a nézeteket lásd a LyricsVerse-nél, app.js). A távolságok
    em-ben vannak, hogy a betűmérettel együtt nőjenek. */
@@ -1234,6 +1312,10 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 }
 
 @media (max-width: 640px) {
+    .lyrics-panel.bottom .lyrics-toolbar { grid-template-areas: "tabs tabs tabs" ". handle buttons"; row-gap: 2px; }
+    .lyrics-panel.bottom .lyrics-tabs { grid-area: tabs; }
+    .lyrics-panel.bottom .lyrics-resize { grid-area: handle; }
+    .lyrics-panel.bottom .lyrics-toolbar-buttons { grid-area: buttons; }
     .share-list { grid-template-columns: minmax(0, 1fr); }
     .share-qr { width: min(220px, 100%); margin: 0 auto; }
     /* a listák és a szerkesztő fejlécében csak az ikonok, így a lista nevének több hely jut */

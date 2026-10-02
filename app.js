@@ -60,6 +60,25 @@ const hymnVerses = (hymn) => {
     return hymn.lyrics.trim().split(/\n\s*\n/).map(v => clean(v.replace(/^\d+\.\s*/, '').split('\n')));
 };
 
+// Az ének himnológiai leírása (enek.json: "description") bekezdésekben, soronként, mint a versszakok:
+// [["1. bekezdés 1. sora", "2. sora"], ["2. bekezdés"]]. Elfogad egyetlen szöveget is (sortörés: \n, új bekezdés: üres
+// sor), vagy sorok tömbjét (új bekezdés: üres sor).
+const hymnDescription = (hymn) => {
+    const paragraphs = [[]];
+    const addLine = (line) => {
+        const text = line.trim();
+        if (text) paragraphs[paragraphs.length - 1].push(text);
+        else if (paragraphs[paragraphs.length - 1].length) paragraphs.push([]);
+    };
+    const d = hymn.description;
+    const parts = typeof d === 'string' ? [d] : Array.isArray(d) ? d : [];
+    parts.forEach(part => {
+        if (Array.isArray(part)) { addLine(''); part.filter(l => typeof l === 'string').forEach(addLine); addLine(''); }
+        else if (typeof part === 'string') part.split('\n').forEach(addLine);
+    });
+    return paragraphs.filter(p => p.length);
+};
+
 // Egy versszak saját sorai és a refrénje (a "Refr." sor utáni sorok; a további versszakoknál rendszerint csak a rövidítése)
 const splitRefrain = (lines) => {
     const i = lines.findIndex(l => l.startsWith('Refr.'));
@@ -104,7 +123,7 @@ const parseVerses = (text) => {
 };
 
 // --- TÁROLÁS (localStorage) ---
-const STORAGE_KEYS = { playlists: 'orgonista_playlists', settings: 'orgonista_settings', lyricsLayouts: 'orgonista_lyrics_layouts' };
+const STORAGE_KEYS = { playlists: 'orgonista_playlists', settings: 'orgonista_settings', lyricsLayouts: 'orgonista_lyrics_layouts', hymnNotes: 'orgonista_hymn_notes' };
 
 const SETTINGS_VERSION = 2;
 
@@ -2163,7 +2182,167 @@ const saveLyricsLayout = (hymnNumber, layout) => {
 // Átméretezés: a legkisebb méret px-ben, a legnagyobb a kottanézet hányadában (lent a magasság, oldalt a szélesség)
 const LYRICS_RESIZE_LIMITS = { bottom: { min: 64, max: 0.85 }, side: { min: 150, max: 0.7 } };
 
-const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyricsWidth, scoreMaxWidth, scoreFont, hymnNumber, onNext, onPrev }) => {
+// --- Megjegyzés és regisztráció énekenként ---
+// A szövegpanel Megjegyzések lapján az énekhez írt megjegyzés és a regisztráció (manuálonként és a pedálon). Csak ezen a
+// készüléken tárolódnak (orgonista_hymn_notes), énekszámonként; az üres mezők nem kerülnek a tárolóba.
+const REGISTRATION_FIELDS = [
+    { key: 'm3', label: '3. manuál' }, { key: 'm2', label: '2. manuál' }, { key: 'm1', label: '1. manuál' }, { key: 'ped', label: 'Pedál' }
+];
+const loadAllHymnNotes = () => {
+    const all = loadJSON(STORAGE_KEYS.hymnNotes, {});
+    return all && typeof all === 'object' && !Array.isArray(all) ? all : {};
+};
+const hymnNotesOf = (hymnNumber) => {
+    const saved = hymnNumber != null ? loadAllHymnNotes()[hymnNumber] : null;
+    const entry = saved && typeof saved === 'object' ? saved : {};
+    const registration = entry.registration && typeof entry.registration === 'object' ? entry.registration : {};
+    return {
+        note: typeof entry.note === 'string' ? entry.note : '',
+        registration: Object.fromEntries(REGISTRATION_FIELDS.map(f => [f.key, typeof registration[f.key] === 'string' ? registration[f.key] : '']))
+    };
+};
+// mentés; a visszaadott (a szélein szóköz nélküli) adatokat mutatja a lap
+const saveHymnNotes = (hymnNumber, notes) => {
+    const clean = { note: notes.note.trim(), registration: Object.fromEntries(REGISTRATION_FIELDS.map(f => [f.key, notes.registration[f.key].trim()])) };
+    if (hymnNumber == null) return clean;
+    const all = loadAllHymnNotes();
+    const entry = {};
+    if (clean.note) entry.note = clean.note;
+    const registration = Object.fromEntries(Object.entries(clean.registration).filter(([, v]) => v));
+    if (Object.keys(registration).length) entry.registration = registration;
+    if (Object.keys(entry).length) all[hymnNumber] = entry;
+    else delete all[hymnNumber];
+    saveJSON(STORAGE_KEYS.hymnNotes, all);
+    return clean;
+};
+const hasHymnNotes = (notes) => !!notes.note.trim() || REGISTRATION_FIELDS.some(f => notes.registration[f.key].trim());
+
+// A látható terület a képernyő-billentyűzet nélkül: a visualViewport helye és magassága (ahol nincs, az ablaké)
+const visibleArea = () => {
+    const vv = window.visualViewport;
+    return vv ? { top: vv.offsetTop, height: vv.height } : { top: 0, height: window.innerHeight };
+};
+const useVisibleArea = () => {
+    const [area, setArea] = useState(visibleArea);
+    useEffect(() => {
+        const vv = window.visualViewport;
+        const update = () => setArea(visibleArea());
+        if (vv) { vv.addEventListener('resize', update); vv.addEventListener('scroll', update); }
+        window.addEventListener('resize', update);
+        return () => {
+            if (vv) { vv.removeEventListener('resize', update); vv.removeEventListener('scroll', update); }
+            window.removeEventListener('resize', update);
+        };
+    }, []);
+    return area;
+};
+
+// A Megjegyzések lap: a leírás (az enek.json-ból), a megjegyzés és a regisztráció; az utóbbi kettő koppintásra
+// szerkeszthető (a regisztrációnál a megérintett sor kapja a fókuszt)
+const HymnNotes = ({ description, notes, onEdit }) => (
+    <div className="hymn-notes">
+        <section className="hymn-notes-section">
+            <h4 className="hymn-notes-title">Leírás</h4>
+            {description.length > 0
+                ? description.map((lines, i) => (
+                    <p key={i} className="hymn-notes-desc">{lines.map((line, j) => <React.Fragment key={j}>{j > 0 && <br/>}{line}</React.Fragment>)}</p>
+                ))
+                : <p className="hymn-notes-empty">Ehhez az énekhez még nincs leírás.</p>}
+        </section>
+        <section className="hymn-notes-section">
+            <h4 className="hymn-notes-title">Megjegyzés</h4>
+            <button type="button" className="hymn-notes-edit hymn-notes-note-box" onClick={() => onEdit({ kind: 'note' })} aria-label="Megjegyzés szerkesztése">
+                {notes.note ? <span className="hymn-notes-note">{notes.note}</span> : <span className="hymn-notes-empty">Koppints ide, és írj megjegyzést…</span>}
+            </button>
+        </section>
+        <section className="hymn-notes-section">
+            <h4 className="hymn-notes-title">Regisztráció</h4>
+            <div className="hymn-notes-edit hymn-notes-registration">
+                {REGISTRATION_FIELDS.map(f => (
+                    <button key={f.key} type="button" className="hymn-notes-reg-row" onClick={() => onEdit({ kind: 'registration', field: f.key })}
+                        aria-label={`Regisztráció szerkesztése: ${f.label}`}>
+                        <span className="hymn-notes-reg-label">{f.label}</span>
+                        <span className={`hymn-notes-reg-value${notes.registration[f.key] ? '' : ' empty'}`}>{notes.registration[f.key] || '–'}</span>
+                    </button>
+                ))}
+            </div>
+        </section>
+    </div>
+);
+
+// A megjegyzés vagy a regisztráció szerkesztője. A látható terület tetején nyílik meg, és követi annak méretét, így a
+// tablet, telefon képernyő-billentyűzete nem takarja el a szöveget. Mentés: a gombbal, Ctrl+Enterrel vagy a háttérre
+// koppintva (a regisztrációnál az utolsó mezőben Enterrel is; a többiben az Enter a következő mezőre lép). Mégse vagy
+// Escape: a változás elvész.
+const HymnNotesEditor = ({ hymnNumber, hymnTitle, notes, editing, onSave, onCancel }) => {
+    const area = useVisibleArea();
+    const isNote = editing.kind === 'note';
+    const [note, setNote] = useState(notes.note);
+    const [registration, setRegistration] = useState(notes.registration);
+    const fieldRefs = useRef({});
+    const save = () => onSave(isNote ? { ...notes, note } : { ...notes, registration });
+    const actionsRef = useRef({});
+    actionsRef.current = { save, onCancel };
+    useLayoutEffect(() => {
+        // a megnyitott mező kapja a fókuszt, a kurzor a szöveg végére kerül
+        const el = fieldRefs.current[isNote ? 'note' : editing.field];
+        if (!el) return;
+        el.focus({ preventScroll: true });
+        el.setSelectionRange(el.value.length, el.value.length);
+        if (isNote) el.scrollTop = el.scrollHeight;
+    }, []);
+    useEffect(() => {
+        const onKey = (e) => {
+            if (e.key === 'Escape') { e.preventDefault(); actionsRef.current.onCancel(); }
+            else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); actionsRef.current.save(); }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, []);
+    const regKeyDown = (e, i) => {
+        if (e.key !== 'Enter' || e.ctrlKey || e.metaKey || e.isComposing) return;
+        e.preventDefault();
+        const next = REGISTRATION_FIELDS[i + 1];
+        if (next) fieldRefs.current[next.key].focus();
+        else save();
+    };
+    const kind = isNote ? 'Megjegyzés' : 'Regisztráció';
+    return ReactDOM.createPortal(
+        <div className="note-sheet-overlay" onPointerDown={(e) => { if (e.target === e.currentTarget) { e.preventDefault(); save(); } }}>
+            <div className="note-sheet" role="dialog" aria-modal="true" aria-label={`${kind}: ${hymnNumber}. ének`}
+                style={{ top: area.top + 8, maxHeight: Math.max(150, area.height - 16) }}>
+                <div className="note-sheet-header">
+                    <span className="hymn-number text-accent">{hymnNumber}</span>
+                    <span className="note-sheet-hymn">{hymnTitle}</span>
+                    <span className="note-sheet-kind">{kind}</span>
+                </div>
+                <div className="note-sheet-body">
+                    {isNote ? (
+                        <textarea ref={el => { fieldRefs.current.note = el; }} className="input note-sheet-text" value={note}
+                            onChange={e => setNote(e.target.value)} placeholder="pl. tempó, az előjáték hossza, mire kell figyelni" aria-label="Megjegyzés" />
+                    ) : REGISTRATION_FIELDS.map((f, i) => (
+                        <label key={f.key} className="note-sheet-reg">
+                            <span className="note-sheet-reg-label">{f.label}</span>
+                            <input ref={el => { fieldRefs.current[f.key] = el; }} type="text" className="input" value={registration[f.key]}
+                                onChange={e => { const value = e.target.value; setRegistration(r => ({ ...r, [f.key]: value })); }}
+                                onKeyDown={e => regKeyDown(e, i)} enterKeyHint={i < REGISTRATION_FIELDS.length - 1 ? 'next' : 'done'} />
+                        </label>
+                    ))}
+                </div>
+                <div className="note-sheet-footer">
+                    <button onClick={onCancel} className="btn">Mégse</button>
+                    <button onClick={save} className="btn btn-primary">Mentés</button>
+                </div>
+            </div>
+        </div>,
+        document.querySelector('.app-root') || document.body
+    );
+};
+
+// A szövegpanel választott füle (Szöveg / Megjegyzések): a program futása alatt minden énekre érvényes
+let lyricsTabMemory = 'lyrics';
+
+const ScoreViewer = ({ score, variationId, preludeId, lyrics, description = [], showLyrics, lyricsWidth, scoreMaxWidth, scoreFont, hymnNumber, hymnTitle, onNext, onPrev }) => {
     // A szövegpanel elrendezése az aktuális énekhez; ének váltásakor (pl. a lejátszóban lapozva) annak a mentett
     // elrendezése töltődik be
     let [lyricsLayout, setLyricsLayout] = useState(() => ({ hymn: hymnNumber, ...lyricsLayoutOf(hymnNumber) }));
@@ -2178,6 +2357,19 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
         lyricsLayoutRef.current = next;
         setLyricsLayout(next);
         saveLyricsLayout(next.hymn, next);
+    };
+    const [tab, setTabState] = useState(() => lyricsTabMemory);
+    const setTab = (next) => { lyricsTabMemory = next; setTabState(next); };
+    // az ének megjegyzése és regisztrációja (ének váltásakor annak a mentett adatai)
+    let [notes, setNotes] = useState(() => ({ hymn: hymnNumber, ...hymnNotesOf(hymnNumber) }));
+    if (notes.hymn !== hymnNumber) {
+        notes = { hymn: hymnNumber, ...hymnNotesOf(hymnNumber) };
+        setNotes(notes);
+    }
+    const [editing, setEditing] = useState(null);   // { hymn, kind: 'note' } vagy { hymn, kind: 'registration', field }
+    const saveNotes = (next) => {
+        setNotes({ ...saveHymnNotes(hymnNumber, next), hymn: hymnNumber });
+        setEditing(null);
     };
     const rootRef = useRef(null);
     const panelRef = useRef(null);
@@ -2246,7 +2438,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.defaultPrevented || e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
-            if (document.querySelector('.modal-overlay')) return;
+            if (document.querySelector('.modal-overlay, .note-sheet-overlay')) return;
             if (e.target.closest && e.target.closest('input, select, textarea, [contenteditable="true"]')) return;
             const { onNext, onPrev } = navRef.current;
             const turn = PAGE_FORWARD_KEYS.includes(e.key) ? onNext : PAGE_BACK_KEYS.includes(e.key) ? onPrev : null;
@@ -2344,10 +2536,21 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
         <div className="lyrics-resize" onPointerDown={startResize} role="separator" aria-orientation={isSide ? 'vertical' : 'horizontal'}
             aria-label="Szövegpanel átméretezése" title="Húzd a szövegpanel átméretezéséhez (dupla koppintás: alapméret)" />
     );
-    const lyricsPanel = showLyrics && verses.length > 0 && (
+    // A panel két lapja: Szöveg és Megjegyzések (leírás, megjegyzés, regisztráció). A fülek lent a gombok sorában balra,
+    // oldalt a gombok fölött vannak. A két lap egy rácscellában van, így fülváltáskor a panel mérete nem változik.
+    const hasNotes = hasHymnNotes(notes);
+    const tabButton = (id, label, extra) => (
+        <button role="tab" id={`lyrics-tab-${id}`} aria-selected={tab === id} aria-controls={`lyrics-pane-${id}`}
+            className={`lyrics-tab${tab === id ? ' active' : ''}`} onClick={() => setTab(id)}>{label}{extra}</button>
+    );
+    const lyricsPanel = showLyrics && (verses.length > 0 || description.length > 0 || hasNotes) && (
         <div ref={panelRef} className={`lyrics-panel ${isSide ? 'side' : 'bottom'}`} style={panelStyle}>
             <div className="lyrics-toolbar">
-                {isSide ? resizeHandle : <><span />{resizeHandle}</>}
+                <div className="lyrics-tabs" role="tablist" aria-label="A szövegpanel lapjai">
+                    {tabButton('lyrics', 'Szöveg')}
+                    {tabButton('notes', 'Megjegyzések', hasNotes && <span className="lyrics-tab-dot" title="Van megjegyzés vagy regisztráció" />)}
+                </div>
+                {resizeHandle}
                 <div className="lyrics-toolbar-buttons">
                     <button onClick={() => changeFont(-1)} disabled={fontStep <= 0} className="lyrics-tool lyrics-font-btn" title="Kisebb betű" aria-label="Kisebb betű">
                         <span className="lyrics-font-t small">T</span>−
@@ -2359,25 +2562,37 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, showLyrics, lyrics
                     <button onClick={() => updateLyricsLayout({ position: isSide ? 'bottom' : 'right' })} className="lyrics-tool" title={isSide ? "Lentre tesz" : "Oldalra tesz"}>
                         {isSide ? <Icons.LayoutBottom size={18}/> : <Icons.LayoutSidebar size={18}/>}
                     </button>
-                    {!isSide && (
+                    {!isSide && tab === 'lyrics' && (
                         <button onClick={() => updateLyricsLayout({ layout: lyricsLayout.layout === 'block' ? 'columns' : 'block' })} className="lyrics-tool" title={lyricsLayout.layout === 'block' ? "Oszlopos nézet" : "Folyó szöveg"}>
                             {lyricsLayout.layout === 'block' ? <Icons.Columns size={18}/> : <Icons.List size={18}/>}
                         </button>
                     )}
                 </div>
             </div>
-            <div className={`lyrics-scroll ${lyricsMode}`} style={{ overflowX: lyricsMode === 'columns' ? 'auto' : 'hidden' }}>
-                {lyricsMode === 'columns' ? (
-                    <div className="lyrics-columns">
-                        {verses.map((v, i) => (
-                            <React.Fragment key={v.index}>
-                                <LyricsVerse verse={v} mode="columns" />
-                                {i === 0 && refrain && <LyricsRefrain lines={refrain} />}
-                            </React.Fragment>
-                        ))}
-                    </div>
-                ) : verses.map(v => <LyricsVerse key={v.index} verse={v} mode={lyricsMode} />)}
+            <div className="lyrics-tabpanes">
+                <div id="lyrics-pane-lyrics" role="tabpanel" aria-labelledby="lyrics-tab-lyrics" aria-hidden={tab !== 'lyrics'}
+                    className={`lyrics-scroll ${lyricsMode}${tab === 'lyrics' ? '' : ' inactive'}`} style={{ overflowX: lyricsMode === 'columns' ? 'auto' : 'hidden' }}>
+                    {verses.length === 0 ? <p className="hymn-notes-empty">Ehhez az énekhez nincs szöveg.</p>
+                    : lyricsMode === 'columns' ? (
+                        <div className="lyrics-columns">
+                            {verses.map((v, i) => (
+                                <React.Fragment key={v.index}>
+                                    <LyricsVerse verse={v} mode="columns" />
+                                    {i === 0 && refrain && <LyricsRefrain lines={refrain} />}
+                                </React.Fragment>
+                            ))}
+                        </div>
+                    ) : verses.map(v => <LyricsVerse key={v.index} verse={v} mode={lyricsMode} />)}
+                </div>
+                <div id="lyrics-pane-notes" role="tabpanel" aria-labelledby="lyrics-tab-notes" aria-hidden={tab !== 'notes'}
+                    className={`lyrics-scroll notes${tab === 'notes' ? '' : ' inactive'}`}>
+                    <HymnNotes description={description} notes={notes} onEdit={(e) => setEditing({ ...e, hymn: hymnNumber })} />
+                </div>
             </div>
+            {editing && editing.hymn === hymnNumber && (
+                <HymnNotesEditor hymnNumber={hymnNumber} hymnTitle={hymnTitle} notes={notes} editing={editing}
+                    onSave={saveNotes} onCancel={() => setEditing(null)} />
+            )}
         </div>
     );
 
@@ -2945,7 +3160,7 @@ function OrganistApp() {
                 // A listából azóta kikerült, de letöltött könyv is megmarad (törölni a felhasználó tudja)
                 Object.keys(downloaded).filter(folder => !entries.some(e => e.folder === folder))
                     .forEach(folder => entries.push({ folder, builtin: false, orphan: true, remote: null, remoteError: null, local: downloaded[folder] }));
-                setHymnBook(hymns.map(h => ({ ...h, verses: hymnVerses(h) })));
+                setHymnBook(hymns.map(h => ({ ...h, verses: hymnVerses(h), description: hymnDescription(h) })));
                 setBooks(entries);
                 if (errors.length) setAlertMessage(`Hiba az adatfájlok betöltésekor: ${errors.join(', ')}`);
                 setLoading(false);
@@ -3514,7 +3729,7 @@ function OrganistApp() {
                             </div>
                         </div>
                         <div style={{flex:1, overflow:'hidden'}}>
-                            <ScoreViewer score={getScoreById(selectedHymn.scoreId)} variationId={currentVariationId} preludeId={currentPreludeId} hymnNumber={selectedHymn.number} lyrics={lyricsOf(selectedHymn)} showLyrics={settings.showLyrics} lyricsWidth={settings.lyricsWidth} scoreMaxWidth={settings.scoreMaxWidth} scoreFont={settings.scoreFont}/>
+                            <ScoreViewer score={getScoreById(selectedHymn.scoreId)} variationId={currentVariationId} preludeId={currentPreludeId} hymnNumber={selectedHymn.number} hymnTitle={selectedHymn.title} lyrics={lyricsOf(selectedHymn)} description={selectedHymn.description} showLyrics={settings.showLyrics} lyricsWidth={settings.lyricsWidth} scoreMaxWidth={settings.scoreMaxWidth} scoreFont={settings.scoreFont}/>
                         </div>
                     </div>
                 ) : (
@@ -3648,7 +3863,9 @@ function OrganistApp() {
                                 variationId={playerItem.variationId}
                                 preludeId={playerItem.preludeId}
                                 hymnNumber={playerItem.hymn.number}
+                                hymnTitle={playerItem.hymn.title}
                                 lyrics={lyricsOf(playerItem.hymn, playerItem.verses)}
+                                description={playerItem.hymn.description}
                                 showLyrics={settings.showLyrics}
                                 lyricsWidth={settings.lyricsWidth}
                                 scoreMaxWidth={settings.scoreMaxWidth}
