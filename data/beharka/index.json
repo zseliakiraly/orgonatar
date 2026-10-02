@@ -3,9 +3,9 @@
   "title": "Beharka Gyülekezeti Harmóniumjáték",
   "author": "Beharka Pál",
   "copyright": " - ",
-  "description": "Válogatott letétek Beharka Pál 1983-ban megjelent Gyülekezeti Harmóniumjáték című harmóniumiskolájából.",
+  "description": "Válogatott letétek Beharka Pál 1975-ben megjelent Gyülekezeti Harmóniumjáték című harmóniumiskolájából.",
   "scores": [
-    { "id": "484", "composer": "Beharka Pál", "voiceCount": 2, "year": "1983", "xmlUrl": "beh1-91.mxl" }
+    { "id": "484", "composer": "Beharka Pál", "voiceCount": 2, "year": "1975", "xmlUrl": "beh1-91.mxl" }
     
   ],
   "preludes": []
