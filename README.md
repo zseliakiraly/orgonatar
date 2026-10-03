@@ -108,6 +108,25 @@ magától frissül. A program az `index.json` változásából veszi észre a fr
 ugyanazzal a fájlnévvel cserélsz le, az `index.json`-ban is változtass valamit, például a
 könyv `"version"` mezőjét (`"version": "2026-10-01"`). Frissítéskor a lecserélt fájl is letöltődik.
 
+## Oldalmenü, telefonon menügomb
+
+- Az oldalmenü a jobb vagy a bal szélen van (Beállítások → Oldalmenü helye).
+- **Telefonon, álló helyzetben** (legfeljebb 640 képpont széles, álló ablakban) az oldalmenü rejtve van, így a lapok a
+  teljes szélességet kapják. A főoldalak (Könyvtár, Listák, Kottakönyvek, Beállítások, Névjegy) fejlécében a
+  **menügomb** (☰) húzza elő, azon az oldalon, ahol az oldalmenü lenne; a gombok mellett a nevük is látszik.
+  - Bezárul: menüpontra vagy a háttérre koppintva, Escape-pel, a vissza gombbal, és ha a kijelző elfordul.
+  - Nyitáskor a fókusz a menü aktív pontjára kerül, Escape után vissza a menügombra.
+  - A részletes oldalakon (ének, lista szerkesztője, lejátszó) nincs menügomb, ott a vissza gomb van.
+  - A feltétel az `app.js` `MENU_DRAWER_QUERY`-je és a `style.css` megfelelő `@media` szabálya (a kettőnek egyeznie kell).
+
+## Névjegy
+
+- **Használati útmutató:** link a [docs/](docs/README.md) útmutatóra a GitHubon (`GUIDE_URL`), új lapon.
+- **Hiba bejelentése:** új levél a `feedback@zseli.hu` címre (`FEEDBACK_EMAIL`), „OrgonaTár hibabejelentő” tárggyal.
+  A levél elején üres hely a leírásnak, a végén a hiba kereséséhez hasznos adatok: böngésző (user agent), ablakméret,
+  böngészőben vagy a kezdőképernyőről nyílt-e meg, és a program címe. Küldés előtt mind átírható. A cím szövegként is
+  ott van, ha a készüléken nincs levelezőprogram.
+
 ## Beállítások
 
 Széles kijelzőn (pl. fekvő 10"-es tableten) két oszlopban: balra a Megjelenés, jobbra a Kottanézet és lejátszó, alatta
@@ -151,11 +170,11 @@ Színséma (a választóban színmintával): **Pergamen** (alapértelmezett), Pa
 
 ## Tárolás
 
-A listák, a beállítások, a szövegpanel énekenkénti elrendezése, valamint az énekekhez írt megjegyzések és
-regisztrációk a böngésző localStorage-ában vannak (`orgonista_playlists`, `orgonista_settings`,
-`orgonista_lyrics_layouts`, `orgonista_hymn_notes`; a kottafont-minták rajza: `orgonista_font_samples_*`), a
-letöltött kottakönyvek a böngésző
-Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönként külön tárolódik.
+A listák, a beállítások, a szövegpanel énekenkénti elrendezése, az énekekhez írt megjegyzések és regisztrációk,
+valamint a letétek értékelése a böngésző localStorage-ában vannak (`orgonista_playlists`, `orgonista_settings`,
+`orgonista_lyrics_layouts`, `orgonista_hymn_notes`, `orgonista_score_ratings`; a kottafont-minták rajza:
+`orgonista_font_samples_*`), a letöltött kottakönyvek a böngésző Cache Storage tárolójában
+(`orgonatar-konyv:<mappa>:…`). Mindez eszközönként külön tárolódik.
 
 ## Kottakönyvek oldal
 
@@ -244,7 +263,7 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
   új listaként kerül a többi mellé, és megnyílik a szerkesztőben.
   - Az énekeskönyvben nem található ének kimarad (az előnézet jelzi). Ha a választott letét vagy előjáték ezen az
     eszközön nem érhető el (pl. nincs letöltve a könyve), az előnézet szól; a lista megjegyzi a választást, a
-    könyv letöltése után már az jelenik meg (addig az első elérhető letét, előjáték nélkül).
+    könyv letöltése után már az jelenik meg (addig a legjobbra értékelt elérhető letét, előjáték nélkül).
   - A kamerához https kell (GitHub Pages) és a kamera engedélyezése. iPaden, iPhone-on a kezdőképernyőre tett
     program külön tárolót kap: oda a programon belül, a Kamera gombbal (vagy a kód beillesztésével) érdemes
     importálni, mert a telefon kamerájából megnyitott link a Safariban nyílik meg.
@@ -260,6 +279,23 @@ Cache Storage tárolójában (`orgonatar-konyv:<mappa>:…`). Mindez eszközönk
 
   Egy 6 énekes lista kódja kb. 200, egy 20 énekesé kb. 270 jel. A linkben és a QR-kódban ugyanez a kód van. A
   korábbi, olvasható kódokat (`OT1:<énekek száma>:<név>;…`) és linkjeiket is elfogadja.
+
+## A letétek értékelése
+
+- Az ének oldalán a kotta alatt balra 1–5 csillag: a látott letét értékelése. Egy csillagra koppintva annyi csillag;
+  ugyanarra újra koppintva törlődik. Billentyűzettel (a csoport egy gombja kap fókuszt) a nyilak állítják, a Delete
+  törli; egérrel fölé állva előnézet. A lejátszóban nincs, mert ott az alsó sáv széle is lapoz.
+- Csak ezen a készüléken tárolódik (`orgonista_score_ratings`, a letét azonosítójával: `{ "fazekas_kottak_165": 5 }`;
+  a letét azonosítója a könyv `id`-je és a kotta `id`-je, ugyanaz, amit a listák is tárolnak).
+- **A letétek sorrendje** (`rankVariations`): elöl a jobbra értékeltek; az egyformán értékeltek és az értékeletlenek
+  a könyvek sorrendjében (`data/kottakonyvek.json`), de a beépített könyv(ek) kottái hátrébb. Ebben a sorrendben
+  állnak a letétválasztóban (az ének oldalán és a Hozzáadás ablakában, az értékeltek mellett a csillagaikkal), és az
+  első a letét alapértelmezése:
+  - az ének megnyitásakor;
+  - hozzáadáskor a lista szerkesztőjéből (az ének oldaláról az ott látott letét kerül a listára);
+  - ha egy lista letétje ezen az eszközön nem érhető el (pl. importált lista, nincs letöltve a könyve).
+- Keskeny kottanézetben (telefonon) a kotta alatti sáv: balra a csillagok, mellettük a nagyítás, a maradék helyen a
+  letét adatai (CSS container query, `.score-footer`).
 
 ## Kottanézet és lejátszó
 
