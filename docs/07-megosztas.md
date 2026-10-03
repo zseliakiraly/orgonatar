@@ -37,8 +37,8 @@ A Listák oldalon: **Importálás**.
 Tudnivalók:
 - Ha egy ének nincs meg az énekeskönyvben, kimarad; az előnézet jelzi.
 - Ha egy ének letétje vagy előjátéka ezen az eszközön nem érhető el (pl. nincs letöltve a könyve), az előnézet szól.
-  A lista ilyenkor is megjegyzi a választást. Amíg a könyvet le nem töltöd, az első elérhető letét jelenik meg,
-  előjáték nélkül.
+  A lista ilyenkor is megjegyzi a választást. Amíg a könyvet le nem töltöd, az elérhető letétek közül a legjobbra
+  értékelt jelenik meg (lásd: [A letétek értékelése](03-konyvtar.md#a-letétek-értékelése)), előjáték nélkül.
 - A QR-kódot a telefon kamerájával is beolvashatod. Ekkor a link a böngészőben nyitja meg a programot, rögtön az
   importálással.
 - **iPad, iPhone:** ha a programot a kezdőképernyőről használod, a programon belül, a **Kamera** gombbal (vagy a kód

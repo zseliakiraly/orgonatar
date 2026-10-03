@@ -49,6 +49,8 @@ const Icons = {
     Camera: (props) => <IconBase {...props}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></IconBase>,
     File: (props) => <IconBase {...props}><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></IconBase>,
     Check: (props) => <IconBase {...props}><polyline points="20 6 9 17 4 12"/></IconBase>,
+    Menu: (props) => <IconBase {...props}><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/></IconBase>,
+    Star: (props) => <IconBase {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></IconBase>,
 };
 
 // Az ének versszakai soronként (enek.json: "verses": [["1. versszak 1. sora", "2. sora", …], [2. versszak], …]).
@@ -123,7 +125,7 @@ const parseVerses = (text) => {
 };
 
 // --- TÁROLÁS (localStorage) ---
-const STORAGE_KEYS = { playlists: 'orgonista_playlists', settings: 'orgonista_settings', lyricsLayouts: 'orgonista_lyrics_layouts', hymnNotes: 'orgonista_hymn_notes' };
+const STORAGE_KEYS = { playlists: 'orgonista_playlists', settings: 'orgonista_settings', lyricsLayouts: 'orgonista_lyrics_layouts', hymnNotes: 'orgonista_hymn_notes', scoreRatings: 'orgonista_score_ratings' };
 
 const SETTINGS_VERSION = 2;
 
@@ -556,20 +558,31 @@ const Logo = ({ className = '' }) => (
     </svg>
 );
 
-const NavigationSidebar = ({ activeTab, onTabChange, menuSide, toggleFullScreen }) => (
-    <div className={`sidebar ${menuSide}`}>
+// Oldalmenü. Telefonon, álló helyzetben (MENU_DRAWER_QUERY) el van rejtve: a főoldalak fejlécének menügombja húzza
+// elő azon az oldalon, ahol az oldalmenü lenne; ilyenkor a gombok mellett a feliratuk is látszik.
+const MENU_DRAWER_QUERY = '(max-width: 640px) and (orientation: portrait)'; // a style.css-ben is
+const NavigationSidebar = ({ activeTab, onTabChange, menuSide, toggleFullScreen, open }) => (
+    <nav id="app-menu" className={`sidebar ${menuSide}${open ? ' open' : ''}`} aria-label="Főmenü">
         <div className="sidebar-group">
-            <button onClick={() => onTabChange('library')} className={`nav-btn ${activeTab === 'library' ? 'active' : ''}`} title="Könyvtár"><Icons.ListMusic size={26} /></button>
-            <button onClick={() => onTabChange('playlists')} className={`nav-btn ${activeTab === 'playlists' || activeTab === 'playlist_editor' ? 'active' : ''}`} title="Listák"><Icons.ListOrdered size={26} /></button>
-            <button onClick={() => onTabChange('scorebooks')} className={`nav-btn ${activeTab === 'scorebooks' ? 'active' : ''}`} title="Kottakönyvek"><Icons.Book size={26} /></button>
+            <button onClick={() => onTabChange('library')} className={`nav-btn ${activeTab === 'library' ? 'active' : ''}`} title="Könyvtár"><Icons.ListMusic size={26} /><span className="nav-label">Könyvtár</span></button>
+            <button onClick={() => onTabChange('playlists')} className={`nav-btn ${activeTab === 'playlists' || activeTab === 'playlist_editor' ? 'active' : ''}`} title="Listák"><Icons.ListOrdered size={26} /><span className="nav-label">Listák</span></button>
+            <button onClick={() => onTabChange('scorebooks')} className={`nav-btn ${activeTab === 'scorebooks' ? 'active' : ''}`} title="Kottakönyvek"><Icons.Book size={26} /><span className="nav-label">Kottakönyvek</span></button>
+        </div>
+        <div className="sidebar-group">
+            {toggleFullScreen && <button onClick={toggleFullScreen} className="nav-btn" title="Teljes képernyő"><Icons.Maximize size={24} /><span className="nav-label">Teljes képernyő</span></button>}
+            <button onClick={() => onTabChange('settings')} className={`nav-btn ${activeTab === 'settings' ? 'active' : ''}`} title="Beállítások"><Icons.Settings size={24} /><span className="nav-label">Beállítások</span></button>
+            <button onClick={() => onTabChange('about')} className={`nav-btn ${activeTab === 'about' ? 'active' : ''}`} title="Névjegy"><Icons.Info size={24} /><span className="nav-label">Névjegy</span></button>
+        </div>
+    </nav>
+);
 
-        </div>
-        <div className="sidebar-group">
-            {toggleFullScreen && <button onClick={toggleFullScreen} className="nav-btn" title="Teljes képernyő"><Icons.Maximize size={24} /></button>}
-            <button onClick={() => onTabChange('settings')} className={`nav-btn ${activeTab === 'settings' ? 'active' : ''}`} title="Beállítások"><Icons.Settings size={24} /></button>
-            <button onClick={() => onTabChange('about')} className={`nav-btn ${activeTab === 'about' ? 'active' : ''}`} title="Névjegy"><Icons.Info size={24} /></button>
-        </div>
-    </div>
+// A menügomb (csak telefonon, álló helyzetben látszik). variant: "corner" a középre igazított fejléc sarkában,
+// "inline" a fejléc többi gombja mellett, "floating" fejléc nélküli oldalon (Névjegy).
+const MenuToggle = ({ open, onToggle, side, variant }) => (
+    <button type="button" className={`menu-toggle ${variant} ${side}`} onClick={onToggle} title="Menü" aria-label="Menü"
+        aria-expanded={open} aria-controls="app-menu">
+        <Icons.Menu size={24} />
+    </button>
 );
 
 // placement="upper": a felső harmadban (nem középen), hogy a tablet képernyő-billentyűzete ne takarja ki az alját
@@ -1474,7 +1487,8 @@ const AddToPlaylistModal = ({ onClose, onConfirm, playlists, initialVariationId,
                     </div>
                     <div style={{flex:1, minWidth:0}}>
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Változat</label>
-                        <CustomSelect items={variations} currentId={selectedVariationId} onChange={setSelectedVariationId} placeholder="Változat választása" width="100%" />
+                        <CustomSelect items={variations} currentId={selectedVariationId} onChange={setSelectedVariationId} placeholder="Változat választása" width="100%"
+                            renderOption={renderVariationOption} />
                     </div>
                 </div>
                 {(variationMissing || preludeMissing) && (
@@ -1628,12 +1642,13 @@ const serifFontOption = (font) => (
     </span>
 );
 
-const SettingsView = ({ settings, onUpdateSettings }) => {
+const SettingsView = ({ settings, onUpdateSettings, menuButton }) => {
     const set = (patch) => onUpdateSettings({ ...settings, ...patch });
     return (
     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
         <div className="header centered">
              <h1 className="header-title main page-title">Beállítások</h1>
+             {menuButton}
         </div>
 
         <div className="main-content" style={{padding:'2rem', overflowY:'auto'}}>
@@ -2219,6 +2234,72 @@ const saveHymnNotes = (hymnNumber, notes) => {
 };
 const hasHymnNotes = (notes) => !!notes.note.trim() || REGISTRATION_FIELDS.some(f => notes.registration[f.key].trim());
 
+// --- A letétek értékelése ---
+// A letétek csillagos értékelése (1–5) csak ezen a készüléken tárolódik (orgonista_score_ratings), a letét azonosítója
+// szerint: { "fazekas_kottak_165": 5 }. Az ének megnyitásakor a legjobbra értékelt letét jelenik meg.
+const RATING_MAX = 5;
+const RATING_STEPS = Array.from({ length: RATING_MAX }, (_, i) => i + 1);
+const loadScoreRatings = () => {
+    const all = loadJSON(STORAGE_KEYS.scoreRatings, {});
+    if (!all || typeof all !== 'object' || Array.isArray(all)) return {};
+    return Object.fromEntries(Object.entries(all).filter(([, r]) => Number.isInteger(r) && r >= 1 && r <= RATING_MAX));
+};
+// A letétek sorrendje a választóban (az első az alapértelmezett): elöl a jobbra értékeltek; az egyformán értékeltek (és
+// az értékeletlenek) a könyvek sorrendjében (a rendezés stabil), de közülük a beépített könyv kottái hátul
+const rankVariations = (variations, ratings) => variations
+    .map(v => ({ ...v, rating: ratings[v.id] || 0 }))
+    .sort((a, b) => b.rating - a.rating || Number(!!a.builtin) - Number(!!b.builtin));
+
+// Csillagos értékelő a kotta alatt. Koppintás: annyi csillag; a mostani értékre újra koppintva törlődik. Billentyűzettel
+// a nyilak állítják, a Delete törli (a csoportból egy gomb kap fókuszt a Tab billentyűvel).
+const StarRating = ({ value, onChange, label = 'A letét értékelése' }) => {
+    const [hover, setHover] = useState(0);
+    const buttonsRef = useRef([]);
+    const shown = hover || value;
+    const handleKeyDown = (e) => {
+        const next = { ArrowRight: value + 1, ArrowUp: value + 1, ArrowLeft: value - 1, ArrowDown: value - 1, Home: 1, End: RATING_MAX,
+            Delete: 0, Backspace: 0 }[e.key];
+        if (next === undefined) return;
+        e.preventDefault();
+        const rating = next === 0 ? 0 : Math.min(RATING_MAX, Math.max(1, next));
+        if (rating !== value) onChange(rating);
+        const button = buttonsRef.current[Math.max(rating, 1) - 1];
+        if (button) button.focus();
+    };
+    return (
+        <div className={`star-rating${hover ? ' previewing' : ''}`} role="radiogroup" aria-label={label}
+            onKeyDown={handleKeyDown} onPointerLeave={() => setHover(0)}>
+            {RATING_STEPS.map(n => (
+                <button key={n} ref={el => { buttonsRef.current[n - 1] = el; }} type="button" role="radio" aria-checked={value === n}
+                    tabIndex={n === Math.max(value, 1) ? 0 : -1} aria-label={`${n} csillag`}
+                    title={value === n ? 'Értékelés törlése' : `${n} csillag`} className={`star-btn${n <= shown ? ' on' : ''}`}
+                    onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHover(n); }}
+                    onClick={() => { setHover(0); onChange(value === n ? 0 : n); }}>
+                    <Icons.Star size={18} />
+                </button>
+            ))}
+        </div>
+    );
+};
+
+// Az értékelés kijelzése (a letétválasztóban)
+const RatingStars = ({ value }) => (
+    <span className="rating-stars" role="img" aria-label={`${value} csillag`} title={`${value} csillag`}>
+        {RATING_STEPS.map(n => <Icons.Star key={n} size={12} className={n <= value ? 'on' : ''} />)}
+    </span>
+);
+
+// A letét a választóban: a neve és az adatai, jobbra az értékelése (ha van)
+const renderVariationOption = (v) => (
+    <div className="variation-option">
+        <div className="variation-option-text">
+            <div className="custom-select-option-label">{v.name}</div>
+            {v.composer && <div className="custom-select-option-sub">{v.composer}</div>}
+        </div>
+        {v.rating > 0 && <RatingStars value={v.rating} />}
+    </div>
+);
+
 // A látható terület a képernyő-billentyűzet nélkül: a visualViewport helye és magassága (ahol nincs, az ablaké)
 const visibleArea = () => {
     const vv = window.visualViewport;
@@ -2344,7 +2425,7 @@ const HymnNotesEditor = ({ hymnNumber, hymnTitle, notes, editing, onSave, onCanc
 // A szövegpanel választott füle (Szöveg / Megjegyzések): a program futása alatt minden énekre érvényes
 let lyricsTabMemory = 'lyrics';
 
-const ScoreViewer = ({ score, variationId, preludeId, lyrics, description = [], showLyrics, scoreMaxWidth, scoreFont, hymnNumber, hymnTitle, onNext, onPrev }) => {
+const ScoreViewer = ({ score, variationId, preludeId, lyrics, description = [], showLyrics, scoreMaxWidth, scoreFont, hymnNumber, hymnTitle, onNext, onPrev, onRate }) => {
     // A szövegpanel elrendezése az aktuális énekhez; ének váltásakor (pl. a lejátszóban lapozva) annak a mentett
     // elrendezése töltődik be
     let [lyricsLayout, setLyricsLayout] = useState(() => ({ hymn: hymnNumber, ...lyricsLayoutOf(hymnNumber) }));
@@ -2653,18 +2734,22 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, description = [], 
                     {loading && <div className="score-loading">⏳ Kotta betöltése...</div>}
                 </div>
 
-                {/* Alsó sáv: zoom és a letét adatai, külön helyen, hogy ne takarják a kottát */}
+                {/* Alsó sáv: a letét értékelése (az ének oldalán), zoom és a letét adatai, külön helyen, hogy ne takarják a
+                    kottát. (A lejátszóban nincs értékelés: ott az alsó sáv széle is lapoz.) */}
                 <div className="score-footer">
-                    <div className="zoom-bar">
-                        <button onClick={zoomOut} disabled={shownZoom <= ZOOM_MIN + 0.001} title="Kicsinyítés">-</button>
-                        <span title={fitLimited ? 'Ennél nagyobban nem fér ki a kotta' : undefined}>{Math.round(shownZoom * 100)}%</span>
-                        <button onClick={zoomIn} disabled={atMax} title="Nagyítás">+</button>
-                    </div>
-                    {variation && (
-                        <div className="score-info">
-                            {variation.year} {variation.voiceCount && ` • ${variation.voiceCount} szólam`}
+                    <div className={`score-footer-bar${onRate && variation ? ' has-rating' : ''}`}>
+                        {onRate && variation && <StarRating value={variation.rating || 0} onChange={(rating) => onRate(variation.id, rating)} />}
+                        <div className="zoom-bar">
+                            <button onClick={zoomOut} disabled={shownZoom <= ZOOM_MIN + 0.001} title="Kicsinyítés">-</button>
+                            <span title={fitLimited ? 'Ennél nagyobban nem fér ki a kotta' : undefined}>{Math.round(shownZoom * 100)}%</span>
+                            <button onClick={zoomIn} disabled={atMax} title="Nagyítás">+</button>
                         </div>
-                    )}
+                        {variation && (
+                            <div className="score-info">
+                                {variation.year} {variation.voiceCount && ` • ${variation.voiceCount} szólam`}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -2836,10 +2921,11 @@ const ScorebookCard = ({ book, download, active, onToggle, onDownload, onCancel,
     );
 };
 
-const ScorebooksView = ({ books, downloads, bookActive, online, onToggle, onDownload, onCancel, onDelete }) => (
+const ScorebooksView = ({ books, downloads, bookActive, online, onToggle, onDownload, onCancel, onDelete, menuButton }) => (
     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
         <div className="header centered">
             <h1 className="header-title main page-title">Kottakönyvek</h1>
+            {menuButton}
         </div>
 
         <div className="main-content" style={{padding:'1rem', overflowY:'auto'}}>
@@ -3136,7 +3222,42 @@ const PlaylistEditor = ({ playlist, onRemoveItem, onEditItem, onAddItem, onPlay,
     );
 };
 
+// --- NÉVJEGY ---
+// A használati útmutató (docs/) a GitHubon olvasható, a képekkel együtt
+const GUIDE_URL = 'https://github.com/zseliakiraly/orgonatar/blob/main/docs/README.md';
+const FEEDBACK_EMAIL = 'feedback@zseli.hu';
+// A hibabejelentő levél: rögzített tárgy, a levél végén a hiba kereséséhez hasznos adatok (küldés előtt átírhatók)
+const feedbackMailto = () => {
+    const standalone = navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    const body = ['', '', '', '--', 'A hiba kereséséhez:',
+        `Böngésző: ${navigator.userAgent}`,
+        `Ablak: ${window.innerWidth} × ${window.innerHeight} képpont`,
+        `Megnyitva: ${standalone ? 'a kezdőképernyőről' : 'böngészőben'} (${window.location.origin}${window.location.pathname})`].join('\n');
+    return `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent('OrgonaTár hibabejelentő')}&body=${encodeURIComponent(body)}`;
+};
 
+const AboutView = ({ menuButton }) => (
+    <div className="about-view">
+        {menuButton}
+        <Logo className="about-logo" />
+        <h1 className="page-title text-3xl text-galaxy mb-2">Református OrgonaTár</h1>
+        <p className="text-accent uppercase font-bold tracking-widest mb-8">Fazekas Márton</p>
+        <div className="content-box">
+            <p>Református énekek orgonakíséretei, a 2021-es énekeskönyvhöz igazítva. Több korálkönyvből válogattam, elsősorban saját használatra - így számos kíséret kimaradt, például a "művészi" B letétek a genfi korálkönyvből.</p>
+        </div>
+        <div className="about-actions">
+            <a href={GUIDE_URL} target="_blank" rel="noopener noreferrer" className="btn btn-outline"><Icons.Book size={18}/> Használati útmutató</a>
+            <a href={feedbackMailto()} className="btn btn-outline about-feedback"><Icons.Mail size={18}/> Hiba bejelentése</a>
+        </div>
+        <p className="about-feedback-note">
+            Hibát találtál, vagy javaslatod van? Írj a <a href={`mailto:${FEEDBACK_EMAIL}`}>{FEEDBACK_EMAIL}</a> címre.
+        </p>
+        <p className="about-credits">
+            A kottákat a <a href="https://www.verovio.org" target="_blank" rel="noopener noreferrer">Verovio</a> rajzolja
+            (LGPL-3.0 licenc, <a href={`https://github.com/rism-digital/verovio/tree/version-${VEROVIO_VERSION}`} target="_blank" rel="noopener noreferrer">forráskód</a>).
+        </p>
+    </div>
+);
 
 // --- FŐ ALKALMAZÁS ---
 function OrganistApp() {
@@ -3156,6 +3277,8 @@ function OrganistApp() {
     // STORAGE STATE (induláskor a localStorage-ból töltjük)
     const [playlists, setPlaylists] = useState(() => normalizePlaylists(loadJSON(STORAGE_KEYS.playlists, [])));
     const [settings, setSettings] = useState(loadSettings);
+    const [scoreRatings, setScoreRatings] = useState(loadScoreRatings);   // { letét azonosítója: 1–5 }
+    const [menuOpen, setMenuOpen] = useState(false);   // a kihúzható menü (telefonon, álló helyzetben)
 
     // DATA STATE
     const [hymnBook, setHymnBook] = useState([]);
@@ -3341,6 +3464,7 @@ function OrganistApp() {
     // A bejegyzés csak azonosítókat tárol, ezért a kezelőnek nincs szüksége a friss adatokra.
     const applyNavState = useCallback((state) => {
         const s = state || {};
+        setMenuOpen(false);
         setActiveTab(s.activeTab || 'library');
         setSelectedHymnNumber(s.selectedHymnNumber ?? null);
         setSelectedPlaylistId(s.selectedPlaylistId ?? null);
@@ -3366,6 +3490,26 @@ function OrganistApp() {
         }
         navigate({ activeTab: tab });
     };
+
+    // A kihúzható menü: nyitáskor a fókusz a menübe kerül; az Escape bezárja (a fókusz vissza a menügombra), és akkor
+    // is bezárul, ha a kijelző elfordul (fekve, vagy szélesebb ablakban az oldalmenü mindig látszik)
+    useEffect(() => {
+        if (!menuOpen) return;
+        const menu = document.getElementById('app-menu');
+        const first = menu && (menu.querySelector('.nav-btn.active') || menu.querySelector('.nav-btn'));
+        if (first) first.focus({ preventScroll: true });
+        const onKeyDown = (e) => {
+            if (e.key !== 'Escape') return;
+            e.preventDefault();
+            setMenuOpen(false);
+            const toggle = document.querySelector('.menu-toggle');
+            if (toggle) toggle.focus();
+        };
+        const onResize = () => { if (!window.matchMedia(MENU_DRAWER_QUERY).matches) setMenuOpen(false); };
+        document.addEventListener('keydown', onKeyDown);
+        window.addEventListener('resize', onResize);
+        return () => { document.removeEventListener('keydown', onKeyDown); window.removeEventListener('resize', onResize); };
+    }, [menuOpen]);
 
     useEffect(() => {
         // Újratöltéskor a böngésző megőrzi a history.state-et, így ugyanoda térünk vissza
@@ -3423,7 +3567,10 @@ function OrganistApp() {
         return next;
     }, [books]);
 
+    // A beépített könyvek mappái (szövegként, hogy csak valódi változáskor számoljunk újra)
+    const builtinFolders = books.filter(b => b.builtin).map(b => b.folder).join('/');
     const activeScores = useMemo(() => {
+        const builtin = new Set(builtinFolders.split('/'));
         const grouped = {};
         // Egy könyvben ugyanahhoz az énekhez több letét is tartozhat azonos "id"-vel (pl. két változat a 7. zsoltárhoz);
         // az azonosítókat egyedivé tesszük, különben a második változat nem választható ki.
@@ -3458,7 +3605,8 @@ function OrganistApp() {
                     xmlUrl: resolveBookUrl(score.xmlUrl, book.folder),
                     voiceCount: score.voiceCount,
                     composer: details,
-                    year: score.year || book.year
+                    year: score.year || book.year,
+                    builtin: builtin.has(book.folder)
                 };
                 
                 if (score.type === 'prelude') {
@@ -3505,11 +3653,21 @@ function OrganistApp() {
         });
         
         return Object.values(grouped);
-    }, [scorebooks, settings.bookActive]);
+    }, [scorebooks, settings.bookActive, builtinFolders]);
+    // A letétek az értékelésük szerint sorban (az értékeléssel együtt); az első az ének alapértelmezett letétje
+    const rankedScores = useMemo(() => activeScores.map(s => s.variations.length > 0 ? { ...s, variations: rankVariations(s.variations, scoreRatings) } : s),
+        [activeScores, scoreRatings]);
+    const rateVariation = useCallback((variationId, rating) => setScoreRatings(prev => {
+        const next = { ...prev };
+        if (rating > 0) next[variationId] = rating;
+        else delete next[variationId];
+        return next;
+    }), []);
 
     // Save persistence (a kezdőállapot már a tárolt adat, így nem írunk felül semmit)
     useEffect(() => { saveJSON(STORAGE_KEYS.playlists, playlists); }, [playlists]);
     useEffect(() => { saveJSON(STORAGE_KEYS.settings, settings); }, [settings]);
+    useEffect(() => { saveJSON(STORAGE_KEYS.scoreRatings, scoreRatings); }, [scoreRatings]);
 
     // Származtatott adatok
     const hymnByNumber = useMemo(() => new Map(hymnBook.map(h => [String(h.number), h])), [hymnBook]);
@@ -3546,8 +3704,8 @@ function OrganistApp() {
     useEffect(() => { document.documentElement.style.setProperty('--font-ui', uiFontStack(settings.uiFont)); }, [settings.uiFont]);
     useEffect(() => { document.documentElement.style.setProperty('--font-serif', serifFontStack(settings.serifFont)); }, [settings.serifFont]);
 
-    // Énekváltáskor az első változat, előjáték nélkül. Ha csak a könyvek változtak (pl. letöltés a háttérben),
-    // a választás megmarad, amíg létezik.
+    // Énekváltáskor az első (a legjobbra értékelt) változat, előjáték nélkül. Ha csak a könyvek vagy az értékelések
+    // változtak (pl. letöltés a háttérben), a választás megmarad, amíg létezik.
     const lastHymnNumberRef = useRef(null);
     useEffect(() => {
         if (!selectedHymn) return;
@@ -3558,11 +3716,11 @@ function OrganistApp() {
         lastHymnNumberRef.current = selectedHymn.number;
         setCurrentVariationId(prev => !hymnChanged && variations.some(v => v.id === prev) ? prev : (variations.length > 0 ? variations[0].id : null));
         setCurrentPreludeId(prev => !hymnChanged && preludes.some(p => p.id === prev) ? prev : null);
-    }, [selectedHymn, activeScores]);
+    }, [selectedHymn, rankedScores]);
 
     const getScoreById = (scoreId) => {
         if (!scoreId) return null;
-        return activeScores.find(s => s.id.toString() === scoreId.toString()) || null;
+        return rankedScores.find(s => s.id.toString() === scoreId.toString()) || null;
     };
     const getScoreInfo = (scoreId, varId, preId) => {
         const score = getScoreById(scoreId);
@@ -3688,6 +3846,9 @@ function OrganistApp() {
     };
 
     if (loading) return <div className="loading-screen" style={{backgroundColor: currentTheme.sidebar}}>Betöltés...</div>;
+
+    // A menügomb a főoldalak fejlécében (a részletes oldalakon a vissza gomb van a helyén)
+    const menuToggle = (variant) => <MenuToggle open={menuOpen} onToggle={() => setMenuOpen(o => !o)} side={settings.sidebarSide} variant={variant} />;
     
     // --- RENDER ---
     return (
@@ -3696,8 +3857,10 @@ function OrganistApp() {
                 activeTab={view}
                 onTabChange={handleTabChange}
                 menuSide={settings.sidebarSide}
-                toggleFullScreen={FULLSCREEN_SUPPORTED ? toggleFullScreen : null} 
+                toggleFullScreen={FULLSCREEN_SUPPORTED ? () => { setMenuOpen(false); toggleFullScreen(); } : null}
+                open={menuOpen}
             />
+            {menuOpen && <div className="menu-backdrop" onClick={() => setMenuOpen(false)} />}
             
             <div className="main-content">
                 {/* Modals */}
@@ -3745,22 +3908,9 @@ function OrganistApp() {
                 )}
 
                 {/* Content Views */}
-                {view === 'settings' && <SettingsView settings={settings} onUpdateSettings={setSettings} />}
+                {view === 'settings' && <SettingsView settings={settings} onUpdateSettings={setSettings} menuButton={menuToggle('corner')} />}
 
-                {view === 'about' && (
-                    <div className="about-view">
-                        <Logo className="about-logo" />
-                        <h1 className="page-title text-3xl text-galaxy mb-2">Református OrgonaTár</h1>
-                        <p className="text-accent uppercase font-bold tracking-widest mb-8">Fazekas Márton</p>
-                         <div className="content-box">
-                            <p>Református énekek orgonakíséretei, a 2021-es énekeskönyvhöz igazítva. Több korálkönyvből válogattam, elsősorban saját használatra - így számos kíséret kimaradt, például a "művészi" B letétek a genfi korálkönyvből.</p>
-                        </div>
-                        <p className="about-credits">
-                            A kottákat a <a href="https://www.verovio.org" target="_blank" rel="noopener noreferrer">Verovio</a> rajzolja
-                            (LGPL-3.0 licenc, <a href={`https://github.com/rism-digital/verovio/tree/version-${VEROVIO_VERSION}`} target="_blank" rel="noopener noreferrer">forráskód</a>).
-                        </p>
-                    </div>
-                )}
+                {view === 'about' && <AboutView menuButton={menuToggle('floating')} />}
 
                 {view === 'playlist_editor' && <PlaylistEditor playlist={selectedPlaylist} onRemoveItem={(itemId) => handleRemoveItemRequest(selectedPlaylist.id, itemId)}
                     onEditItem={(item) => setEditingItem({ playlistId: selectedPlaylist.id, itemId: item.id })} onAddItem={handleAddHymnToEditor} onPlay={startPlaylist} onReorder={handleReorderPlaylist}
@@ -3785,8 +3935,9 @@ function OrganistApp() {
                                     if(!score) return null;
                                     return (
                                         <>
-                                            <CustomSelect items={score.preludes} currentId={currentPreludeId} onChange={setCurrentPreludeId} placeholder="Előjáték választása" emptyText="Nincs előjáték" width="160px" />
-                                            <CustomSelect items={score.variations} currentId={currentVariationId} onChange={setCurrentVariationId} placeholder="Változat választása" width="180px" />
+                                            <CustomSelect items={score.preludes} currentId={currentPreludeId} onChange={setCurrentPreludeId} placeholder="Előjáték választása" emptyText="Nincs előjáték" width="160px" ariaLabel="Előjáték" />
+                                            <CustomSelect items={score.variations} currentId={currentVariationId} onChange={setCurrentVariationId} placeholder="Változat választása" width="180px"
+                                                renderOption={renderVariationOption} ariaLabel="Letét" />
                                             <button onClick={() => { setTargetPlaylistId(null); setPendingHymnToAdd(null); setIsAddModalOpen(true); }} className="btn btn-primary" title="Hozzáadás listához"><Icons.Plus size={20} /></button>
                                         </>
                                     ); 
@@ -3794,13 +3945,14 @@ function OrganistApp() {
                             </div>
                         </div>
                         <div style={{flex:1, overflow:'hidden'}}>
-                            <ScoreViewer score={getScoreById(selectedHymn.scoreId)} variationId={currentVariationId} preludeId={currentPreludeId} hymnNumber={selectedHymn.number} hymnTitle={selectedHymn.title} lyrics={lyricsOf(selectedHymn)} description={selectedHymn.description} showLyrics={settings.showLyrics} scoreMaxWidth={settings.scoreMaxWidth} scoreFont={settings.scoreFont}/>
+                            <ScoreViewer score={getScoreById(selectedHymn.scoreId)} variationId={currentVariationId} preludeId={currentPreludeId} hymnNumber={selectedHymn.number} hymnTitle={selectedHymn.title} lyrics={lyricsOf(selectedHymn)} description={selectedHymn.description} showLyrics={settings.showLyrics} scoreMaxWidth={settings.scoreMaxWidth} scoreFont={settings.scoreFont} onRate={rateVariation}/>
                         </div>
                     </div>
                 ) : (
                     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
                         <div className="header centered">
                             <h1 className="header-title main page-title">Református OrgonaTár</h1>
+                            {menuToggle('corner')}
                         </div>
                         <div className="library-toolbar">
                             <div className="library-search">
@@ -3833,13 +3985,14 @@ function OrganistApp() {
                 {view === 'playlists' && (
                     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
                         <div className="header">
-                            <div style={{flex:1}}></div>
+                            <div style={{flex:1}}>{settings.sidebarSide === 'left' && menuToggle('inline')}</div>
                             <h1 className="header-title main page-title">Liturgikus listák</h1>
                             <div className="header-actions">
                                 <button onClick={() => setImportText('')} className="btn btn-on-dark" title="Lista importálása (kód, link, fájl vagy QR-kód)" aria-label="Lista importálása">
                                     <Icons.Import size={20}/><span className="btn-label">Importálás</span>
                                 </button>
                                 <button onClick={() => setIsCreateListModalOpen(true)} className="btn btn-primary" aria-label="Új lista"><Icons.Plus size={20}/><span className="btn-label">Új lista</span></button>
+                                {settings.sidebarSide !== 'left' && menuToggle('inline')}
                             </div>
                         </div>
                         {playlists.length === 0 ? (
@@ -3886,7 +4039,8 @@ function OrganistApp() {
 
                 {view === 'scorebooks' && (
                     <ScorebooksView books={books} downloads={downloads} bookActive={settings.bookActive} online={online}
-                        onToggle={toggleBookActive} onDownload={startDownload} onCancel={cancelDownload} onDelete={setBookToDelete} />
+                        onToggle={toggleBookActive} onDownload={startDownload} onCancel={cancelDownload} onDelete={setBookToDelete}
+                        menuButton={menuToggle('corner')} />
                 )}
 
                 

@@ -41,7 +41,9 @@ Két helyről lehet énekeket a listára tenni.
 1. **Cél lista:** melyik listára kerüljön az ének. Az **+ Új lista…** sorral itt is létrehozható új lista, a naptár
    gombbal együtt.
 2. **Előjáték:** az ének oldalán választott előjáték, itt módosítható. A „Nincs kiválasztva” sorral elhagyható.
-3. **Változat:** a letét.
+3. **Változat:** a letét. Az ének oldaláról az ott látott letét, a lista szerkesztőjéből a legjobbra értékelt (lásd:
+   [A letétek értékelése](03-konyvtar.md#a-letétek-értékelése)). A választóban az értékelt letétek mellett a
+   csillagaik is látszanak.
 4. **Versszakok:** a kiválasztottak jelennek meg a lejátszó szövegpaneljén. Alapból mind ki van jelölve, egy sorra
    koppintva ki-be kapcsolható.
 5. **Mind / Egyik sem:** az összes versszak kijelölése vagy törlése.

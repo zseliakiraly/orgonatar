@@ -21,7 +21,9 @@ teszi közzé). A technikai részletek a fő [README](../README.md)-ben vannak.
 ```
 
 - A sorrend a Kottakönyvek oldal sorrendje.
-- A `"builtin": true` könyv a beépített: mindig elérhető, és magától mentődik a készülékekre.
+- A `"builtin": true` könyv a beépített: mindig elérhető, és magától mentődik a készülékekre. A letétválasztóban a
+  kottái a többi könyvé után állnak, így az ének megnyitásakor csak akkor jelennek meg, ha nincs más letét (vagy a
+  felhasználó jobbra értékelte őket).
 - A többi könyvet a felhasználók töltik le.
 
 ## Egy könyv: `data/<mappa>/index.json`
@@ -46,7 +48,8 @@ Minden könyvnek saját mappája van. Benne van az `index.json`, a kottafájlok 
 ```
 
 A könyv mezői:
-- `id`: a könyv azonosítója. **Ne változzon**, mert a listák ehhez kötik a kiválasztott letétet.
+- `id`: a könyv azonosítója. **Ne változzon**, mert a listák ehhez kötik a kiválasztott letétet, és a letétek
+  értékelése is ehhez kötődik.
 - `title`, `author`, `description`, `copyright`: a könyv adatai a kártyán.
   - A cím végén zárójelben álló évszám (pl. `(2010)`) a rajzolt borítón külön jelenik meg.
   - A ` - ` utáni rész a rajzolt borítón alcím lesz.
