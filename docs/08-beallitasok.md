@@ -19,7 +19,8 @@ Az oldalmenü fogaskerék gombja nyitja meg. Újra megnyomva oda visz vissza, ah
   Next). A menüben mindegyik a saját mintájával látszik.
 - **Énekszámok és oldalcímek:** talpas betű, a régi korálkönyvek mintájára (Old Standard TT, DM Serif Text, Libre
   Bodoni).
-- **Oldalmenü helye:** bal vagy jobb oldalon legyen a menü.
+- **Oldalmenü helye:** bal vagy jobb oldalon legyen a menü. Álló telefonon ezen az oldalon van a menügomb, és innen
+  jön elő a menü (lásd: [Telefonon](01-elso-lepesek.md#telefonon)).
 
 ## 2. Kottanézet és lejátszó
 

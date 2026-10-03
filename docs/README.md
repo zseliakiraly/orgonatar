@@ -12,9 +12,10 @@ kottakönyvekkel internet nélkül is működik.
 
 ## Tartalom
 
-1. [Első lépések](01-elso-lepesek.md) – megnyitás, kezdőképernyő, teljes képernyő, a felület részei, telefonon
+1. [Első lépések](01-elso-lepesek.md) – megnyitás, kezdőképernyő, teljes képernyő, a felület részei, telefonon (menü)
 2. [Kottakönyvek](02-kottakonyvek.md) – könyvek letöltése, frissítése és elrejtése; internet nélkül
-3. [Könyvtár és az ének oldala](03-konyvtar.md) – keresés, kulcsszavak, letét és előjáték, nagyítás
+3. [Könyvtár és az ének oldala](03-konyvtar.md) – keresés, kulcsszavak, letét és előjáték, a letétek értékelése,
+   nagyítás
 4. [Szövegpanel, megjegyzés, regisztráció](04-szovegpanel.md)
 5. [Listák](05-listak.md) – lista összeállítása az istentiszteletre
 6. [Lejátszó](06-lejatszo.md) – az istentisztelet alatt: lapozás koppintással vagy pedállal
@@ -36,3 +37,6 @@ kottakönyvekkel internet nélkül is működik.
 
 A képeken a program fekvő tableten látszik (1280 × 800 képpont). Telefonon ugyanígy működik, keskenyebb elrendezésben
 ([lásd itt](01-elso-lepesek.md#telefonon)).
+
+Hibát találtál, vagy javaslatod van? A program **Névjegy** oldalán a **Hiba bejelentése** gombbal írhatsz (vagy
+közvetlenül a <feedback@zseli.hu> címre). Ezt az útmutatót is a Névjegy oldalról lehet megnyitni.

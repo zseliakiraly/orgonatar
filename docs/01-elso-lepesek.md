@@ -44,7 +44,9 @@ Az oldalmenü alapból a jobb szélen van, a [Beállításokban](08-beallitasok.
 3. **Kottakönyvek:** a kottagyűjtemények letöltése a készülékre.
 4. **Teljes képernyő:** be- és kikapcsolás (ha a böngésző tudja).
 5. **Beállítások:** színséma, betűk, kottanézet. Újra megnyomva visszavisz oda, ahonnan jöttél.
-6. **Névjegy:** a program adatai.
+6. **Névjegy:** a program adatai, link erre a **használati útmutatóra**, és a **Hiba bejelentése** gomb. A gomb a
+   levelezőben új levelet nyit a <feedback@zseli.hu> címre, „OrgonaTár hibabejelentő” tárggyal. A levél végére a
+   program a hiba kereséséhez hasznos adatokat ír (böngésző, ablakméret); a levél elejére írd le, mi történt.
 
 A lapok bal felső sarkában lévő **‹** gomb az előző lapra visz vissza. Ugyanígy működik a böngésző és a telefon vissza
 gombja is.
@@ -57,12 +59,20 @@ a [Kottakönyveknél](02-kottakonyvek.md#internet-nélkül).
 
 ## Telefonon
 
-Telefonon ugyanezek a lapok vannak, keskenyebb elrendezésben:
-- az ének oldalán a választók a cím alá kerülnek;
-- a lejátszóban a letét adatai a cím alatti sorba;
-- a szövegpanel fülei külön sorba.
+Telefonon ugyanezek a lapok vannak, keskenyebb elrendezésben.
 
-![Telefonon: Könyvtár, az ének oldala, lejátszó](kepek/telefon.webp)
+![Telefonon: Könyvtár, a menü, az ének oldala, lejátszó](kepek/telefon.webp)
+
+1. **Menügomb (☰):** álló telefonon az oldalmenü rejtve van, így a lapoknak több hely jut. A Könyvtár, a Listák, a
+   Kottakönyvek, a Beállítások és a Névjegy tetején lévő gomb húzza elő. Az ének oldalán, a lista szerkesztőjében és a
+   lejátszóban nincs menügomb: onnan a **‹** gombbal léphetsz vissza.
+2. **A menü:** ugyanazok a gombok, mint az oldalmenüben, a nevükkel. Azon az oldalon jön elő, ahol az oldalmenü lenne
+   (lásd: [Beállítások](08-beallitasok.md)). Egy pontjára vagy mellé koppintva bezárul.
+3. Az ének oldalán a választók a cím alá kerülnek; a kotta alatt a [csillagok](03-konyvtar.md#a-letétek-értékelése), a
+   nagyítás és a letét adatai egymás mellett vannak.
+
+A lejátszóban a letét adatai a cím alatti sorba, a szövegpanel fülei külön sorba kerülnek. Fekvő telefonon az
+oldalmenü a megszokott helyén van.
 
 ---
 

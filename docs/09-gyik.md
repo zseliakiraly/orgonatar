@@ -40,6 +40,15 @@ böngésző beállításaiban engedélyezd az oldalnak a kamerát.
 - Ha a pedál mégsem lapoz, koppints egyszer a kotta közepére (nem a szélére), hogy a program kapja meg a
   billentyűket.
 
+**Miért nem a beépített énekeskönyv kottája nyílik meg?**
+Az ének megnyitásakor a legjobbra értékelt letét jelenik meg; értékelés nélkül a letöltött könyvek első letétje, a
+beépített énekeskönyv kottája csak akkor, ha nincs más. A választóból bármikor választhatsz másikat, és csillagokkal
+beállíthatod, melyik nyíljon meg (lásd: [A letétek értékelése](03-konyvtar.md#a-letétek-értékelése)).
+
+**Telefonon hol van az oldalmenü?**
+Álló telefonon el van rejtve: a Könyvtár, a Listák, a Kottakönyvek, a Beállítások és a Névjegy tetején lévő **☰**
+gomb húzza elő (lásd: [Telefonon](01-elso-lepesek.md#telefonon)). Fekve a megszokott helyén van.
+
 **Túl kicsi vagy túl nagy a kotta.**
 - A − / + gombbal állítható. A + akkor nem nyomható, ha a kotta nagyobban már nem férne ki.
 - A szövegpanel kisebbre húzásával, vagy oldalra téve több hely jut a kottának.
@@ -52,10 +61,17 @@ képernyőn fut.
 **Hol tárolódnak az adataim?**
 Csak ezen a készüléken, a böngészőben:
 - a listák, a beállítások, a megjegyzések és a regisztrációk;
+- a letétek értékelése (csillagok);
 - a szövegpanel énekenkénti elrendezése;
 - a letöltött kottakönyvek.
 
 A program ezeket nem küldi el sehová; másokhoz csak az kerül, amit te osztasz meg.
+
+**Hogyan jelezhetek hibát, vagy írhatok javaslatot?**
+A **Névjegy** oldalon a **Hiba bejelentése** gomb új levelet nyit a <feedback@zseli.hu> címre, „OrgonaTár
+hibabejelentő” tárggyal. Írd le, mi történt, és mit vártál helyette; ha lehet, melyik énekkel, melyik lapon. A levél
+végén a program a böngésző és a kijelző adatait is odaírja, ez segít a hiba megtalálásában (küldés előtt törölhető).
+Ha a készüléken nincs levelezőprogram beállítva, a címre máshonnan is írhatsz.
 
 ---
 
