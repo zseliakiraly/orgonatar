@@ -123,8 +123,8 @@ ahonnan a beállításokba jöttél. A lenyíló menük mindenhol a program saj�
     mintákkal.
   - Mind a programmal csomagolt, szabad (SIL OFL) betűtípus (`fonts/`); a választás után a többi törölhető
     (`fonts/README.md`).
-- **Kottanézet és lejátszó:** szövegpanel, oldalsáv és kotta szélessége, óra a lejátszóban. Az oldalsáv szélessége
-  az oldalsó szövegpanel alapmérete; énekenként a panelen is átméretezhető (lásd lent).
+- **Kottanézet és lejátszó:** szövegpanel, kotta szélessége, óra a lejátszóban. (Az oldalsó szövegpanel szélessége nem
+  beállítás: alapméretben a kottanézet 15%-a, legalább 200 px, és énekenként a panel fogantyújával állítható, lásd lent.)
 - **Kottagrafika:** a kotta rajzolata. Kottafont: **Leipzig** (tömöttebb, alapértelmezett) vagy
   **Bravura** (szellősebb); mindkettőt ugyanazon a mintakottán mutatja (választógombokkal). A minták a lap
   megjelenése után rajzolódnak ki, így a lap tableten is azonnal megnyílik, és a böngészőben megmaradnak
