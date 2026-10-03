@@ -4,6 +4,9 @@ Református énekek orgonakíséreteinek böngészője (2021-es énekeskönyv): 
 MusicXML-ből (a [Verovio](https://www.verovio.org) rajzolja őket), énekszövegek,
 liturgikus listák és lejátszó nézet istentisztelethez.
 
+**Használati útmutató képekkel:** [docs/](docs/README.md) (első lépések, kottakönyvek, könyvtár, szövegpanel, listák,
+lejátszó, megosztás, beállítások, gyakori kérdések, az adatok karbantartása).
+
 A korábbi, OpenSheetMusicDisplay-jel (OSMD) rajzoló változat az `osmd` ágon van meg.
 
 ## Fájlok
@@ -16,6 +19,7 @@ A korábbi, OpenSheetMusicDisplay-jel (OSMD) rajzoló változat az `osmd` ágon 
 | `app.min.js` | Generált fájl (`npm run build`), kézzel ne szerkeszd. |
 | `style.css` | Stílusok. |
 | `orgonatar-logo.svg` | A program logója (eredeti rajz); a Névjegy oldalon az `app.js` `Logo` komponense ugyanezt rajzolja, a téma színével. |
+| `docs/` | Használati útmutató (Markdown), a képernyőképek a `docs/kepek/` mappában (WebP). |
 | `icons/` | A böngészőfül és a kezdőképernyő ikonja: a logó vastagabb vonalú változatai (`favicon.svg`, sötét böngészőben világos vonallal; `apple-touch-icon.png`, `icon-192.png`). Ha a logó változik, ezeket is újra kell készíteni. |
 
 ## Build
