@@ -169,7 +169,7 @@ const BACKGROUNDS = [
 ];
 const SCORE_WIDTHS = ['100%', '90%', '80%', '70%', '60%', '50%'].map(w => ({ id: w, name: w }));
 
-const DEFAULT_SETTINGS = { theme: 'pergamen', background: 'plain', uiFont: UI_FONTS[0].id, serifFont: SERIF_FONTS[0].id, showLyrics: true, showClock: true, sidebarSide: 'right', lyricsWidth: '15%', scoreMaxWidth: '100%', scoreFont: SCORE_FONTS[0].id, bookActive: {}, skipFullscreenPrompt: false, settingsVersion: SETTINGS_VERSION };
+const DEFAULT_SETTINGS = { theme: 'pergamen', background: 'plain', uiFont: UI_FONTS[0].id, serifFont: SERIF_FONTS[0].id, showLyrics: true, showClock: true, sidebarSide: 'right', scoreMaxWidth: '100%', scoreFont: SCORE_FONTS[0].id, bookActive: {}, skipFullscreenPrompt: false, settingsVersion: SETTINGS_VERSION };
 
 const loadJSON = (key, fallback) => {
     try {
@@ -195,6 +195,9 @@ const loadSettings = () => {
     // 2. verzió: a Pergamen lett az alapértelmezett téma. A korábbi alapértéket ("papyrus"), amelyet az oldal
     // magától elmentett, egyszer átállítjuk (addig Pergament nem is lehetett választani).
     if ((stored.settingsVersion || 1) < 2 && settings.theme === 'papyrus') settings.theme = 'pergamen';
+    // Az oldalsó szövegpanel szélessége már nem beállítás (énekenként a panel fogantyújával állítható): a régi érték
+    // kimarad a tárolóból
+    delete settings.lyricsWidth;
     settings.settingsVersion = SETTINGS_VERSION;
     return settings;
 };
@@ -1678,14 +1681,6 @@ const SettingsView = ({ settings, onUpdateSettings }) => {
                         </button>
                     </SettingsRow>
 
-                    <SettingsRow title="Oldalsáv szélessége" hint="Ha oldalt van a szöveg (alapméret; énekenként a panelen át is méretezhető)">
-                        <div className="flex flex-wrap gap-2">
-                            {['15%', '20%', '25%', '30%'].map(w => (
-                                <button key={w} onClick={() => set({ lyricsWidth: w })} className={`btn ${settings.lyricsWidth === w ? 'btn-primary' : 'btn-ghost'}`}>{w}</button>
-                            ))}
-                        </div>
-                    </SettingsRow>
-
                     <SettingsRow title="Kotta szélessége" hint="Maximális szélesség">
                         <CustomSelect items={SCORE_WIDTHS} currentId={settings.scoreMaxWidth || '80%'} onChange={(scoreMaxWidth) => set({ scoreMaxWidth })}
                             allowEmpty={false} width="110px" menuMinWidth={0} ariaLabel="Kotta szélessége" />
@@ -2186,6 +2181,8 @@ const saveLyricsLayout = (hymnNumber, layout) => {
 };
 // Átméretezés: a legkisebb méret px-ben, a legnagyobb a kottanézet hányadában (lent a magasság, oldalt a szélesség)
 const LYRICS_RESIZE_LIMITS = { bottom: { min: 64, max: 0.85 }, side: { min: 150, max: 0.7 } };
+// Az oldalsó panel alapszélessége, amíg az éneknél nem méretezték át: a kottanézet 15%-a, legalább 200 px
+const LYRICS_SIDE_WIDTH = { width: '15%', minWidth: '200px' };
 
 // --- Megjegyzés és regisztráció énekenként ---
 // A szövegpanel Megjegyzések lapján az énekhez írt megjegyzés és a regisztráció (manuálonként és a pedálon). Csak ezen a
@@ -2347,7 +2344,7 @@ const HymnNotesEditor = ({ hymnNumber, hymnTitle, notes, editing, onSave, onCanc
 // A szövegpanel választott füle (Szöveg / Megjegyzések): a program futása alatt minden énekre érvényes
 let lyricsTabMemory = 'lyrics';
 
-const ScoreViewer = ({ score, variationId, preludeId, lyrics, description = [], showLyrics, lyricsWidth, scoreMaxWidth, scoreFont, hymnNumber, hymnTitle, onNext, onPrev }) => {
+const ScoreViewer = ({ score, variationId, preludeId, lyrics, description = [], showLyrics, scoreMaxWidth, scoreFont, hymnNumber, hymnTitle, onNext, onPrev }) => {
     // A szövegpanel elrendezése az aktuális énekhez; ének váltásakor (pl. a lejátszóban lapozva) annak a mentett
     // elrendezése töltődik be
     let [lyricsLayout, setLyricsLayout] = useState(() => ({ hymn: hymnNumber, ...lyricsLayoutOf(hymnNumber) }));
@@ -2534,7 +2531,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, description = [], 
     // átméretezték, a beállított méretben.
     const panelSize = isSide ? lyricsLayout.width : lyricsLayout.height;
     const panelStyle = { '--lyrics-scale': lyricsLayout.fontScale };
-    if (isSide) Object.assign(panelStyle, panelSize ? { width: `${panelSize * 100}%`, minWidth: 0 } : { width: lyricsWidth, minWidth: '200px' });
+    if (isSide) Object.assign(panelStyle, panelSize ? { width: `${panelSize * 100}%`, minWidth: 0 } : LYRICS_SIDE_WIDTH);
     else Object.assign(panelStyle, panelSize ? { height: `${panelSize * 100}%`, minHeight: 0, maxHeight: 'none' }
         : { height: 'auto', minHeight: '150px', maxHeight: lyricsMode === 'block' ? '30%' : '50%' });
     const resizeHandle = (
@@ -3797,7 +3794,7 @@ function OrganistApp() {
                             </div>
                         </div>
                         <div style={{flex:1, overflow:'hidden'}}>
-                            <ScoreViewer score={getScoreById(selectedHymn.scoreId)} variationId={currentVariationId} preludeId={currentPreludeId} hymnNumber={selectedHymn.number} hymnTitle={selectedHymn.title} lyrics={lyricsOf(selectedHymn)} description={selectedHymn.description} showLyrics={settings.showLyrics} lyricsWidth={settings.lyricsWidth} scoreMaxWidth={settings.scoreMaxWidth} scoreFont={settings.scoreFont}/>
+                            <ScoreViewer score={getScoreById(selectedHymn.scoreId)} variationId={currentVariationId} preludeId={currentPreludeId} hymnNumber={selectedHymn.number} hymnTitle={selectedHymn.title} lyrics={lyricsOf(selectedHymn)} description={selectedHymn.description} showLyrics={settings.showLyrics} scoreMaxWidth={settings.scoreMaxWidth} scoreFont={settings.scoreFont}/>
                         </div>
                     </div>
                 ) : (
@@ -3935,7 +3932,6 @@ function OrganistApp() {
                                 lyrics={lyricsOf(playerItem.hymn, playerItem.verses)}
                                 description={playerItem.hymn.description}
                                 showLyrics={settings.showLyrics}
-                                lyricsWidth={settings.lyricsWidth}
                                 scoreMaxWidth={settings.scoreMaxWidth}
                                 scoreFont={settings.scoreFont}
                                 onNext={currentPlayerIndex < playerQueue.length - 1 ? () => goToPlayerIndex(currentPlayerIndex + 1) : null}

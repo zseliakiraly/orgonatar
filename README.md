@@ -4,6 +4,9 @@ Református énekek orgonakíséreteinek böngészője (2021-es énekeskönyv): 
 MusicXML-ből (a [Verovio](https://www.verovio.org) rajzolja őket), énekszövegek,
 liturgikus listák és lejátszó nézet istentisztelethez.
 
+**Használati útmutató képekkel:** [docs/](docs/README.md) (első lépések, kottakönyvek, könyvtár, szövegpanel, listák,
+lejátszó, megosztás, beállítások, gyakori kérdések, az adatok karbantartása).
+
 A korábbi, OpenSheetMusicDisplay-jel (OSMD) rajzoló változat az `osmd` ágon van meg.
 
 ## Fájlok
@@ -16,6 +19,7 @@ A korábbi, OpenSheetMusicDisplay-jel (OSMD) rajzoló változat az `osmd` ágon 
 | `app.min.js` | Generált fájl (`npm run build`), kézzel ne szerkeszd. |
 | `style.css` | Stílusok. |
 | `orgonatar-logo.svg` | A program logója (eredeti rajz); a Névjegy oldalon az `app.js` `Logo` komponense ugyanezt rajzolja, a téma színével. |
+| `docs/` | Használati útmutató (Markdown), a képernyőképek a `docs/kepek/` mappában (WebP). |
 | `icons/` | A böngészőfül és a kezdőképernyő ikonja: a logó vastagabb vonalú változatai (`favicon.svg`, sötét böngészőben világos vonallal; `apple-touch-icon.png`, `icon-192.png`). Ha a logó változik, ezeket is újra kell készíteni. |
 
 ## Build
@@ -123,8 +127,8 @@ ahonnan a beállításokba jöttél. A lenyíló menük mindenhol a program saj�
     mintákkal.
   - Mind a programmal csomagolt, szabad (SIL OFL) betűtípus (`fonts/`); a választás után a többi törölhető
     (`fonts/README.md`).
-- **Kottanézet és lejátszó:** szövegpanel, oldalsáv és kotta szélessége, óra a lejátszóban. Az oldalsáv szélessége
-  az oldalsó szövegpanel alapmérete; énekenként a panelen is átméretezhető (lásd lent).
+- **Kottanézet és lejátszó:** szövegpanel, kotta szélessége, óra a lejátszóban. (Az oldalsó szövegpanel szélessége nem
+  beállítás: alapméretben a kottanézet 15%-a, legalább 200 px, és énekenként a panel fogantyújával állítható, lásd lent.)
 - **Kottagrafika:** a kotta rajzolata. Kottafont: **Leipzig** (tömöttebb, alapértelmezett) vagy
   **Bravura** (szellősebb); mindkettőt ugyanazon a mintakottán mutatja (választógombokkal). A minták a lap
   megjelenése után rajzolódnak ki, így a lap tableten is azonnal megnyílik, és a böngészőben megmaradnak
