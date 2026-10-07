@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="https://music-encoding.org/schema/5.1/mei-basic.rng" type="application/xml" schematypens="http://relaxng.org/ns/structure/1.0"?>
+<?xml-model href="https://music-encoding.org/schema/5.1/mei-basic.rng" type="application/xml" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<mei xmlns="http://www.music-encoding.org/ns/mei" meiversion="5.1+basic">
+   <meiHead>
+      <fileDesc>
+         <titleStmt>
+            <title type="main">152. dicséret</title>
+            <respStmt>
+               <persName role="composer">FM-PCs.</persName>
+            </respStmt>
+         </titleStmt>
+         <pubStmt>
+            <date isodate="2026-10-06T20:50:27" />
+            <availability>2019. Fazekas Márton</availability>
+         </pubStmt>
+      </fileDesc>
+   </meiHead>
+   <music>
+      <body>
+         <mdiv>
+            <score>
+               <scoreDef>
+                  <staffGrp>
+                     <staffGrp bar.thru="true" symbol="brace">
+                        <label>Piano</label>
+                        <labelAbbr>Pno.</labelAbbr>
+                        <instrDef midi.instrnum="19" />
+                        <staffDef n="1" lines="5" keysig="1f" meter.count="6" meter.unit="4">
+                           <clef shape="G" line="2" />
+                        </staffDef>
+                        <staffDef n="2" lines="5" keysig="1f" meter.count="6" meter.unit="4">
+                           <clef shape="F" line="4" />
+                        </staffDef>
+                     </staffGrp>
+                  </staffGrp>
+               </scoreDef>
+               <section xml:id="s1">
+                  <measure xml:id="m1jcgzwh" right="dbl" metcon="false" n="1">
+                     <staff xml:id="m1s1" n="1">
+                        <layer xml:id="m1s1l1" n="1">
+                           <note xml:id="n1dppo8l" dur="4" pname="f" oct="4" />
+                           <beam>
+                              <note xml:id="n1891ag7" dur="8" pname="c" oct="4" />
+                              <note xml:id="n1w6vqy0" dur="8" pname="f" oct="4" />
+                           </beam>
+                           <beam>
+                              <note xml:id="nughj6k" type="mscore-beam-begin" dur="8" pname="e" oct="4" />
+                              <note xml:id="n12f5oom" dur="8" pname="f" oct="4" />
+                           </beam>
+                           <note xml:id="nqqmreo" dur="4" pname="g" oct="4" />
+                           <note xml:id="nevtgdr" dots="1" dur="2" pname="f" oct="4" />
+                           <rest xml:id="r1xbe854" dur="4" />
+                        </layer>
+                     </staff>
+                     <staff xml:id="m1s2" n="2">
+                        <layer xml:id="m1s2l1" n="1">
+                           <note xml:id="n1vghgdu" dur="4" pname="a" oct="3" />
+                           <beam>
+                              <note xml:id="n9876h" dur="8" pname="b" oct="3">
+                                 <accid accid.ges="f" />
+                              </note>
+                              <note xml:id="n22ainm" dur="8" pname="c" oct="4" />
+                           </beam>
+                           <beam>
+                              <note xml:id="npll4gy" type="mscore-beam-begin" dur="8" pname="c" oct="4" />
+                              <note xml:id="n1s34ysf" dur="8" pname="b" oct="3">
+                                 <accid accid.ges="f" />
+                              </note>
+                           </beam>
+                           <note xml:id="n6z0ehp" dur="4" pname="a" oct="3" />
+                           <note xml:id="n1ucsndx" dur="4" pname="b" oct="3">
+                              <accid accid.ges="f" />
+                           </note>
+                           <beam>
+                              <note xml:id="n15joupb" dur="8" pname="a" oct="3" />
+                              <note xml:id="nuc0ldj" dur="8" pname="g" oct="3" />
+                           </beam>
+                           <note xml:id="n8mbtsc" dur="4" pname="f" oct="3" />
+                           <rest xml:id="r1a9kv97" dur="4" />
+                        </layer>
+                     </staff>
+                  </measure>
+               </section>
+            </score>
+         </mdiv>
+      </body>
+   </music>
+</mei>
