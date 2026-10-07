@@ -1113,7 +1113,9 @@
    ["Ments meg, Uram, engem kezeiddel,", "Légy erősségem, segedelmem nékem,", "Mert törvényedet szeretem szívvel!", "Üdvözítésed várom, én Istenem,", "Melyben vetettem reménységemet,", "Mert igen kedvelem szent törvényedet."],
    ["Éltét csak azért kívánja lelkem,", "Hogy ő tégedet, Uram, dicsérhessen,", "Ítéleted légyen segedelmem!", "Mint elveszett juh, bujdosom e földön.", "Uram, keress meg engem, szolgádat,", "Nem felejtem el parancsolatidat!"]
  ] },
- { "number": "120", "title": "Én az Úr Istenhez kiálték", "keywords": ["zsoltár", "könyörgés"], "scoreId": "120", "verses": [] },
+ { "number": "120", "title": "Én az Úr Istenhez kiálték", "keywords": ["zsoltár", "könyörgés"], "scoreId": "120", "verses": [
+  ["Én az Úr Istenhez kiálték,", "Mikoron nagy ínségben valék,", "És be nem fogá az ő fülét.", "Hallgasd meg, Uram, kérésemet!", "A népeknek hazug szájától,", "Hamis nyelvek gyalázatjától,", "Életemet e veszélytől", "Tartsd meg kegyelmességedből!"]
+ ] },
  { "number": "121", "title": "Szemem a hegyekre vetem", "keywords": ["zsoltár", "bizalom"], "scoreId": "121", "verses": [
    ["Szemem a hegyekre vetem,", "Onnan felül nékem", "Minden segedelmem.", "Isten az én reménységem,", "Ki az eget formálta,", "És e földet alkotta."],
    ["Lábad botlani nem hagyja,", "És aki rád vigyáz,", "Nem szunnyadozik az,", "Izráelnek vigyázója,", "Mert az nem aluszik el,", "De rájuk gondot visel."],
@@ -1183,7 +1185,9 @@
    ["Fölnevelem ez egy magvát", "Az én szolgámnak, Dávidnak,", "Kit én fölkentem magamnak.", "Fölkészíttettem lámpását,", "Hogy lássa világát annak."],
    ["De viszont ő ellenségit", "Öltöztetem nagy szégyenben,", "Midőn a koronát fején", "Meglátják, és dicsőségit,", "Hogy megvirágzik ékesen."]
  ] },
- { "number": "133", "title": "Ímé, mily jó és mily nagy gyönyörűség", "keywords": ["zsoltár"], "scoreId": "133", "verses": [] },
+ { "number": "133", "title": "Ímé, mily jó és mily nagy gyönyörűség", "keywords": ["zsoltár"], "scoreId": "133", "verses": [
+  ["Ímé, mily jó és mily nagy gyönyörűség", "Az atyafiak közt az egyenesség,", "Ha békével együtt laknak.", "Mint a balzsamolaj, ők olyanok!", "Megáldja az Úr az ilyeneket,", "Nékik ád hosszú életet." ]
+ ] },
  { "number": "134", "title": "Úrnak szolgái mindnyájan", "keywords": ["zsoltár", "dicséret"], "scoreId": "134", "verses": [
    ["Úrnak szolgái mindnyájan,", "Áldjátok az Urat vígan,", "Kik az ő házában éjjel", "Vigyázván, vagytok hűséggel."],
    ["Felemelvén kezeteket,", "Dicsérjétek Istenteket,", "Szívből néki hálát adván,", "Őt áldjátok minduntalan!"],
@@ -1827,12 +1831,24 @@
    ["Dús kincséből az Úr", "Jó békességet adjon,", "Hogy szívünkben a kedv", "Víg és derűs maradjon.", "Ne hagyja híveit", "Bú-bajban sohasem;", "A rossztól óvja meg", "Itt s túl ez életen."],
    ["Az Atyát és Fiút", "És a Szentlelket áldom;", "A menny Urát, kiben", "Szent egybe forrt a három;", "Aki úgy szól ma is,", "Ahogy régente szólt,", "Nem változik: az Ő,", "És az lesz, aki volt."]
  ] },
- { "number": "209", "title": "Úr Jézus, mely igen drága", "keywords": ["kezdőének"], "scoreId": "209", "verses": [] },
- { "number": "210", "title": "Ó, mely boldog ember az", "keywords": ["kezdőének"], "scoreId": "210", "verses": [] },
- { "number": "211", "title": "Szent Isten, noha néked", "keywords": ["kezdőének"], "scoreId": "211", "verses": [] },
- { "number": "212", "title": "Úr Isten, mi sok szükséget", "keywords": ["kezdőének"], "scoreId": "25", "verses": [] },
- { "number": "213", "title": "Ó, Úr Isten, légy közöttünk", "keywords": ["kezdőének"], "scoreId": "84", "verses": [] },
- { "number": "214", "title": "Nem vagyunk mi magunkéi", "keywords": ["kezdőének"], "scoreId": "42", "verses": [] },
+ { "number": "209", "title": "Úr Jézus, mely igen drága", "keywords": ["kezdőének"], "scoreId": "541", "verses": [
+  ["Úr Jézus, mely igen drága A te igédnek világa,", "Mely bölccsé tévén az elmét, Szüli az Úrnak félelmét.", "Gerjeszd fel most indulatunk, Hogy míg igédre hallgatunk,", "Végyen bennünk épületet A hit, reménység és szeretet:", "Tégy bölcsekké, tégy szentekké!"]
+ ] },
+ { "number": "210", "title": "Ó, mely boldog ember az", "keywords": ["kezdőének"], "scoreId": "211", "verses": [
+  ["Ó, mely boldog ember az, Ki téged, élő, igaz Egy Istent megismerhet,", "És te szent hajlékodban Lélekben, igazságban Dicsérhet és tisztelhet.", "Ó, mi Istenünk, Adtad e boldogságot nekünk;","Adjad, hogy ismerhessünk még jobban, Naponként dicsérhessünk buzgóbban,", "Szent Lelkedet hozzánk e végre Küldd el segítségre!"]
+ ] },
+ { "number": "211", "title": "Szent Isten, noha néked", "keywords": ["kezdőének"], "scoreId": "211", "verses": [
+  ["Szent Isten, noha néked Az egek ülőszéked, Ott dicsérnek tégedet,", "Biztat szent ígéreted, Hogy azért meg nem veted Földön lakó népedet.", "Együtt vagy vélek, Kikben alázatos a lélek.", "Mi is hát térdet hajtunk, hogy rajtunk", "Könyörülj, s kegyelmeddel fogadd el,", "Mikor tehozzád emel kezet Ez a gyülekezet."]
+ ] },
+ { "number": "212", "title": "Úr Isten, mi sok szükséget", "keywords": ["kezdőének"], "scoreId": "25", "verses": [
+  ["Úr Isten, mi sok szükséget Érezvén körülöttünk,", "Segedelemkérés végett E szent helyre feljöttünk.", "Uram, a könyörgőnek Illesd meg szívét és száját,", "A téged tisztelőnek Áldd és szenteld meg munkáját!"]
+ ] },
+ { "number": "213", "title": "Ó, Úr Isten, légy közöttünk", "keywords": ["kezdőének"], "scoreId": "84", "verses": [
+  ["Ó, Úr Isten, légy közöttünk, Kik imádásodra jöttünk, Szívünk egyedül rád hallgasson,", "Hogy igédnek áldott szava, Melytől függ lelkünknek java, Minket minden jóra bírhasson:", "Szent e hely, légyenek szentek, Kik e házban megjelentek!"]
+ ] },
+ { "number": "214", "title": "Nem vagyunk mi magunkéi", "keywords": ["kezdőének"], "scoreId": "42", "verses": [
+  ["Nem vagyunk mi magunkéi, De Jézus vére bére;", "Lelkünk, testünk Istenéi Az ő tiszteletére.", "Urunk Jézus, jöjj most el, Lelked által segíts fel!", "Dicsőítünk mi testünkben, Magasztalunk mi lelkünkben!"]
+ ] },
  { "number": "221", "title": "Adjunk hálát mindnyájan", "keywords": ["főének", "hálaadás", "bizalom"], "scoreId": "221", "verses": [
    ["Adjunk hálát mindnyájan az Atya Úr Istennek,", "És mondjunk dicséretet mi teremtő Istenünknek,", "Ki egybegyűjte most minket,", "Hogy ünnepet szenteljünk, és szent igéjével éljünk."],
    ["Ó, kegyes Atya Isten, te vagy Úr mindenekben,", "Ki megjelentéd magad szent igédben itt, e földön,", "És sok csudatételidben,", "A te áldott Fiadban, mi kegyes Üdvözítőnkben."],
