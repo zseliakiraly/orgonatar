@@ -5,148 +5,28 @@
   "copyright": "Fazekas Márton saját kották",
   "description": "Saját letéteim, egy része Parola Csaba segítségével készült, a többi szabadon tenyészik.",
   "scores": [
-    {
-      "id": "165",
-      "composer": "Fazekas Márton",
-      "year": "2017",
-      "xmlUrl": "165fm-4k-2017.mei",
-      "voiceCount": 4
-    },
-    {
-      "id": "192",
-      "composer": "Fazekas Márton",
-      "year": "2017",
-      "xmlUrl": "192fm-4k-2017.mei",
-      "voiceCount": 4
-    },
-    {
-      "id": "211",
-      "composer": "Fazekas Márton",
-      "year": "2019",
-      "xmlUrl": "211fm-3k-2019.mei",
-      "voiceCount": 3
-    },
-    {
-      "id": "221",
-      "composer": "Fazekas Márton",
-      "year": "2019",
-      "xmlUrl": "221fm-3k-2019.mei",
-      "voiceCount": 3
-    },
-    {
-      "id": "227",
-      "composer": "Fazekas Márton",
-      "year": "2015",
-      "xmlUrl": "227fm-4k-2015.mei",
-      "voiceCount": 4
-    },
-    {
-      "id": "288",
-      "composer": "Fazekas Márton",
-      "year": "2017",
-      "xmlUrl": "288fm-3k-2017.mei",
-      "voiceCount": 3
-    },
-    {
-      "id": "373",
-      "composer": "Fazekas Márton",
-      "year": "2018",
-      "xmlUrl": "373fm-4k-2018.mei",
-      "voiceCount": 4
-    },
-    {
-      "id": "433",
-      "composer": "Fazekas Márton",
-      "year": "2018",
-      "xmlUrl": "433fm-3k-2018.mei",
-      "voiceCount": 3
-    },
-    {
-      "id": "501",
-      "composer": "Fazekas Márton",
-      "year": "2016",
-      "xmlUrl": "501fm-4k-2016.mei",
-      "voiceCount": 4
-    },
-    {
-      "id": "507",
-      "composer": "Fazekas Márton",
-      "year": "2019",
-      "xmlUrl": "507fm-4k-2019.mei",
-      "voiceCount": 4
-    },
-    {
-      "id": "545",
-      "composer": "Fazekas Márton",
-      "year": "2017",
-      "xmlUrl": "545fm-4k-2017.mei",
-      "voiceCount": 4
-    },
-    {
-      "id": "624",
-      "composer": "Fazekas Márton",
-      "year": "2016",
-      "xmlUrl": "624fm-4k-2016.mei",
-      "voiceCount": 4
-    },
-    {
-      "id": "726",
-      "composer": "Fazekas Márton",
-      "year": "2016",
-      "xmlUrl": "726fm-3k-2016.mei",
-      "voiceCount": 3
-    },
-    {
-      "id": "796",
-      "composer": "Fazekas Márton",
-      "year": "2017",
-      "xmlUrl": "796fm-4k-2017.mei",
-      "voiceCount": 4
-    },
-    {
-      "id": "821",
-      "composer": "Fazekas Márton",
-      "year": "2017",
-      "xmlUrl": "821fm-4k-2017.mei",
-      "voiceCount": 4
-    }
+    { "id": "165", "composer": "Fazekas Márton", "year": "2017", "xmlUrl": "165fm-4k-2017.mei", "voiceCount": 4 },
+    { "id": "192", "composer": "Fazekas Márton", "year": "2017", "xmlUrl": "192fm-4k-2017.mei", "voiceCount": 4 },
+    { "id": "211", "composer": "Fazekas Márton", "year": "2019", "xmlUrl": "211fm-3k-2019.mei", "voiceCount": 3 },
+    { "id": "221", "composer": "Fazekas Márton", "year": "2019", "xmlUrl": "221fm-3k-2019.mei", "voiceCount": 3 },
+    { "id": "227", "composer": "Fazekas Márton", "year": "2015", "xmlUrl": "227fm-4k-2015.mei", "voiceCount": 4 },
+    { "id": "288", "composer": "Fazekas Márton", "year": "2017", "xmlUrl": "288fm-3k-2017.mei", "voiceCount": 3 },
+    { "id": "373", "composer": "Fazekas Márton", "year": "2018", "xmlUrl": "373fm-4k-2018.mei", "voiceCount": 4 },
+    { "id": "433", "composer": "Fazekas Márton", "year": "2018", "xmlUrl": "433fm-3k-2018.mei", "voiceCount": 3 },
+    { "id": "501", "composer": "Fazekas Márton", "year": "2016", "xmlUrl": "501fm-4k-2016.mei", "voiceCount": 4 },
+    { "id": "507", "composer": "Fazekas Márton", "year": "2019", "xmlUrl": "507fm-4k-2019.mei", "voiceCount": 4 },
+    { "id": "545", "composer": "Fazekas Márton", "year": "2017", "xmlUrl": "545fm-4k-2017.mei", "voiceCount": 4 },
+    { "id": "624", "composer": "Fazekas Márton", "year": "2016", "xmlUrl": "624fm-4k-2016.mei", "voiceCount": 4 },
+    { "id": "726", "composer": "Fazekas Márton", "year": "2016", "xmlUrl": "726fm-3k-2016.mei", "voiceCount": 3 },
+    { "id": "796", "composer": "Fazekas Márton", "year": "2017", "xmlUrl": "796fm-4k-2017.mei", "voiceCount": 4 },
+    { "id": "821", "composer": "Fazekas Márton", "year": "2017", "xmlUrl": "821fm-4k-2017.mei", "voiceCount": 4 }
   ],
   "preludes": [
-    {
-      "id": "165",
-      "composer": "Fazekas Márton",
-      "year": "2017",
-      "xmlUrl": "165fm-e-2017.mei"
-    },
-    {
-      "id": "192",
-      "composer": "Fazekas Márton",
-      "year": "2017",
-      "xmlUrl": "192fm-e-2017.mei"
-    },
-    {
-      "id": "211",
-      "composer": "Fazekas Márton",
-      "year": "2019",
-      "xmlUrl": "211fm-e-2019.mei"
-    },
-    {
-      "id": "501",
-      "composer": "Fazekas Márton",
-      "year": "2016",
-      "xmlUrl": "501fm-e-2016.mei"
-    },
-    {
-      "id": "545",
-      "composer": "Fazekas Márton",
-      "year": "2017",
-      "xmlUrl": "545fm-e-2017.mei"
-    },
-    {
-      "id": "726",
-      "composer": "Fazekas Márton",
-      "year": "2016",
-      "xmlUrl": "726fm-e-2016.mei"
-    }
+    { "id": "165", "composer": "Fazekas Márton", "year": "2017", "xmlUrl": "165fm-e-2017.mei" },
+    { "id": "192", "composer": "Fazekas Márton", "year": "2017", "xmlUrl": "192fm-e-2017.mei" },
+    { "id": "211", "composer": "Fazekas Márton", "year": "2019", "xmlUrl": "211fm-e-2019.mei" },
+    { "id": "501", "composer": "Fazekas Márton", "year": "2016", "xmlUrl": "501fm-e-2016.mei" },
+    { "id": "545", "composer": "Fazekas Márton", "year": "2017", "xmlUrl": "545fm-e-2017.mei" },
+    { "id": "726", "composer": "Fazekas Márton", "year": "2016", "xmlUrl": "726fm-e-2016.mei" }
   ]
 }
