@@ -17,6 +17,11 @@ nélkül; az énekek között lapozni lehet. Indítás:
 4. **Óra:** a pontos idő. A [Beállításokban](08-beallitasok.md) kikapcsolható.
 5. **Szövegpanel:** csak a listán kiválasztott versszakok. A Megjegyzések lapon az ének megjegyzése és regisztrációja
    (lásd: [Szövegpanel](04-szovegpanel.md)).
+6. **A kotta beállításai:** a nagyítás és a hangnem, mint az ének oldalán (lásd:
+   [A kotta beállításai](03-konyvtar.md#a-kotta-beállításai)).
+   - Nyugalomban csak egy halvány kör, hogy az alatta lévő hangjegyek is olvashatók legyenek.
+   - Az itt beállított hangnem is az énekhez tárolódik.
+   - Lapozáskor (koppintással vagy pedállal) a nyitott panel bezárul.
 
 A kotta itt is mindig egészben látszik: a program akkorára méretezi, hogy görgetés nélkül elférjen.
 
@@ -27,7 +32,8 @@ A kotta itt is mindig egészben látszik: a program akkorára méretezi, hogy g�
 1. Koppintás a kottaterület **bal szélére** (a szélső 15%-ra): az előző ének.
 2. Koppintás a kottaterület **jobb szélére**: a következő ének.
 
-Egérrel a két sáv fölött nyíl alakú kurzor jelzi, merre lapoz.
+Egérrel a két sáv fölött nyíl alakú kurzor jelzi, merre lapoz. A jobb alsó sarokban lévő kerek gomb (és a nyitott
+panelje) nem lapoz.
 
 **Billentyűzettel vagy Bluetooth-os lapozópedállal:**
 - előre: PageDown, ↓ vagy →;

@@ -49,6 +49,7 @@ const Icons = {
     Camera: (props) => <IconBase {...props}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></IconBase>,
     File: (props) => <IconBase {...props}><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></IconBase>,
     Check: (props) => <IconBase {...props}><polyline points="20 6 9 17 4 12"/></IconBase>,
+    Sliders: (props) => <IconBase {...props}><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></IconBase>,
     Grid: (props) => <IconBase {...props}><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></IconBase>,
     Menu: (props) => <IconBase {...props}><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/></IconBase>,
     Star: (props) => <IconBase {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></IconBase>,
@@ -126,7 +127,7 @@ const parseVerses = (text) => {
 };
 
 // --- TÁROLÁS (localStorage) ---
-const STORAGE_KEYS = { playlists: 'orgonista_playlists', settings: 'orgonista_settings', lyricsLayouts: 'orgonista_lyrics_layouts', hymnNotes: 'orgonista_hymn_notes', scoreRatings: 'orgonista_score_ratings' };
+const STORAGE_KEYS = { playlists: 'orgonista_playlists', settings: 'orgonista_settings', lyricsLayouts: 'orgonista_lyrics_layouts', hymnNotes: 'orgonista_hymn_notes', scoreRatings: 'orgonista_score_ratings', transpositions: 'orgonista_transpositions' };
 
 const SETTINGS_VERSION = 2;
 
@@ -1802,6 +1803,42 @@ const VEROVIO_OPTIONS = {
     svgFormatRaw: true          // tömörebb SVG
 };
 
+// Transzponálás félhangonként. A Verovio a puszta félhangszámmal (pl. "+1") nem mindig a legegyszerűbb hangnemet
+// választja (F-dúrból Fisz-dúr lesz Gesz-dúr helyett), ezért a cél hangnemet mi választjuk ki, és hangköz névvel adjuk
+// át (pl. "+m2", "-M2"): a legkevesebb előjegyzésűt; egyformánál azt, amelyikhez egyszerűbb hangköz vezet (kis szekund,
+// nem bővített prím), végül felfelé a keresztes, lefelé a bés alakot. fifths: az eredeti előjegyzés (+ kereszt, − bé).
+const TRANSPOSE_LIMIT = 6;
+const intervalName = (fifths) => {   // a kvintkörön fifths lépésnyi hangköz felfelé (prím…szeptim), pl. 2 → "M2"
+    const steps = ((4 * fifths) % 7 + 7) % 7;
+    const semis = ((7 * fifths) % 12 + 12) % 12;
+    let diff = semis - [0, 2, 4, 5, 7, 9, 11][steps];
+    if (diff > 6) diff -= 12;
+    if (diff < -6) diff += 12;
+    const perfect = steps === 0 || steps === 3 || steps === 4;
+    const quality = perfect ? { 0: 'P', 1: 'A', [-1]: 'd' }[diff] : { 0: 'M', [-1]: 'm', 1: 'A', [-2]: 'd' }[diff];
+    return quality ? `${quality}${steps + 1}` : null;
+};
+const transposeInterval = (fifths, semitones) => {
+    if (!semitones) return '';
+    const up = semitones > 0;
+    let best = null;
+    const r = ((fifths + 7 * semitones) % 12 + 12) % 12;   // a cél előjegyzés 12-es maradékosztálya
+    for (const target of [r - 12, r, r + 12]) {
+        const name = intervalName(up ? target - fifths : fifths - target);
+        if (!name) continue;
+        const simple = /^[PMm]/.test(name);
+        const better = !best || Math.abs(target) < Math.abs(best.target)
+            || (Math.abs(target) === Math.abs(best.target) && (simple !== best.simple ? simple : up ? target > best.target : target < best.target));
+        if (better) best = { target, name, simple };
+    }
+    return best ? `${up ? '+' : '-'}${best.name}` : String(semitones);
+};
+// A kotta (első) előjegyzése a MEI-ből: keresztek száma pozitív, béké negatív
+const meiFifths = (mei) => {
+    const m = /(?:\bkeysig|\bkey\.sig|<keySig\b[^>]*?\ssig)="(\d+)([sf])?"/.exec(mei);
+    return m ? (m[2] === 'f' ? -1 : 1) * parseInt(m[1], 10) : 0;
+};
+
 // Kotta betöltése a Verovióba: tömörített MusicXML (.mxl, zip) vagy szöveg (MusicXML, MEI; a formátumot a Verovio
 // ismeri fel). A hangszernevet (pl. „Zongora”, „Organ”) a Verovio a sorok elé írná, és nincs rá kapcsoló: a beolvasott
 // kottát MEI-be alakítjuk, a neveket (label, labelAbbr) kivesszük, és újratöltjük.
@@ -1818,15 +1855,21 @@ const scoreKey = (url, bytes) => {
     return `${url}|${bytes.length}|${(hash >>> 0).toString(36)}`;
 };
 
-const loadScore = (tk, url, buffer) => {
-    tk.setOptions({ breaks: 'none' });
+// A transzponálás (semitones) a betöltéskor történik; az eredeti (nem transzponált) MEI-t jegyezzük meg, és ezt adjuk
+// vissza (sikertelen betöltésnél null), hogy más transzponáláshoz újra betölthető legyen (loadTransposed).
+const loadTransposed = (tk, mei, semitones) => {
+    tk.setOptions({ breaks: 'none', transpose: transposeInterval(meiFifths(mei), semitones) });
+    return tk.loadData(mei);
+};
+const loadScore = (tk, url, buffer, semitones = 0) => {
+    tk.setOptions({ breaks: 'none', transpose: '' });
     const bytes = new Uint8Array(buffer);
     const key = scoreKey(url, bytes);
     const cached = scoreCache.get(key);
     if (cached !== undefined) {
         scoreCache.delete(key);
         scoreCache.set(key, cached);
-        return tk.loadData(cached);
+        return loadTransposed(tk, cached, semitones) ? cached : null;
     }
     let loaded;
     if (bytes[0] === 0x50 && bytes[1] === 0x4B) loaded = tk.loadZipDataBuffer(buffer);
@@ -1834,13 +1877,13 @@ const loadScore = (tk, url, buffer) => {
         const encoding = bytes[0] === 0xFF && bytes[1] === 0xFE ? 'utf-16le' : bytes[0] === 0xFE && bytes[1] === 0xFF ? 'utf-16be' : 'utf-8';
         loaded = tk.loadData(new TextDecoder(encoding).decode(bytes));
     }
-    if (!loaded) return false;
+    if (!loaded) return null;
     const mei = tk.getMEI();
     const stripped = mei.replace(PART_NAME_ELEMENT, '');
-    if (stripped !== mei && !tk.loadData(stripped)) return false;
+    if ((stripped !== mei || semitones) && !loadTransposed(tk, stripped, semitones)) return null;
     scoreCache.set(key, stripped);
     if (scoreCache.size > SCORE_CACHE_SIZE) scoreCache.delete(scoreCache.keys().next().value);
-    return true;
+    return stripped;
 };
 
 // A kottablokkok (MusicXML: VerovioViewer, kép: ScoreImage) nem maguk választják meg a méretüket: bejelentkeznek
@@ -1853,7 +1896,7 @@ const loadScore = (tk, url, buffer) => {
 //   height()      a kirajzolt kotta magassága (px)
 //   maxZoom       ennél nagyobb nagyításnak nincs hatása (képnél 1 = teljes szélesség); kottánál nincs ilyen
 
-const VerovioViewer = ({ fileUrl, font, page }) => {
+const VerovioViewer = ({ fileUrl, font, transpose = 0, page }) => {
     const containerRef = useRef(null);
     const toolkitRef = useRef(null);        // saját Verovio-példány (az előjátéknak és a kottának külön)
     const stateRef = useRef('loading');
@@ -1861,11 +1904,15 @@ const VerovioViewer = ({ fileUrl, font, page }) => {
     const renderedRef = useRef(null);       // { pageWidth, font }: így van kirajzolva
     const fileUrlRef = useRef(fileUrl);
     const fontRef = useRef(font);
+    const transposeRef = useRef(transpose);
+    const meiRef = useRef(null);            // a betöltött kotta (nem transzponált) MEI-je
+    const loadedTransposeRef = useRef(0);   // ennyivel transzponálva van betöltve
     const loadIdRef = useRef(0);
     const loadQueueRef = useRef(Promise.resolve());
     const [error, setError] = useState(null);
     fileUrlRef.current = fileUrl;
     fontRef.current = font;
+    transposeRef.current = transpose;
 
     const fail = (message) => {
         stateRef.current = 'error';
@@ -1895,7 +1942,7 @@ const VerovioViewer = ({ fileUrl, font, page }) => {
     // 1. Bejelentkezés a ScoreViewernél: egyszer, a komponens teljes élettartamára
     useLayoutEffect(() => {
         const unregister = page.register({
-            layoutKey: () => `${fileUrlRef.current}|${fontRef.current}`,
+            layoutKey: () => `${fileUrlRef.current}|${fontRef.current}|${transposeRef.current}`,
             state: () => stateRef.current,
             layout: (zoom) => {
                 const container = containerRef.current, tk = toolkitRef.current;
@@ -1976,7 +2023,10 @@ const VerovioViewer = ({ fileUrl, font, page }) => {
                 }
                 const tk = toolkitRef.current;
                 laidOutRef.current = null; // betöltve, de még nincs tördelve: a kirajzolás tördeli
-                if (!loadScore(tk, fileUrl, buffer)) throw new Error('a fájl nem olvasható');
+                const semitones = transposeRef.current;
+                meiRef.current = loadScore(tk, fileUrl, buffer, semitones);
+                if (!meiRef.current) throw new Error('a fájl nem olvasható');
+                loadedTransposeRef.current = semitones;
                 stateRef.current = 'ready';
                 page.notify();
             })
@@ -1989,6 +2039,21 @@ const VerovioViewer = ({ fileUrl, font, page }) => {
     useEffect(() => {
         if (stateRef.current === 'ready') page.notify();
     }, [font]);
+
+    // Transzponálás: a megjegyzett MEI újratöltése az új hangnemben (a betöltések sorában), majd újrarajzolás
+    useEffect(() => {
+        const loadId = loadIdRef.current;
+        loadQueueRef.current = loadQueueRef.current.then(() => {
+            const tk = toolkitRef.current, semitones = transposeRef.current;
+            if (loadId !== loadIdRef.current || stateRef.current !== 'ready' || !tk || !meiRef.current) return;
+            if (semitones === loadedTransposeRef.current) return;
+            if (!loadTransposed(tk, meiRef.current, semitones)) { fail('A kotta nem transzponálható.'); return; }
+            loadedTransposeRef.current = semitones;
+            laidOutRef.current = null;
+            renderedRef.current = null;
+            page.notify();
+        });
+    }, [transpose]);
 
     return (
         <div className="verovio-viewer">
@@ -2239,6 +2304,28 @@ const saveHymnNotes = (hymnNumber, notes) => {
 };
 const hasHymnNotes = (notes) => !!notes.note.trim() || REGISTRATION_FIELDS.some(f => notes.registration[f.key].trim());
 
+// --- Transzponálás énekenként ---
+// Az énekszám szerint, csak ezen a készüléken (orgonista_transpositions): { "42": -2 }. Az ének oldalán és a lejátszóban
+// is ez érvényes (az előjátékra és a letétre is). Az eredeti hangnem (0) nem kerül a tárolóba.
+const loadTranspositions = () => {
+    const all = loadJSON(STORAGE_KEYS.transpositions, {});
+    return all && typeof all === 'object' && !Array.isArray(all) ? all : {};
+};
+const transposeOf = (hymnNumber) => {
+    const value = hymnNumber != null ? loadTranspositions()[hymnNumber] : 0;
+    return Number.isInteger(value) && Math.abs(value) <= TRANSPOSE_LIMIT ? value : 0;
+};
+const saveTranspose = (hymnNumber, value) => {
+    if (hymnNumber == null) return;
+    const all = loadTranspositions();
+    if (value) all[hymnNumber] = value;
+    else delete all[hymnNumber];
+    saveJSON(STORAGE_KEYS.transpositions, all);
+};
+// a transzponálás szövegesen: „eredeti hangnem”, „2 félhanggal feljebb”, „1 félhanggal lejjebb”
+const transposeLabel = (value) => !value ? 'eredeti hangnem' : `${Math.abs(value)} félhanggal ${value > 0 ? 'feljebb' : 'lejjebb'}`;
+const transposeShort = (value) => (value > 0 ? `+${value}` : value < 0 ? `−${-value}` : '0');
+
 // --- A letétek értékelése ---
 // A letétek csillagos értékelése (1–5) csak ezen a készüléken tárolódik (orgonista_score_ratings), a letét azonosítója
 // szerint: { "fazekas_kottak_165": 5 }. Az ének megnyitásakor a legjobbra értékelt letét jelenik meg.
@@ -2429,6 +2516,7 @@ const HymnNotesEditor = ({ hymnNumber, hymnTitle, notes, editing, onSave, onCanc
 
 // A szövegpanel választott füle (Szöveg / Megjegyzések): a program futása alatt minden énekre érvényes
 let lyricsTabMemory = 'lyrics';
+let scoreFabSeq = 0;
 
 const ScoreViewer = ({ score, variationId, preludeId, lyrics, description = [], showLyrics, scoreMaxWidth, scoreFont, hymnNumber, hymnTitle, onNext, onPrev, onRate }) => {
     // A szövegpanel elrendezése az aktuális énekhez; ének váltásakor (pl. a lejátszóban lapozva) annak a mentett
@@ -2455,6 +2543,23 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, description = [], 
         setNotes(notes);
     }
     const [editing, setEditing] = useState(null);   // { hymn, kind: 'note' } vagy { hymn, kind: 'registration', field }
+    // a lebegő gomb (FAB) panelje: nagyítás, transzponálás, értékelés
+    const [fabOpen, setFabOpen] = useState(false);
+    const fabRef = useRef(null);
+    const [fabId] = useState(() => ++scoreFabSeq);
+    // az ének transzponálása (ének váltásakor annak a mentett értéke; a panel ilyenkor bezárul, pl. pedállal lapozva)
+    let [transposeState, setTransposeState] = useState(() => ({ hymn: hymnNumber, value: transposeOf(hymnNumber) }));
+    if (transposeState.hymn !== hymnNumber) {
+        transposeState = { hymn: hymnNumber, value: transposeOf(hymnNumber) };
+        setTransposeState(transposeState);
+        if (fabOpen) setFabOpen(false);
+    }
+    const transpose = transposeState.value;
+    const changeTranspose = (value) => {
+        const next = Math.max(-TRANSPOSE_LIMIT, Math.min(TRANSPOSE_LIMIT, value));
+        saveTranspose(hymnNumber, next);
+        setTransposeState({ hymn: hymnNumber, value: next });
+    };
     const saveNotes = (next) => {
         setNotes({ ...saveHymnNotes(hymnNumber, next), hymn: hymnNumber });
         setEditing(null);
@@ -2521,6 +2626,22 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, description = [], 
         return () => { observer.disconnect(); clearTimeout(timer); };
     }, [hasContent]);
 
+    // A lebegő gomb panelje: máshová koppintva vagy Escape-re bezárul (Escape után a fókusz vissza a gombra)
+    useEffect(() => {
+        if (!fabOpen) return;
+        const onPointerDown = (e) => { if (fabRef.current && !fabRef.current.contains(e.target)) setFabOpen(false); };
+        const onKeyDown = (e) => {
+            if (e.key !== 'Escape' || document.querySelector('.modal-overlay, .note-sheet-overlay')) return;
+            e.preventDefault();
+            setFabOpen(false);
+            const btn = fabRef.current && fabRef.current.querySelector('.score-fab-btn');
+            if (btn) btn.focus();
+        };
+        document.addEventListener('pointerdown', onPointerDown);
+        document.addEventListener('keydown', onKeyDown);
+        return () => { document.removeEventListener('pointerdown', onPointerDown); document.removeEventListener('keydown', onKeyDown); };
+    }, [fabOpen]);
+
     // Lapozás billentyűzettel vagy Bluetooth lapozópedállal (ezek nyíl- vagy PageUp/PageDown billentyűt küldenek).
     // Mindig egész oldalt (éneket) lapoz; a lenyomva tartott billentyű ismétlése nem lapoz tovább.
     useEffect(() => {
@@ -2542,7 +2663,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, description = [], 
     const handlePaneClick = (e) => {
         const { onNext, onPrev } = navRef.current;
         if (!onNext && !onPrev) return;
-        if (e.target.closest('button, a, input, select, textarea')) return; // pl. a zoom gombjai
+        if (e.target.closest('button, a, input, select, textarea, .score-fab')) return; // pl. a lebegő gomb panelje
         const selection = window.getSelection && window.getSelection();
         if (selection && !selection.isCollapsed && e.currentTarget.contains(selection.anchorNode)) return; // kijelölés ne lapozzon
         const spot = hotspotAt(e.currentTarget, e.clientX);
@@ -2553,7 +2674,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, description = [], 
     // Egérrel a lapozó sáv fölött nyíl alakú kurzor jelzi, merre lapoz
     const handlePaneMouseMove = (e) => {
         const { onNext, onPrev } = navRef.current;
-        const spot = (onNext || onPrev) ? hotspotAt(e.currentTarget, e.clientX) : null;
+        const spot = (onNext || onPrev) && !e.target.closest('.score-fab') ? hotspotAt(e.currentTarget, e.clientX) : null;
         const cursor = spot === 'prev' && onPrev ? 'w-resize' : spot === 'next' && onNext ? 'e-resize' : '';
         if (e.currentTarget.style.cursor !== cursor) e.currentTarget.style.cursor = cursor;
     };
@@ -2701,6 +2822,8 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, description = [], 
     const atMax = fitLimited || zoom >= ZOOM_MAX || (fit && shownZoom >= fit.cap - 0.005); // (kép: teljes szélesség)
     const zoomOut = () => setZoom(Math.max(ZOOM_MIN, Math.ceil(Math.round(shownZoom * 1000) / 100 - 1) / 10));
     const zoomIn = () => setZoom(Math.min(ZOOM_MAX, Math.floor(Math.round(shownZoom * 1000) / 100 + 1) / 10));
+    // transzponálni csak a Verovióval rajzolt kottát (MusicXML, MEI) lehet, a képet nem
+    const canTranspose = [prelude, variation].some(b => b && b.xmlUrl && !isImageUrl(b.xmlUrl));
 
     return (
         <div ref={rootRef} style={{display:'flex', height:'100%', flexDirection: isSide ? 'row' : 'column'}}>
@@ -2715,7 +2838,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, description = [], 
                                 <div className="prelude-label">Előjáték: {prelude.name}</div>
                                 {prelude.xmlUrl ? (isImageUrl(prelude.xmlUrl)
                                     ? <ScoreImage key={prelude.xmlUrl} src={prelude.xmlUrl} alt={`Előjáték: ${prelude.name}`} page={page} />
-                                    : <VerovioViewer fileUrl={prelude.xmlUrl} font={scoreFont} page={page} />
+                                    : <VerovioViewer fileUrl={prelude.xmlUrl} font={scoreFont} transpose={transpose} page={page} />
                                 ) : (
                                     <div className="score-missing">Előjáték kotta helye</div>
                                 )}
@@ -2727,7 +2850,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, description = [], 
                             <div className="score-block" style={{maxWidth: scoreMaxWidth || '100%'}}>
                                 {isImageUrl(variation.xmlUrl)
                                     ? <ScoreImage key={variation.xmlUrl} src={variation.xmlUrl} alt={variation.name || 'Kotta'} page={page} />
-                                    : <VerovioViewer fileUrl={variation.xmlUrl} font={scoreFont} page={page} />}
+                                    : <VerovioViewer fileUrl={variation.xmlUrl} font={scoreFont} transpose={transpose} page={page} />}
                             </div>
                         ) : (
                             <div className="score-placeholder">
@@ -2739,22 +2862,47 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, description = [], 
                     {loading && <div className="score-loading">⏳ Kotta betöltése...</div>}
                 </div>
 
-                {/* Alsó sáv: a letét értékelése (az ének oldalán), zoom és a letét adatai, külön helyen, hogy ne takarják a
-                    kottát. (A lejátszóban nincs értékelés: ott az alsó sáv széle is lapoz.) */}
-                <div className="score-footer">
-                    <div className={`score-footer-bar${onRate && variation ? ' has-rating' : ''}`}>
-                        {onRate && variation && <StarRating value={variation.rating || 0} onChange={(rating) => onRate(variation.id, rating)} />}
-                        <div className="zoom-bar">
-                            <button onClick={zoomOut} disabled={shownZoom <= ZOOM_MIN + 0.001} title="Kicsinyítés">-</button>
-                            <span title={fitLimited ? 'Ennél nagyobban nem fér ki a kotta' : undefined}>{Math.round(shownZoom * 100)}%</span>
-                            <button onClick={zoomIn} disabled={atMax} title="Nagyítás">+</button>
+                {/* Lebegő gomb (FAB) a kotta jobb alsó sarkában, hogy a kotta alatt ne foglaljon helyet. A panelje:
+                    nagyítás, transzponálás, az ének oldalán az értékelés. (A lejátszóban nincs értékelés: ott a kotta
+                    széle lapoz, egy véletlen koppintás ne értékeljen.) Zárva is a lapon van (rejtve). */}
+                <div ref={fabRef} className={`score-fab${fabOpen ? ' open' : ''}`}>
+                    <div id={`score-fab-panel-${fabId}`} className="score-fab-panel" role="group" aria-label="A kotta beállításai" hidden={!fabOpen}>
+                        <div className="score-fab-row">
+                            <span className="score-fab-label">Nagyítás</span>
+                            <div className="zoom-bar">
+                                <button onClick={zoomOut} disabled={shownZoom <= ZOOM_MIN + 0.001} title="Kicsinyítés" aria-label="Kicsinyítés">−</button>
+                                <span title={fitLimited ? 'Ennél nagyobban nem fér ki a kotta' : undefined}>{Math.round(shownZoom * 100)}%</span>
+                                <button onClick={zoomIn} disabled={atMax} title="Nagyítás" aria-label="Nagyítás">+</button>
+                            </div>
                         </div>
-                        {variation && (
-                            <div className="score-info">
-                                {variation.year} {variation.voiceCount && ` • ${variation.voiceCount} szólam`}
+                        <div className="score-fab-row">
+                            <span className="score-fab-label">Hangnem</span>
+                            <div className="transpose-bar">
+                                <button onClick={() => changeTranspose(transpose - 1)} disabled={!canTranspose || transpose <= -TRANSPOSE_LIMIT}
+                                    title="Félhanggal lejjebb" aria-label="Transzponálás félhanggal lejjebb">−</button>
+                                <span className="transpose-value" aria-live="polite">{canTranspose ? transposeShort(transpose) : '–'}</span>
+                                <button onClick={() => changeTranspose(transpose + 1)} disabled={!canTranspose || transpose >= TRANSPOSE_LIMIT}
+                                    title="Félhanggal feljebb" aria-label="Transzponálás félhanggal feljebb">+</button>
+                            </div>
+                        </div>
+                        <div className="score-fab-note">
+                            {!canTranspose ? 'Képként tárolt kotta nem transzponálható.' : transposeLabel(transpose)}
+                            {canTranspose && transpose !== 0 && (
+                                <button type="button" className="score-fab-reset" onClick={() => changeTranspose(0)}>Eredeti hangnem</button>
+                            )}
+                        </div>
+                        {onRate && variation && (
+                            <div className="score-fab-row">
+                                <span className="score-fab-label">Értékelés</span>
+                                <StarRating value={variation.rating || 0} onChange={(rating) => onRate(variation.id, rating)} />
                             </div>
                         )}
                     </div>
+                    <button type="button" className="score-fab-btn" onClick={() => setFabOpen(o => !o)} aria-expanded={fabOpen}
+                        aria-controls={`score-fab-panel-${fabId}`} aria-label="A kotta beállításai (nagyítás, transzponálás)" title="Nagyítás, transzponálás">
+                        {fabOpen ? <Icons.X size={22}/> : <Icons.Sliders size={22}/>}
+                        {transpose !== 0 && canTranspose && <span className="score-fab-badge" title={transposeLabel(transpose)}>{transposeShort(transpose)}</span>}
+                    </button>
                 </div>
             </div>
 
@@ -3753,10 +3901,12 @@ function OrganistApp() {
         if (!scoreId) return null;
         return rankedScores.find(s => s.id.toString() === scoreId.toString()) || null;
     };
-    const getScoreInfo = (scoreId, varId, preId) => {
+    // A lista énekének letétje és előjátéka névvel. fallback: ha a letét itt nem érhető el, a helyette látott (a legjobbra
+    // értékelt) letét adatai (a lejátszó fejlécéhez; a szerkesztőben a „?” jelzi, hogy a választott letét hiányzik).
+    const getScoreInfo = (scoreId, varId, preId, { fallback = false } = {}) => {
         const score = getScoreById(scoreId);
         if(!score) return { variationName: '?', variationComposer: '?', preludeName: null };
-        const variation = score.variations ? score.variations.find(v => v.id === varId) : null;
+        const variation = score.variations ? (score.variations.find(v => v.id === varId) || (fallback ? score.variations[0] : null)) : null;
         const prelude = score.preludes ? score.preludes.find(p => p.id === preId) : null;
         return { 
             variationName: variation ? variation.name : '?', 
@@ -4112,7 +4262,7 @@ function OrganistApp() {
                                     </div>
                                     {/* A változat adatai (szükség esetén rövidülnek) */}
                                     {(() => {
-                                        const { variationName, variationComposer, preludeName } = getScoreInfo(playerItem.hymn.scoreId, playerItem.variationId, playerItem.preludeId);
+                                        const { variationName, variationComposer, preludeName } = getScoreInfo(playerItem.hymn.scoreId, playerItem.variationId, playerItem.preludeId, { fallback: true });
                                         return <div className="player-heading-info text-xs opacity-70 border-l border-gray-500 pl-3 ml-2">
                                             {preludeName && <><span className="font-bold text-accent">[{preludeName}]</span>{' '}</>}
                                             <span>{variationName}</span>

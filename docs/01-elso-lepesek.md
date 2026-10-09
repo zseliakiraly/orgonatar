@@ -68,8 +68,8 @@ Telefonon ugyanezek a lapok vannak, keskenyebb elrendezésben.
    lejátszóban nincs menügomb: onnan a **‹** gombbal léphetsz vissza.
 2. **A menü:** ugyanazok a gombok, mint az oldalmenüben, a nevükkel. Azon az oldalon jön elő, ahol az oldalmenü lenne
    (lásd: [Beállítások](08-beallitasok.md)). Egy pontjára vagy mellé koppintva bezárul.
-3. Az ének oldalán a választók a cím alá kerülnek; a kotta alatt a [csillagok](03-konyvtar.md#a-letétek-értékelése), a
-   nagyítás és a letét adatai egymás mellett vannak.
+3. Az ének oldalán a választók a cím alá kerülnek. A [kotta beállításainak](03-konyvtar.md#a-kotta-beállításai) gombja
+   (nagyítás, hangnem, csillagok) itt is a jobb alsó sarokban van; a panelje a képernyőn belül nyílik.
 
 A lejátszóban a letét adatai a cím alatti sorba, a szövegpanel fülei külön sorba kerülnek. Fekvő telefonon az
 oldalmenü a megszokott helyén van.
