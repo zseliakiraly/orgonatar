@@ -1259,7 +1259,7 @@ const ImportListModal = ({ initialText = '', hymnByNumber, scoresAvailable, onCl
                         </div>
                         {unknown.length > 0 && <p className="import-message error">Nem található az énekeskönyvben, kimarad: {unknown.map(it => it.hymnNumber).join(', ')}</p>}
                         {missingScores > 0 && <p className="import-message info">{missingScores} éneknél a választott letét vagy előjáték ezen az eszközön nem
-                            érhető el (pl. nincs letöltve vagy ki van kapcsolva a könyve). Addig a hiányzó letét helyett az első elérhető jelenik meg, a hiányzó
+                            érhető el (pl. nincs letöltve vagy ki van kapcsolva a könyve). Addig a hiányzó letét helyett az elérhetők közül a legjobbra értékelt jelenik meg, a hiányzó
                             előjáték pedig elmarad.</p>}
                     </div>
                 )}
