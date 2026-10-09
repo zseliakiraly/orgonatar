@@ -17,7 +17,7 @@ kottakönyvekkel internet nélkül is működik.
 3. [Könyvtár és az ének oldala](03-konyvtar.md) – keresés, kulcsszavak, letét és előjáték, a letétek értékelése,
    nagyítás
 4. [Szövegpanel, megjegyzés, regisztráció](04-szovegpanel.md)
-5. [Listák](05-listak.md) – lista összeállítása az istentiszteletre
+5. [Listák](05-listak.md) – lista összeállítása az istentiszteletre; csempék vagy listás nézet
 6. [Lejátszó](06-lejatszo.md) – az istentisztelet alatt: lapozás koppintással vagy pedállal
 7. [Megosztás és importálás](07-megosztas.md) – lista átküldése másik eszközre kóddal vagy QR-kóddal
 8. [Beállítások](08-beallitasok.md)

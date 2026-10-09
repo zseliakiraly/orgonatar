@@ -7,16 +7,32 @@ versszakokkal. A listák **ezen a készüléken** tárolódnak. Másik eszközre
 
 ## A Listák oldal
 
+A listák közül mindig a **legújabb** áll elöl (amelyiket utoljára hoztad létre vagy importáltad).
+
 ![A Listák oldal](kepek/listak.webp)
 
-1. **Új lista:** új, üres lista (lásd lent).
+1. **Nézet:** csempék (alapértelmezett) vagy lista (lásd lent: [Listás nézet](#listás-nézet)). A választott nézet
+   ezen a készüléken megmarad.
 2. **Importálás:** lista beolvasása kódból, linkből, fájlból vagy QR-kódról (lásd: [Megosztás és
    importálás](07-megosztas.md)).
-3. **A lista énekei:** énekszám, a kiválasztott versszakok (pl. `1-3`, `1,3,5`) és a kezdősor.
-4. **Megosztás:** a lista kódja és QR-kódja.
-5. **Szerkesztés:** megnyitja a lista szerkesztőjét. A kártyára koppintva is megnyílik.
-6. **Törlés:** a lista törlése (a program előtte megerősítést kér).
-7. **Indítás:** a lista megnyitása a [lejátszóban](06-lejatszo.md).
+3. **Új lista:** új, üres lista (lásd lent).
+4. **A lista énekei:** énekszám, a kiválasztott versszakok (pl. `1-3`, `1,3,5`) és a kezdősor.
+5. **Megosztás:** a lista kódja és QR-kódja.
+6. **Szerkesztés:** megnyitja a lista szerkesztőjét. A kártyára koppintva is megnyílik.
+7. **Törlés:** a lista törlése (a program előtte megerősítést kér).
+8. **Indítás:** a lista megnyitása a [lejátszóban](06-lejatszo.md).
+
+### Listás nézet
+
+Sok lista esetén áttekinthetőbb: soronként egy lista, az énekei nélkül, a Könyvtár énekkártyáihoz hasonlóan.
+
+![A Listák oldal listás nézetben](kepek/listak-lista.webp)
+
+1. **A lista neve.** Ha a név dátummal kezdődik (a naptár gombbal), a dátum talpas betűvel, külön látszik.
+2. **Megosztás, Szerkesztés, Törlés:** ugyanaz, mint a csempén.
+3. **Indítás:** a lista megnyitása a lejátszóban, a többi gombbal egy sorban. Telefonon csak a ▶ ikon látszik.
+
+A sorra koppintva a lista szerkesztője nyílik meg.
 
 ## Új lista
 
@@ -38,8 +54,8 @@ Két helyről lehet énekeket a listára tenni.
 
 ![A Hozzáadás ablak](kepek/hozzaadas.webp)
 
-1. **Cél lista:** melyik listára kerüljön az ének. Az **+ Új lista…** sorral itt is létrehozható új lista, a naptár
-   gombbal együtt.
+1. **Cél lista:** melyik listára kerüljön az ének. Alapból a legújabb lista van kiválasztva, a választóban is ez áll
+   elöl. Az **+ Új lista…** sorral itt is létrehozható új lista, a naptár gombbal együtt.
 2. **Előjáték:** az ének oldalán választott előjáték, itt módosítható. A „Nincs kiválasztva” sorral elhagyható.
 3. **Változat:** a letét. Az ének oldaláról az ott látott letét, a lista szerkesztőjéből a legjobbra értékelt (lásd:
    [A letétek értékelése](03-konyvtar.md#a-letétek-értékelése)). A választóban az értékelt letétek mellett a

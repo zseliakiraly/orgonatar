@@ -49,6 +49,7 @@ const Icons = {
     Camera: (props) => <IconBase {...props}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></IconBase>,
     File: (props) => <IconBase {...props}><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></IconBase>,
     Check: (props) => <IconBase {...props}><polyline points="20 6 9 17 4 12"/></IconBase>,
+    Grid: (props) => <IconBase {...props}><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></IconBase>,
     Menu: (props) => <IconBase {...props}><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/></IconBase>,
     Star: (props) => <IconBase {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></IconBase>,
 };
@@ -170,8 +171,10 @@ const BACKGROUNDS = [
     { id: 'texture', name: 'Textúra', hint: 'papír, a türkiz elemeken bőrkötés' }
 ];
 const SCORE_WIDTHS = ['100%', '90%', '80%', '70%', '60%', '50%'].map(w => ({ id: w, name: w }));
+// A Listák oldal nézetei: csempék (a lista énekeivel; alapértelmezett) vagy lista (soronként a név és a gombok)
+const PLAYLIST_VIEWS = [{ id: 'tiles', name: 'Csempék' }, { id: 'list', name: 'Lista' }];
 
-const DEFAULT_SETTINGS = { theme: 'pergamen', background: 'plain', uiFont: UI_FONTS[0].id, serifFont: SERIF_FONTS[0].id, showLyrics: true, showClock: true, sidebarSide: 'right', scoreMaxWidth: '100%', scoreFont: SCORE_FONTS[0].id, bookActive: {}, skipFullscreenPrompt: false, settingsVersion: SETTINGS_VERSION };
+const DEFAULT_SETTINGS = { theme: 'pergamen', background: 'plain', uiFont: UI_FONTS[0].id, serifFont: SERIF_FONTS[0].id, showLyrics: true, showClock: true, sidebarSide: 'right', scoreMaxWidth: '100%', scoreFont: SCORE_FONTS[0].id, bookActive: {}, skipFullscreenPrompt: false, playlistView: 'tiles', settingsVersion: SETTINGS_VERSION };
 
 const loadJSON = (key, fallback) => {
     try {
@@ -194,6 +197,7 @@ const loadSettings = () => {
     if (!UI_FONTS.some(f => f.id === settings.uiFont)) settings.uiFont = DEFAULT_SETTINGS.uiFont;
     if (!SERIF_FONTS.some(f => f.id === settings.serifFont)) settings.serifFont = DEFAULT_SETTINGS.serifFont;
     if (!BACKGROUNDS.some(b => b.id === settings.background)) settings.background = DEFAULT_SETTINGS.background;
+    if (!PLAYLIST_VIEWS.some(v => v.id === settings.playlistView)) settings.playlistView = DEFAULT_SETTINGS.playlistView;
     // 2. verzió: a Pergamen lett az alapértelmezett téma. A korábbi alapértéket ("papyrus"), amelyet az oldal
     // magától elmentett, egyszer átállítjuk (addig Pergament nem is lehetett választani).
     if ((stored.settingsVersion || 1) < 2 && settings.theme === 'papyrus') settings.theme = 'pergamen';
@@ -1255,7 +1259,7 @@ const ImportListModal = ({ initialText = '', hymnByNumber, scoresAvailable, onCl
                         </div>
                         {unknown.length > 0 && <p className="import-message error">Nem található az énekeskönyvben, kimarad: {unknown.map(it => it.hymnNumber).join(', ')}</p>}
                         {missingScores > 0 && <p className="import-message info">{missingScores} éneknél a választott letét vagy előjáték ezen az eszközön nem
-                            érhető el (pl. nincs letöltve vagy ki van kapcsolva a könyve). Addig a hiányzó letét helyett az első elérhető jelenik meg, a hiányzó
+                            érhető el (pl. nincs letöltve vagy ki van kapcsolva a könyve). Addig a hiányzó letét helyett az elérhetők közül a legjobbra értékelt jelenik meg, a hiányzó
                             előjáték pedig elmarad.</p>}
                     </div>
                 )}
@@ -1417,7 +1421,8 @@ const NEW_PLAYLIST = '__new__';
 const AddToPlaylistModal = ({ onClose, onConfirm, playlists, initialVariationId, initialPreludeId, initialVerses = null, hymn, variations, preludes, lockPlaylistId, mode = 'add' }) => {
     const isEdit = mode === 'edit';
     const parsedVerses = useMemo(() => verseList(hymn), [hymn]);
-    const [targetId, setTargetId] = useState(() => lockPlaylistId ?? (playlists.length > 0 ? playlists[0].id : NEW_PLAYLIST));
+    // a cél lista alapból a legújabb (a listák létrehozásuk sorrendjében tárolódnak)
+    const [targetId, setTargetId] = useState(() => lockPlaylistId ?? (playlists.length > 0 ? playlists[playlists.length - 1].id : NEW_PLAYLIST));
     const [newName, setNewName] = useState('');
     const [selectedVariationId, setSelectedVariationId] = useState(() => variations.some(v => v.id === initialVariationId) || (isEdit && initialVariationId)
         ? initialVariationId : (variations.length > 0 ? variations[0].id : null));
@@ -1448,8 +1453,8 @@ const AddToPlaylistModal = ({ onClose, onConfirm, playlists, initialVariationId,
             verses: selectedVerses
         });
     };
-    // A cél lista választója: a listák (az énekek számával), a végén az új lista
-    const targetOptions = useMemo(() => playlists.map(pl => ({ id: pl.id, name: pl.name, count: `${pl.items.length} ének` }))
+    // A cél lista választója: a listák a legújabbal kezdve (az énekek számával), a végén az új lista
+    const targetOptions = useMemo(() => [...playlists].reverse().map(pl => ({ id: pl.id, name: pl.name, count: `${pl.items.length} ének` }))
         .concat([{ id: NEW_PLAYLIST, name: '+ Új lista…' }]), [playlists]);
 
     return (
@@ -3222,6 +3227,32 @@ const PlaylistEditor = ({ playlist, onRemoveItem, onEditItem, onAddItem, onPlay,
     );
 };
 
+// --- LISTÁK OLDAL ---
+// Nézetváltó a fejlécben: csempék (a lista énekeivel) vagy lista (soronként a név és a gombok)
+const PlaylistViewToggle = ({ view, onChange }) => (
+    <div className="playlist-view-toggle" role="group" aria-label="Nézet">
+        {PLAYLIST_VIEWS.map(v => (
+            <button key={v.id} type="button" data-view={v.id} aria-pressed={view === v.id} title={`Nézet: ${v.name.toLowerCase()}`}
+                aria-label={`${v.name} nézet`} className={view === v.id ? 'active' : ''} onClick={() => onChange(v.id)}>
+                {v.id === 'tiles' ? <Icons.Grid size={18}/> : <Icons.List size={18}/>}
+            </button>
+        ))}
+    </div>
+);
+
+// A lista neve a listás nézetben, az énekkártyák mintájára: az elején álló dátum (ÉÉÉÉ-HH-NN, a naptár gombbal kerül
+// oda) talpas betűvel, mint az énekszám, utána a név többi része
+const DATED_NAME = /^(\d{4}-\d{2}-\d{2})\s+(\S.*)$/;
+const PlaylistRowName = ({ name }) => {
+    const m = DATED_NAME.exec(name);
+    return (
+        <div className="playlist-row-name">
+            {m && <span className="playlist-row-date hymn-number text-accent">{m[1]}</span>}
+            <span className="playlist-row-title text-ink">{m ? m[2] : name}</span>
+        </div>
+    );
+};
+
 // --- NÉVJEGY ---
 // A használati útmutató (docs/) a GitHubon olvasható, a képekkel együtt
 const GUIDE_URL = 'https://github.com/zseliakiraly/orgonatar/blob/main/docs/README.md';
@@ -3847,6 +3878,15 @@ function OrganistApp() {
 
     if (loading) return <div className="loading-screen" style={{backgroundColor: currentTheme.sidebar}}>Betöltés...</div>;
 
+    // A Listák oldalon a legújabb lista elöl (a listák létrehozásuk sorrendjében tárolódnak)
+    const playlistsNewestFirst = [...playlists].reverse();
+    // A lista kezelőgombjai (a csempe fejlécében és a listás nézet sorában)
+    const playlistButtons = (pl) => (<>
+        <button onClick={(e) => { e.stopPropagation(); setSharingPlaylistId(pl.id); }} className="btn-ghost" title="Megosztás" aria-label="Lista megosztása"><Icons.Share size={18}/></button>
+        <button onClick={(e) => { e.stopPropagation(); openPlaylistEditor(pl); }} className="btn-ghost" title="Szerkesztés"><Icons.Edit size={18}/></button>
+        <button onClick={(e) => { e.stopPropagation(); handleRemovePlaylistRequest(pl); }} className="btn-danger" title="Törlés"><Icons.Trash2 size={18}/></button>
+    </>);
+
     // A menügomb a főoldalak fejlécében (a részletes oldalakon a vissza gomb van a helyén)
     const menuToggle = (variant) => <MenuToggle open={menuOpen} onToggle={() => setMenuOpen(o => !o)} side={settings.sidebarSide} variant={variant} />;
     
@@ -3988,6 +4028,7 @@ function OrganistApp() {
                             <div style={{flex:1}}>{settings.sidebarSide === 'left' && menuToggle('inline')}</div>
                             <h1 className="header-title main page-title">Liturgikus listák</h1>
                             <div className="header-actions">
+                                {playlists.length > 0 && <PlaylistViewToggle view={settings.playlistView} onChange={(v) => setSettings(prev => ({ ...prev, playlistView: v }))} />}
                                 <button onClick={() => setImportText('')} className="btn btn-on-dark" title="Lista importálása (kód, link, fájl vagy QR-kód)" aria-label="Lista importálása">
                                     <Icons.Import size={20}/><span className="btn-label">Importálás</span>
                                 </button>
@@ -4002,18 +4043,29 @@ function OrganistApp() {
                                 <button onClick={() => setIsCreateListModalOpen(true)} className="text-accent font-bold hover:underline mt-2">Hozz létre egyet!</button>
                                 <p className="playlist-empty-import">vagy <button onClick={() => setImportText('')} className="text-accent font-bold hover:underline">importálj</button> egy megosztott listát</p>
                             </div>
+                        ) : settings.playlistView === 'list' ? (
+                            <div className="playlist-list">
+                                {playlistsNewestFirst.map(pl => (
+                                    <div key={pl.id} onClick={() => openPlaylistEditor(pl)} className="card list-item playlist-row">
+                                        <div className="card-decoration"></div>
+                                        <PlaylistRowName name={pl.name} />
+                                        <div className="playlist-row-actions">
+                                            {playlistButtons(pl)}
+                                            <button onClick={(e) => { e.stopPropagation(); startPlaylist(pl); }} className="btn playlist-row-start" title="Indítás" aria-label="Lista indítása">
+                                                <Icons.Play size={18}/><span className="btn-label">Indítás</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         ) : (
                             <div className="playlist-grid">
-                                {playlists.map(pl => (
+                                {playlistsNewestFirst.map(pl => (
                                     <div key={pl.id} onClick={() => openPlaylistEditor(pl)} className="card clickable">
                                         <div className="card-decoration"></div>
                                         <div className="playlist-card-header">
                                             <h3 className="font-bold text-galaxy">{pl.name}</h3>
-                                            <div className="flex gap-2">
-                                                <button onClick={(e) => { e.stopPropagation(); setSharingPlaylistId(pl.id); }} className="btn-ghost" title="Megosztás" aria-label="Lista megosztása"><Icons.Share size={18}/></button>
-                                                <button onClick={(e) => { e.stopPropagation(); openPlaylistEditor(pl); }} className="btn-ghost" title="Szerkesztés"><Icons.Edit size={18}/></button>
-                                                <button onClick={(e) => { e.stopPropagation(); handleRemovePlaylistRequest(pl); }} className="btn-danger" title="Törlés"><Icons.Trash2 size={18}/></button>
-                                            </div>
+                                            <div className="flex gap-2">{playlistButtons(pl)}</div>
                                         </div>
                                         <div style={{flex:1, overflowY:'auto', padding:'0.5rem'}}>
                                             {pl.items.map(resolveItem).map(it => {
