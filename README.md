@@ -230,6 +230,15 @@ valamint a letétek értékelése a böngésző localStorage-ában vannak (`orgo
 
 ## Listák
 
+- **Sorrend:** a Listák oldalon (és a Hozzáadás ablak „Cél lista” választójában) a legújabb lista áll elöl. A listák a
+  létrehozásuk (importálásuk) sorrendjében tárolódnak, a program fordított sorrendben mutatja őket. A Hozzáadás ablakban
+  a cél lista alapból a legújabb.
+- **Nézetek:** a fejléc jobb oldalán nézetváltó (csempék / lista, `PLAYLIST_VIEWS`); a választás a beállításokban
+  (`playlistView`, alapból `tiles`) megmarad. Lista nélkül a váltó nem látszik.
+  - **Csempék** (alapértelmezett): a lista énekei a csempén, alul az Indítás gomb.
+  - **Lista:** soronként, a könyvtár énekkártyáinak mintájára: a lista neve (az elején álló `ÉÉÉÉ-HH-NN` dátum talpas
+    betűvel, mint az énekszám), jobbra egy sorban a Megosztás, Szerkesztés, Törlés és az Indítás (telefonon csak ikon).
+    A lista tartalma itt nem látszik; a sorra koppintva a szerkesztő nyílik meg.
 - A lista kártyáján az énekek száma (talpas betűvel, jobbra zárt oszlopban), utána a kiválasztott versszakok
   tömören (egymást követők intervallumként, a többi felsorolva: `1-5`, `1,4`, `1-3,5`), majd a kezdősor, egy
   alapvonalon. A szerkesztőben is így: „Versszakok: 1-3,5”.
