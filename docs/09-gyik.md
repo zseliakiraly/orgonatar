@@ -50,9 +50,15 @@ beállíthatod, melyik nyíljon meg (lásd: [A letétek értékelése](03-konyvt
 gomb húzza elő (lásd: [Telefonon](01-elso-lepesek.md#telefonon)). Fekve a megszokott helyén van.
 
 **Túl kicsi vagy túl nagy a kotta.**
-- A − / + gombbal állítható. A + akkor nem nyomható, ha a kotta nagyobban már nem férne ki.
+- A jobb alsó sarokban lévő gomb paneljén a **Nagyítás** − / + gombjával állítható. A + akkor nem nyomható, ha a kotta
+  nagyobban már nem férne ki.
 - A szövegpanel kisebbre húzásával, vagy oldalra téve több hely jut a kottának.
 - A Beállításokban a **Kotta szélessége** is állítható.
+
+**Más hangnemben szeretném játszani az éneket.**
+A jobb alsó sarokban lévő gomb paneljén a **Hangnem** − / + gombja félhangonként transzponál, legfeljebb 6 félhanggal
+fel vagy le. Az énekhez tárolódik: a lejátszóban és legközelebb is így jelenik meg. Az **Eredeti hangnem** gomb
+visszaállítja. Képként tárolt kottánál nem lehetséges (lásd: [A kotta beállításai](03-konyvtar.md#a-kotta-beállításai)).
 
 **Kiesett a tablet a teljes képernyőből.**
 Az oldalmenü **Teljes képernyő** gombjával visszakapcsolhatod. A kezdőképernyőre tett program mindig a teljes
@@ -61,7 +67,7 @@ képernyőn fut.
 **Hol tárolódnak az adataim?**
 Csak ezen a készüléken, a böngészőben:
 - a listák, a beállítások, a megjegyzések és a regisztrációk;
-- a letétek értékelése (csillagok);
+- a letétek értékelése (csillagok) és az énekek transzponálása;
 - a szövegpanel énekenkénti elrendezése;
 - a letöltött kottakönyvek.
 

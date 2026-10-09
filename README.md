@@ -171,8 +171,9 @@ Színséma (a választóban színmintával): **Pergamen** (alapértelmezett), Pa
 ## Tárolás
 
 A listák, a beállítások, a szövegpanel énekenkénti elrendezése, az énekekhez írt megjegyzések és regisztrációk,
-valamint a letétek értékelése a böngésző localStorage-ában vannak (`orgonista_playlists`, `orgonista_settings`,
-`orgonista_lyrics_layouts`, `orgonista_hymn_notes`, `orgonista_score_ratings`; a kottafont-minták rajza:
+a letétek értékelése és az énekek transzponálása a böngésző localStorage-ában vannak (`orgonista_playlists`,
+`orgonista_settings`, `orgonista_lyrics_layouts`, `orgonista_hymn_notes`, `orgonista_score_ratings`,
+`orgonista_transpositions`; a kottafont-minták rajza:
 `orgonista_font_samples_*`), a letöltött kottakönyvek a böngésző Cache Storage tárolójában
 (`orgonatar-konyv:<mappa>:…`). Mindez eszközönként külön tárolódik.
 
@@ -291,9 +292,10 @@ valamint a letétek értékelése a böngésző localStorage-ában vannak (`orgo
 
 ## A letétek értékelése
 
-- Az ének oldalán a kotta alatt balra 1–5 csillag: a látott letét értékelése. Egy csillagra koppintva annyi csillag;
-  ugyanarra újra koppintva törlődik. Billentyűzettel (a csoport egy gombja kap fókuszt) a nyilak állítják, a Delete
-  törli; egérrel fölé állva előnézet. A lejátszóban nincs, mert ott az alsó sáv széle is lapoz.
+- Az ének oldalán a kotta beállításainak panelén (a jobb alsó sarokban lebegő gomb, lásd lent) 1–5 csillag: a látott
+  letét értékelése. Egy csillagra koppintva annyi csillag; ugyanarra újra koppintva törlődik. Billentyűzettel (a
+  csoport egy gombja kap fókuszt) a nyilak állítják, a Delete törli; egérrel fölé állva előnézet. A lejátszó paneljén
+  nincs, hogy az istentisztelet alatt egy véletlen koppintás ne értékeljen.
 - Csak ezen a készüléken tárolódik (`orgonista_score_ratings`, a letét azonosítójával: `{ "fazekas_kottak_165": 5 }`;
   a letét azonosítója a könyv `id`-je és a kotta `id`-je, ugyanaz, amit a listák is tárolnak).
 - **A letétek sorrendje** (`rankVariations`): elöl a jobbra értékeltek; az egyformán értékeltek és az értékeletlenek
@@ -303,8 +305,7 @@ valamint a letétek értékelése a böngésző localStorage-ában vannak (`orgo
   - az ének megnyitásakor;
   - hozzáadáskor a lista szerkesztőjéből (az ének oldaláról az ott látott letét kerül a listára);
   - ha egy lista letétje ezen az eszközön nem érhető el (pl. importált lista, nincs letöltve a könyve).
-- Keskeny kottanézetben (telefonon) a kotta alatti sáv: balra a csillagok, mellettük a nagyítás, a maradék helyen a
-  letét adatai (CSS container query, `.score-footer`).
+  A lejátszó fejléce is ezt a letétet írja ki, ha a listán tárolt nem érhető el.
 
 ## Kottanézet és lejátszó
 
@@ -317,9 +318,23 @@ valamint a letétek értékelése a böngésző localStorage-ában vannak (`orgo
   és a szövegpanel áthelyezésekor újra igazodik.
 - Hosszú kottánál az első megjelenítés tovább tarthat, mert a program több méretet kipróbál;
   visszalapozáskor a megtalált méretet már megjegyezte.
-- A +/− gomb a legnagyobb méretet állítja 10%-os lépésekben, a felirat a ténylegesen látott méretet
+- **A kotta beállításai** (FAB): a kottaterület jobb alsó sarkában lebegő kerek gomb (`.score-fab`) nyitja a
+  panelt; a kotta alatt nincs külön sáv, a kotta a terület aljáig ér. A panel a gombbal, Esc-pel vagy mellé
+  koppintva zárul; a gomb és a panel nem lapoz. Sorai: **Nagyítás**, **Hangnem**, és az ének oldalán
+  **Értékelés**. A letét éve és szólamszáma már nem látszik a kotta alatt (a lejátszó fejlécében igen).
+  A lejátszóban a gomb nyugalomban csak egy halvány, körvonalas kör, mert ott a kotta gyakran a gomb alá is ér.
+- A Nagyítás −/+ gombja a legnagyobb méretet állítja 10%-os lépésekben, a felirat a ténylegesen látott méretet
   mutatja. A + nem használható, ha a kotta nagyobban már nem férne ki (képes kottánál: ha elérte a
   teljes szélességet).
+- **Transzponálás:** a Hangnem −/+ gombja félhangonként, legfeljebb ±6 félhanggal transzponál.
+  - Az énekszámhoz tárolódik (`orgonista_transpositions`, pl. `{ "165": -2 }`; 0-nál törlődik). Az ének minden
+    letétjére és előjátékára érvényes, az ének oldalán és a lejátszóban is; a lejátszóban állítva is ide kerül.
+  - A Verovio `transpose` opciója végzi, betöltéskor. Félhangszám helyett hangközt kap (pl. `+m2`, `-M2`), mert a
+    félhangszámnál bővített prímet választana (F-dúr +1 → Fisz-dúr). A program a kotta előjegyzéséből kiszámolja a
+    lehetséges célhangnemeket, és a legkevesebb előjegyzésűt választja (C-dúr +1 → Desz-dúr, nem Cisz-dúr); egyenlő
+    számnál a tiszta, kis vagy nagy hangközt, végül fölfelé a keresztes, lefelé a bés hangnemet.
+  - A képként tárolt kotta (PNG, JPG) nem transzponálható: a gombok tiltva, a panel ezt kiírja.
+  - A transzponált kotta is a fenti módon igazodik a helyhez (az igazító a transzponálás értékét is figyeli).
 - A szövegpanel a kotta mellett vagy alatt lehet (a panel jobb felső sarkának gombjai). Kotta nélküli énekeknél is látszik;
   szöveg nélküli énekeknél csak akkor, ha van leírása, megjegyzése vagy regisztrációja.
   - Két lapja van: **Szöveg** és **Megjegyzések**. A fülek lent a panel eszköztárának sorában balra (a fogantyú

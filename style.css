@@ -390,24 +390,50 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     z-index: 10;
 }
-/* Alsó sáv a kotta alatt: balra a letét értékelése (az ének oldalán), középen a zoom, jobbra a letét adatai */
-.score-footer { flex: none; height: 48px; container-type: inline-size; }
-.score-footer-bar {
-    height: 100%;
-    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; column-gap: 8px;
-    padding: 0 16px;
+/* Lebegő gomb (FAB) a kotta jobb alsó sarkában: fölötte nyílik a panelje (nagyítás, transzponálás, az ének oldalán az
+   értékelés). Nyugalomban kissé áttetsző, hogy alatta a kotta is sejthető legyen. */
+.score-fab { position: absolute; right: 12px; bottom: 12px; z-index: 15; }
+.score-fab-btn {
+    position: relative; width: 48px; height: 48px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background-color: var(--col-galaxy-blue); color: var(--col-papyrus);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25); opacity: 0.82; transition: opacity 0.15s;
 }
-.score-footer .star-rating { grid-column: 1; justify-self: start; }
-/* keskeny kottanézet (telefon): balra a csillagok, mellettük a nagyítás, a maradék helyen a letét adatai */
-@container (max-width: 480px) {
-    .score-footer-bar.has-rating { grid-template-columns: auto auto minmax(0, 1fr); padding: 0 8px; }
-    .score-footer-bar.has-rating .star-btn { width: 24px; }
-    .score-footer-bar.has-rating .zoom-bar { padding: 0.2rem 0.4rem; gap: 0.25rem; }
-    .score-footer-bar.has-rating .zoom-bar span { width: 42px; }
+/* A lejátszóban a kotta a terület aljáig ér, a gomb az utolsó ütemet takarhatja: nyugalomban csak egy halvány,
+   körvonalas kör, hogy az alatta lévő hangjegyek az istentisztelet alatt is olvashatók maradjanak (a jelzés teljes
+   színű marad). Rámutatva, fókuszban és nyitott panelnél a megszokott. */
+.player-view .score-fab:not(.open) .score-fab-btn:not(:hover):not(:focus-visible) {
+    opacity: 1; background-color: rgba(0, 43, 54, 0.1); color: rgba(0, 43, 54, 0.75);
+    box-shadow: inset 0 0 0 1.5px rgba(0, 43, 54, 0.4);
+    /* a téma színével, ahol a böngésző ismeri */
+    background-color: color-mix(in srgb, var(--col-galaxy-blue) 10%, transparent);
+    color: color-mix(in srgb, var(--col-galaxy-blue) 75%, transparent);
+    box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--col-galaxy-blue) 40%, transparent);
 }
-@container (max-width: 300px) {
-    .score-footer-bar.has-rating .score-info { display: none; }
+.score-fab-btn:hover, .score-fab-btn:focus-visible, .score-fab.open .score-fab-btn { opacity: 1; }
+.score-fab-btn:focus-visible { outline: 3px solid var(--col-focus, var(--col-accent)); outline-offset: 2px; }
+/* a transzponálás jelzése a gombon (pl. „−2”), hogy zárt panelnél is látsszon */
+.score-fab-badge {
+    position: absolute; top: -5px; left: -7px; min-width: 24px; height: 20px; padding: 0 6px; border-radius: 10px;
+    background-color: var(--col-accent); color: var(--col-white); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    font-size: 12px; font-weight: 700; line-height: 20px; text-align: center; font-variant-numeric: tabular-nums;
 }
+.score-fab-panel {
+    position: absolute; right: 0; bottom: calc(100% + 10px);
+    width: max-content; min-width: 250px; max-width: calc(100vw - 32px);
+    display: flex; flex-direction: column; gap: 10px; padding: 12px 14px;
+    background-color: var(--col-float-bg, #fff); color: var(--col-ink);
+    border: 1px solid var(--col-border, #ddd); border-radius: 12px;
+    box-shadow: var(--shadow-xl), 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+.score-fab-panel[hidden] { display: none; }
+.score-fab-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.score-fab-label {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--col-accent-text, var(--col-accent));
+}
+.score-fab-note { margin-top: -4px; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-end; gap: 4px 10px; font-size: 12px; color: var(--col-ink-muted, #666); }
+.score-fab-reset { font-size: 12px; font-weight: 600; color: var(--col-accent-text, var(--col-accent)); text-decoration: underline; text-underline-offset: 2px; }
 
 /* Csillagos értékelés: a kitöltött csillagok az akcentus színével (egérrel fölé állva előnézet) */
 .star-rating { display: flex; align-items: center; }
@@ -425,26 +451,22 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 /* a letétválasztó sora: balra a név és az adatok, jobbra az értékelés */
 .variation-option { display: flex; align-items: center; gap: 10px; }
 .variation-option-text { flex: 1; min-width: 0; }
-.score-info {
-    grid-column: 3; justify-self: end; min-width: 0; max-width: 100%;
-    font-size: 12px; color: var(--col-ink-muted, #666);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    pointer-events: none;
+/* Nagyítás és transzponálás a panelen: − érték + */
+.zoom-bar, .transpose-bar {
+    display: flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.35rem;
+    background-color: var(--col-card-raised, #fff); border: 1px solid var(--col-border, #ddd); border-radius: 30px;
 }
-.zoom-bar {
-    grid-column: 2;
-    display: flex; align-items: center; gap: 0.5rem;
-    background: var(--col-float-bg, rgba(255,255,255,0.95));
-    padding: 0.2rem 0.75rem; border-radius: 30px; border: 1px solid var(--col-border, #eee);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-}
-.zoom-bar button {
-    width: 30px; height: 30px;
+.zoom-bar button, .transpose-bar button {
+    width: 34px; height: 34px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 1.5rem; font-weight: bold; color: var(--col-galaxy-blue);
+    font-size: 1.4rem; font-weight: bold; line-height: 1; color: var(--col-galaxy-blue);
 }
-.zoom-bar button:disabled { opacity: 0.3; cursor: default; }
-.zoom-bar span { width: 50px; text-align: center; font-size: 0.9rem; font-weight: bold; color: var(--col-galaxy-blue); }
+.zoom-bar button:hover:not(:disabled), .transpose-bar button:hover:not(:disabled) { background-color: rgba(0, 0, 0, 0.06); }
+.zoom-bar button:disabled, .transpose-bar button:disabled { opacity: 0.3; cursor: default; }
+.zoom-bar span, .transpose-value {
+    width: 52px; text-align: center; font-size: 0.95rem; font-weight: bold; color: var(--col-galaxy-blue);
+    font-variant-numeric: tabular-nums;
+}
 
 /* Form elemek */
 .input {

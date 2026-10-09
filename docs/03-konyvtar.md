@@ -33,29 +33,50 @@ A szűrő menüjében (1) a kulcsszavak mellett az énekek száma látszik. A sz
 5. **Hozzáadás listához (+):** az ének a választott letéttel és előjátékkal egy listára kerül (lásd:
    [Listák](05-listak.md#énekek-hozzáadása)).
 6. Az **előjáték** a letét fölött, a nevével.
-7. **Értékelés:** a látott letét csillagai (lásd lent: [A letétek értékelése](#a-letétek-értékelése)).
-8. **Nagyítás:**
-   - a − és a + 10%-onként állítja a kotta legnagyobb méretét;
-   - a felirat a ténylegesen látott méretet mutatja.
-9. A letét **adatai:** év, szólamok száma.
-10. **Szövegpanel:** az ének versszakai (lásd: [Szövegpanel](04-szovegpanel.md)).
+7. **A kotta beállításai:** a jobb alsó sarokban lebegő kerek gomb. A panelje a nagyítás, a hangnem (transzponálás) és
+   az értékelés (lásd lent: [A kotta beállításai](#a-kotta-beállításai)). A kotta alatt így nincs külön sáv, a kotta
+   a terület aljáig érhet.
+8. **Szövegpanel:** az ének versszakai (lásd: [Szövegpanel](04-szovegpanel.md)).
 
 **A kottát nem kell görgetni.** A program úgy választja meg a méretét és a sortöréseket, hogy az előjáték és a letét
 együtt, egészben elférjen.
-- Ha a **+** nem nyomható, a kotta nagyobban már nem férne ki.
+- Ha a nagyítás **+** gombja nem nyomható, a kotta nagyobban már nem férne ki.
 - A tablet elforgatásakor és a szövegpanel áthelyezésekor a kotta újra igazodik.
 
 Ha az énekhez nincs elérhető kotta, a „Nincs elérhető kotta” felirat látszik. Ilyenkor a
 [Kottakönyvek](02-kottakonyvek.md) oldalon tölthetsz le hozzá könyvet.
 
+## A kotta beállításai
+
+A jobb alsó sarokban lebegő kerek gombra koppintva nyílik a panel. Újra a gombra (ekkor ✕), az Esc billentyűvel vagy
+mellé koppintva bezárul.
+
+![A kotta beállításai: nagyítás, hangnem, értékelés](kepek/kotta-fab.webp)
+
+1. **Nagyítás:**
+   - a − és a + 10%-onként állítja a kotta legnagyobb méretét;
+   - a felirat a ténylegesen látott méretet mutatja.
+2. **Hangnem:** a − és a + egy félhanggal lejjebb vagy feljebb viszi a kottát, legfeljebb 6 félhanggal. Az előjáték és
+   a letét együtt változik; a képen 2 félhanggal feljebb, F-dúrból G-dúrba.
+3. Hány félhanggal változott. Az **Eredeti hangnem** gomb visszaállítja.
+4. **Értékelés:** a látott letét csillagai (lásd lent: [A letétek értékelése](#a-letétek-értékelése)).
+5. A gomb. Ha a kotta transzponálva van, a gombon zárt panelnél is látszik, mennyivel (pl. **+2**).
+
+**A transzponálásról:**
+- Az **énekhez** tárolódik, csak ezen a készüléken: az ének minden letétjére és előjátékára érvényes, legközelebb is
+  így nyílik meg, és a lejátszóban is.
+- A program a legkevesebb előjegyzésű hangnemet választja. Például C-dúrból egy félhanggal feljebb Desz-dúr lesz
+  (5 bé), nem Cisz-dúr (7 kereszt).
+- A **képként** tárolt kotta (beszkennelt oldal) nem transzponálható: a Hangnem gombjai ilyenkor nem nyomhatók.
+
 ## A letétek értékelése
 
 Ha egy énekhez több letét is van, csillagokkal (1–5) megjelölheted, melyiket szereted a legjobban. Az ének oldalán a
-kotta alatt, balra lévő csillagok a **látott** letétre vonatkoznak.
+[kotta beállításainak](#a-kotta-beállításai) panelén lévő csillagok a **látott** letétre vonatkoznak.
 - Egy csillagra koppintva annyi csillagot kap a letét. Ugyanarra a csillagra újra koppintva az értékelés törlődik.
 - Az értékelés **csak ezen a készüléken** tárolódik, a listákhoz hasonlóan.
-- A lejátszóban nincs csillag: ott a kotta alsó sarkára koppintva is lapozni lehet, és egy véletlen koppintás ne
-  értékeljen.
+- A lejátszóban a panelen nincs értékelés, csak nagyítás és hangnem: az istentisztelet alatt egy véletlen koppintás
+  ne értékeljen.
 
 ![A letétválasztó az értékelésekkel](kepek/letetvalaszto.webp)
 
