@@ -129,7 +129,8 @@ A szövegpanel Megjegyzések lapján, a **Leírás** részben jelennek meg, cím
   utánnyomás, PDF);
 - a források a könyv függelékéből (*Szerzők és énekgyűjtemények adatai*, 2. Gyűjtemények);
 - a leírások a [Digitális Református Énekeskönyv](https://enekeskonyv.reformatus.hu/digitalis-reformatus-enekeskonyv/)
-  adatlapjairól (a dőlt betűs ismertetők, a szerzőjük nevével).
+  adatlapjairól (a dőlt betűs ismertetők, a szerzőjük nevével; ahol van, ez 503 ének). A hangfelvételekre és a külső
+  ismertetőkre mutató hivatkozások kimaradtak.
 
 A két forrást összevetettük. Ahol eltértek, a nyomtatott könyv adata került be (a weboldalon néhány elírás van, pl.
 „Debren, 1560”).

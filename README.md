@@ -77,8 +77,8 @@ nyilvánossá kell tenni.
     a `hymnInfo` függvényben olvassa be őket.
     - Kitöltve mind a 667 énekre: a szerzők, évszámok, igehelyek, kiemelt versek és megjegyzések a Református
       Énekeskönyv (RÉ21, 2025-ös utánnyomás) PDF-jéből, a források a függelék gyűjteményi listájából, a leírások a
-      Digitális Református Énekeskönyv (enekeskonyv.reformatus.hu) adatlapjairól. Eltérésnél a nyomtatott könyv
-      adata került be. A forrásokat a Névjegy oldal is megnevezi.
+      Digitális Református Énekeskönyv (enekeskonyv.reformatus.hu) adatlapjairól (503 énekhez van). Eltérésnél a
+      nyomtatott könyv adata került be. A forrásokat a Névjegy oldal is megnevezi.
     - `bible` → *Igehely*: a kapcsolódó igehely, szöveg vagy szövegek tömbje (`"Zsolt 42; Zsolt 43"`,
       `["Zsolt 42", "Zsolt 43"]`; a tömb elemei pontosvesszővel kerülnek egy sorba).
     - `textAuthor`, `textYear` → *Szöveg*: a szöveg szerzője vagy eredete, és az évszáma.
