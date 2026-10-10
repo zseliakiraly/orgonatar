@@ -365,7 +365,25 @@ const nativeFileSrc = (url) => {
     const name = names.find(n => nativeBooks.caches.get(n).has(url));
     return name ? nativeFileUrl(nativeFilePath(name, url)) : null;
 };
-const fileSrc = (url) => (NATIVE && url ? nativeFileSrc(url) || remoteUrl(url) : url);
+// Az alkalmazással telepített (beépített) könyvek: { [mappa]: { files, missing, bytes } } (scripts/build-www.mjs)
+const BUNDLED_BOOKS = (NATIVE && APP_CONFIG.bundled) || {};
+const BUNDLED_FILES = new Set(Object.values(BUNDLED_BOOKS).flatMap(b => b.files || []));
+// A beépített könyv az alkalmazásban: a letöltött könyvekhez hasonló leírás (local), a fájljai az alkalmazásban vannak
+const readBundledBooks = async () => {
+    const result = {};
+    await Promise.all(Object.entries(BUNDLED_BOOKS).map(async ([folder, info]) => {
+        try {
+            const res = await fetch(bookIndexUrl(folder));
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const text = await res.text();
+            result[folder] = { cacheName: null, bundled: true, text, index: normalizeBook(JSON.parse(text), folder), date: null,
+                files: info.files.length + info.missing.length, bytes: info.bytes, missing: info.missing };
+        } catch (err) { console.error(`A beépített könyv (${folder}) nem olvasható:`, err); }
+    }));
+    return result;
+};
+// Sorrend: a letöltött (frissebb) példány, az alkalmazással telepített példány, végül a szerveren lévő
+const fileSrc = (url) => (NATIVE && url ? nativeFileSrc(url) || (BUNDLED_FILES.has(url) ? url : remoteUrl(url)) : url);
 
 // Szövegfájl mentése (listák, ujjrendek): a böngészőben letöltés; az alkalmazásban a rendszer megosztás ablaka, ahonnan
 // a fájl elmenthető (pl. a Fájlok közé vagy a Drive-ra) vagy elküldhető
@@ -4069,7 +4087,7 @@ const ScorebookCard = ({ book, download, active, onToggle, onDownload, onCancel,
         status = `${book.builtin ? 'Mentés a készülékre' : 'Letöltés'}: ${progress.done} / ${progress.total}`;
         if (!book.builtin) actions = <button onClick={() => onCancel(book.folder)} className="btn btn-ghost">Mégse</button>;
     } else if (book.builtin) {
-        if (local) status = `Internet nélkül is elérhető • ${savedText}`;
+        if (local) status = `${local.bundled ? 'Az alkalmazás része' : 'Internet nélkül is elérhető'} • ${savedText}`;
         else if (!OFFLINE_SUPPORTED) status = 'Csak internettel érhető el (ez a böngésző nem tud menteni)';
         else if (!data) status = `Nem érhető el: ${book.remoteError || 'betöltés...'}`;
         else if (!failed) status = 'Mentés a készülékre...';
@@ -4591,8 +4609,9 @@ function OrganistApp() {
                 return [];
             });
 
-        Promise.all([loadJSONFile('./data/enek.json'), loadJSONFile(CATALOG_URL), readDownloadedBooks().catch(() => ({}))])
-            .then(([hymns, catalog, downloaded]) => {
+        Promise.all([loadJSONFile('./data/enek.json'), loadJSONFile(CATALOG_URL), readDownloadedBooks().catch(() => ({})), readBundledBooks()])
+            .then(([hymns, catalog, downloadedBooks, bundled]) => {
+                const downloaded = { ...bundled, ...downloadedBooks };
                 const entries = normalizeCatalog(catalog).map(entry => ({ ...entry, orphan: false, remote: null, remoteError: null, local: downloaded[entry.folder] || null }));
                 // A listából azóta kikerült, de letöltött könyv is megmarad (törölni a felhasználó tudja)
                 Object.keys(downloaded).filter(folder => !entries.some(e => e.folder === folder))
@@ -4628,7 +4647,7 @@ function OrganistApp() {
         if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
         const withoutFolder = (d) => { const rest = { ...d }; delete rest[folder]; return rest; };
         downloadBook({
-            folder, remote: book.remote, previous: book.local, signal: controller.signal,
+            folder, remote: book.remote, previous: book.local && !book.local.bundled ? book.local : null, signal: controller.signal,
             onProgress: (done, total) => setDownloads(d => d[folder] ? { ...d, [folder]: { done, total } } : d)
         })
             .then(local => {
@@ -4700,7 +4719,7 @@ function OrganistApp() {
         // minden megnyitásakor egyszer próbáljuk). Ha az index.json is változott, ezt a frissítés intézi.
         books.forEach(book => {
             const local = book.local;
-            if (!local || !book.remote || !local.missing || !local.missing.length || downloads[book.folder]) return;
+            if (!local || local.bundled || !book.remote || !local.missing || !local.missing.length || downloads[book.folder]) return;
             if (!sameBookText(local.text, book.remote.text)) return;
             const key = missingFilesKey(book.folder, local.cacheName);
             if (autoSyncedRef.current.has(key)) return;

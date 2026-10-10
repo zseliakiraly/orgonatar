@@ -6,9 +6,10 @@ keretrendszerrel csomagolva. A különbség:
 - A beállítások, a listák, az ujjrendek és a letöltött kottakönyvek az **alkalmazás saját tárhelyére** kerülnek
   (nem a böngésző localStorage-ába és Cache Storage-ába). Ha az alkalmazást törlik, ezek is törlődnek: a listákat
   előtte érdemes elmenteni (Beállítások → Adatok → Mentés fájlba).
-- A kották a szerverről jönnek, a **PHP API-n** keresztül (`api/`), ugyanúgy, mint a weboldalon: az énekeskönyv
-  magától letöltődik, a többi könyv kérésre. Internet nélkül a letöltött könyvek és a legutóbb letöltött énekadatok
-  használhatók.
+- A **beépített könyv** (az énekeskönyv, `"builtin": true` a `kottakonyvek.json`-ban) az APK része: internet nélküli
+  telepítés után is megvan. Ha a szerveren változik az `index.json`-ja, az alkalmazás magától letölti az új változatot.
+- A többi könyv kérésre töltődik le a szerverről, a **PHP API-n** keresztül (`api/`). Internet nélkül a beépített és a
+  letöltött könyvek, valamint a legutóbb letöltött énekadatok használhatók.
 - A program fájljai (a kottarajzolóval együtt) az alkalmazásban vannak, ezért gyorsan és internet nélkül is indul.
 - A „Mentés fájlba” a rendszer megosztás ablakát nyitja meg (mentés a Fájlok közé, a Drive-ra, vagy küldés).
 - A megosztási linkek a weboldalra mutatnak (`ORGONATAR_PUBLIC_URL`).
