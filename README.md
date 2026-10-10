@@ -21,6 +21,8 @@ A korábbi, OpenSheetMusicDisplay-jel (OSMD) rajzoló változat az `osmd` ágon 
 | `orgonatar-logo.svg` | A program logója (eredeti rajz); a Névjegy oldalon az `app.js` `Logo` komponense ugyanezt rajzolja, a téma színével. |
 | `docs/` | Használati útmutató (Markdown), a képernyőképek a `docs/kepek/` mappában (WebP). |
 | `icons/` | A böngészőfül és a kezdőképernyő ikonja: a logó vastagabb vonalú változatai (`favicon.svg`, sötét böngészőben világos vonallal; `apple-touch-icon.png`, `icon-192.png`). Ha a logó változik, ezeket is újra kell készíteni. |
+| `api/` | PHP API az Android-alkalmazásnak: a `data/` mappa fájljait adja ki (lásd lent). |
+| `android/`, `native/`, `scripts/`, `capacitor.config.json` | Az Android-alkalmazás ([android/README.md](android/README.md)). |
 
 ## Build
 
@@ -44,6 +46,27 @@ lefordítja az `app.js`-t, és közzéteszi az oldalt. Egyszeri beállítás:
 Az oldal címe: `https://zseliakiraly.github.io/orgonatar/`. Privát repóból a
 GitHub Pages csak fizetős (Pro) előfizetéssel érhető el; ingyenes fiókkal a repót
 nyilvánossá kell tenni.
+
+## Saját tárhely (shared hosting)
+
+A weboldal statikus fájlokból áll, a szerveren semmit sem kell futtatni: bármilyen tárhelyen működik. Feltöltendő:
+`index.html`, `app.min.js`, `style.css`, `sw.js`, `orgonatar-logo.svg`, `libs/`, `fonts/`, `icons/`, `data/`, és az
+Android-alkalmazáshoz az `api/` mappa. (Az `app.min.js`-t előtte le kell fordítani: `npm run build`; a szerveren
+nem kell Node.) Az offline működéshez (service worker) **https** kell.
+
+### PHP API (`api/index.php`)
+
+Az Android-alkalmazás ezen keresztül tölti le az adatokat és a kottákat. PHP 7.4 vagy újabb kell hozzá, adatbázis és
+Composer nem; a `data/` mappát olvassa, amely az `api/` mellett van. A weboldal nem használja (ugyanarról a
+webhelyről közvetlenül éri el a fájlokat).
+
+- `GET api/?path=data/<fájl>`: a `data/` mappa egy fájlja (`kottakonyvek.json`, `enek.json`, `<mappa>/index.json`,
+  kottafájlok, borítóképek). Csak a `data/` mappán belüli, nem rejtett, ismert kiterjesztésű fájl kérhető.
+- `GET api/`: az API adatai (`{"name":"orgonatar","version":1,...}`), így ellenőrizhető, hogy fut-e.
+- ETag és Last-Modified fejléccel válaszol: a frissítéskor a változatlan fájlok nem jönnek le újra (304).
+- Más webhelyről is hívható (CORS), mert az alkalmazás a saját címéről (`https://localhost`) kérdez.
+
+Kipróbálás helyben: `php -S 127.0.0.1:8000` a repó gyökerében, majd <http://127.0.0.1:8000/api/>.
 
 ## Adatok és könyvtárak
 

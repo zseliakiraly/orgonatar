@@ -1,0 +1,8 @@
+{
+  "appId": "hu.zseli.orgonatar",
+  "appName": "OrgonaTár",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  }
+}

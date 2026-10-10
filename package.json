@@ -3,9 +3,19 @@
   "private": true,
   "description": "Református OrgonaTár: orgonakíséretek böngészése és liturgikus listák",
   "scripts": {
-    "build": "esbuild app.js --loader:.js=jsx --target=es2019 --minify --outfile=app.min.js"
+    "build": "esbuild app.js --loader:.js=jsx --target=es2019 --minify --outfile=app.min.js",
+    "build:www": "npm run build && node scripts/build-www.mjs",
+    "android:sync": "npm run build:www && cap sync android"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
     "esbuild": "0.28.2"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/filesystem": "^8.1.4",
+    "@capacitor/share": "^8.0.3"
   }
 }

@@ -1,0 +1,78 @@
+# Az Android-alkalmazás (APK) elkészítése.
+# Minden main ágra feltöltéskor és pull requestnél lefut; az APK az Actions futás oldalán, az "Artifacts" alatt
+# tölthető le. v-vel kezdődő címkénél (pl. v1.0) a Releases oldalra is felkerül, ott könnyen megosztható.
+#
+# Beállítások (Settings → Secrets and variables → Actions), a részletek az android/README.md-ben:
+#   Variables: ORGONATAR_SERVER (a webes program címe), ORGONATAR_API (a PHP API címe), ORGONATAR_PUBLIC_URL
+#   Secrets:   ORGONATAR_KEYSTORE_BASE64, ORGONATAR_KEYSTORE_PASSWORD, ORGONATAR_KEY_ALIAS, ORGONATAR_KEY_PASSWORD
+# Aláíró kulcs nélkül fejlesztői (debug) APK készül: kipróbálni jó, de minden futásé más kulccsal van aláírva, így
+# frissítéskor a régit előbb le kell törölni a telefonról (a listák és a letöltött könyvek is törlődnek vele).
+name: Android-alkalmazás
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write   # a címkénél a Releases oldalra töltéshez
+
+jobs:
+  apk:
+    name: APK készítése
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - run: npm ci
+      - name: A program fájljai az alkalmazásba
+        env:
+          ORGONATAR_SERVER: ${{ vars.ORGONATAR_SERVER }}
+          ORGONATAR_API: ${{ vars.ORGONATAR_API }}
+          ORGONATAR_PUBLIC_URL: ${{ vars.ORGONATAR_PUBLIC_URL }}
+        run: npm run android:sync
+      - name: Aláíró kulcs
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ORGONATAR_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/orgonatar.jks"
+            echo "ORGONATAR_KEYSTORE_FILE=$RUNNER_TEMP/orgonatar.jks" >> "$GITHUB_ENV"
+            echo "variant=release" >> "$GITHUB_OUTPUT"
+          else
+            echo "variant=debug" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Nincs aláíró kulcs::Fejlesztői (debug) APK készül. Állandó kulcs beállítása: android/README.md"
+          fi
+      - name: APK fordítása
+        working-directory: android
+        env:
+          ORGONATAR_KEYSTORE_PASSWORD: ${{ secrets.ORGONATAR_KEYSTORE_PASSWORD }}
+          ORGONATAR_KEY_ALIAS: ${{ secrets.ORGONATAR_KEY_ALIAS }}
+          ORGONATAR_KEY_PASSWORD: ${{ secrets.ORGONATAR_KEY_PASSWORD }}
+          ORGONATAR_VERSION_CODE: ${{ github.run_number }}
+          ORGONATAR_VERSION_NAME: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('0.{0}', github.run_number) }}
+        run: |
+          chmod +x gradlew
+          if [ "${{ steps.keystore.outputs.variant }}" = release ]; then ./gradlew --no-daemon assembleRelease; else ./gradlew --no-daemon assembleDebug; fi
+          mkdir -p ../dist
+          cp app/build/outputs/apk/${{ steps.keystore.outputs.variant }}/*.apk "../dist/orgonatar-${ORGONATAR_VERSION_NAME#v}.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: orgonatar-apk
+          path: dist/*.apk
+      - name: Közzététel a Releases oldalon
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/*.apk --title "OrgonaTár $GITHUB_REF_NAME" --generate-notes
