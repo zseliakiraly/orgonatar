@@ -452,27 +452,44 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 }
 .fing-bar-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .fing-pad {
-    position: absolute; z-index: 17; width: 250px; transform: translateX(-50%);
-    display: flex; flex-direction: column; gap: 8px; padding: 10px;
+    position: absolute; z-index: 17; width: 304px; transform: translateX(-50%);
+    display: flex; flex-direction: column; gap: 6px; padding: 10px;
     background-color: var(--col-float-bg, #fff); color: var(--col-ink);
     border: 1px solid var(--col-border, #ddd); border-radius: 12px;
     box-shadow: var(--shadow-xl), 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 .fing-pad.above { transform: translate(-50%, -100%); }
+/* a kijelző: az ujjrend, a pedáljelek (a láb betűjével) és a játékmód jelei */
 .fing-pad-value {
-    height: 34px; border-radius: 8px; text-align: center; line-height: 34px;
-    font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0.08em;
+    min-height: 36px; padding: 0 8px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 2px 10px;
+    font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0.06em;
     background-color: var(--col-card-raised, #fff); border: 1px solid var(--col-border, #ddd);
 }
-/* a meglévő szám kijelölve: az első gombnyomás felülírja */
+.fing-pad-value .mk-pedal sub { font-size: 0.6em; font-weight: 600; letter-spacing: 0; color: var(--col-ink-muted, #666); }
+.fing-pad-value .mk-play { display: inline-flex; color: var(--col-galaxy-blue); }
+/* a meglévő ujjrend, pedáljel kijelölve: az első gombnyomás felülírja */
 .fing-pad-value .fresh { padding: 0 4px; border-radius: 3px; background-color: color-mix(in srgb, var(--col-accent) 28%, transparent); }
+.fing-pad-label {
+    margin-top: 2px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--col-accent-text, var(--col-accent));
+}
+.fing-pad-label span { margin-left: 4px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--col-ink-muted, #666); }
 .fing-pad-keys { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.fing-pad-keys.pedal { grid-template-columns: repeat(4, 1fr); }
 .fing-pad-keys button {
-    height: 40px; border-radius: 8px; font-size: 1.1rem; font-weight: 700; color: var(--col-galaxy-blue);
+    height: 38px; border-radius: 8px; font-size: 1.1rem; font-weight: 700; color: var(--col-galaxy-blue);
+    display: flex; align-items: center; justify-content: center;
     background-color: var(--col-card-raised, #fff); border: 1px solid var(--col-border, #ddd);
 }
 .fing-pad-keys button:hover { border-color: var(--col-accent); }
 .fing-pad-keys button:active { background-color: rgba(0, 0, 0, 0.06); }
+.fing-pad-keys .pedal-mark { font-size: 1.25rem; line-height: 1; }
+.fing-pad-keys .pedal-side { margin-left: 3px; align-self: flex-end; margin-bottom: 7px; font-size: 0.7rem; font-weight: 600; color: var(--col-ink-muted, #666); }
+/* a bekapcsolt játékmódjel */
+.fing-pad-keys button[aria-pressed="true"] {
+    color: var(--col-white, #fff); background-color: var(--col-accent); border-color: var(--col-accent);
+}
 .fing-pad-actions { display: flex; justify-content: space-between; gap: 8px; }
 
 /* Csillagos értékelés: a kitöltött csillagok az akcentus színével (egérrel fölé állva előnézet) */

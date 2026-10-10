@@ -975,8 +975,9 @@ const shareTextOf = (name, rows, link, code) => [
         : ['Vagy a programban: Listák → Importálás, és ott illeszd be a fenti linket.']),
     ''
 ].join('\n');
-// Ujjrend kódja (OU1…): énekszám, letét azonosítója, hangnem (0–11) és a hangok („kulcs=szám;…”), letétenként egy
-// rekord; tömörítve, ellenőrző összeggel, 62-es számrendszerben, mint a listák kódja
+// Ujjrend kódja (OU1…): énekszám, letét azonosítója, hangnem (0–11, a játékmód jeleinél „a”) és a hangok
+// („kulcs=jelek;…”, pl. „0.1.1.0=3 J∧”), letétenként és hangnemenként egy rekord; tömörítve, ellenőrző összeggel,
+// 62-es számrendszerben, mint a listák kódja
 const FINGER_CODE_MAX_LENGTH = 60000;
 const packCode = (text) => {
     const raw = new TextEncoder().encode(text);
@@ -1010,15 +1011,16 @@ const parseFingerCode = (code) => {
     const items = [];
     for (const rec of s.split(CODE_RS)) {
         const [hymnNumber = '', block = '', cls = '', entries = ''] = rec.split(CODE_US);
-        if (!block || !/^(?:\d|1[01])$/.test(cls)) return null;
+        if (!block || !FINGER_CLASS.test(cls)) return null;
         const fingers = {};
         for (const entry of entries.split(';')) {
             if (!entry) continue;
             const [k, v] = entry.split('=');
-            if (!FINGER_KEY.test(k) || !FINGER_VALUE.test(v || '')) return null;
-            fingers[k] = v;
+            const text = FINGER_KEY.test(k) ? canonMarks(v || '', cls) : null;
+            if (!text) return null;
+            fingers[k] = text;
         }
-        if (Object.keys(fingers).length) items.push({ hymnNumber, block, cls: +cls, fingers });
+        if (Object.keys(fingers).length) items.push({ hymnNumber, block, cls: classOf(cls), fingers });
     }
     return items.length ? items : null;
 };
@@ -1033,7 +1035,7 @@ const decodeFingerings = (text) => {
                 const store = cleanFingerStore(data.fingerings), hymns = (data.blocks && typeof data.blocks === 'object') ? data.blocks : {};
                 const items = [];
                 for (const [block, classes] of Object.entries(store)) for (const [cls, fingers] of Object.entries(classes)) {
-                    items.push({ hymnNumber: String((hymns[block] && hymns[block].hymn) || ''), block, cls: +cls, fingers, name: hymns[block] && hymns[block].name });
+                    items.push({ hymnNumber: String((hymns[block] && hymns[block].hymn) || ''), block, cls: classOf(cls), fingers, name: hymns[block] && hymns[block].name });
                 }
                 return items.length ? items : null;
             }
@@ -1305,15 +1307,25 @@ const ShareCodeModal = ({ title, what, code, link, name, detail, subject, messag
     );
 };
 
-// Az ének látott ujjrendjének (előjáték, letét; az aktuális hangnemben) megosztása
+// Az ének látott ujjrendjének (előjáték, letét) megosztása: az aktuális hangnem ujjrendje és pedáljelei, valamint a
+// játékmód jelei (ezek minden hangnemben ugyanazok)
 const ShareFingeringModal = ({ items, onClose }) => {
     const code = useMemo(() => { try { return encodeFingerCode(items); } catch (e) { return null; } }, [items]);
     const link = code ? fingerLinkOf(code) : '';
     const first = items[0];
     const name = `${first.hymnNumber}. ${first.hymnTitle || ''}`.trim();
-    const lines = items.map(it => `${it.kind}: ${it.name} – ${Object.keys(it.fingers).length} hang`);
+    const blocks = [];
+    for (const it of items) {
+        let b = blocks.find(x => x.block === it.block);
+        if (!b) blocks.push(b = { block: it.block, kind: it.kind, name: it.name, keys: new Set() });
+        Object.keys(it.fingers).forEach(k => b.keys.add(k));
+    }
+    const lines = blocks.map(b => `${b.kind}: ${b.name} – ${b.keys.size} hang`);
+    const keyItem = items.find(it => String(it.cls) !== PLAY_CLASS);
+    const scope = [keyItem && fingerClassLabel(keyItem.cls), items.some(it => String(it.cls) === PLAY_CLASS) && 'játékmód: minden hangnemben']
+        .filter(Boolean).join('; ');
     const text = (withCode) => [
-        `Református OrgonaTár – ujjrend: ${name} (${fingerClassLabel(first.cls)})`,
+        `Református OrgonaTár – ujjrend: ${name} (${scope})`,
         '',
         ...lines.map(l => `  ${l}`),
         '',
@@ -1326,7 +1338,7 @@ const ShareFingeringModal = ({ items, onClose }) => {
     ].join('\n');
     return (
         <ShareCodeModal title="Ujjrend megosztása" what="ujjrend" code={code} link={link} name={name}
-            detail={<>{lines.map((l, i) => <div key={i}>{l}</div>)}<div>{fingerClassLabel(first.cls)}</div></>}
+            detail={<>{lines.map((l, i) => <div key={i}>{l}</div>)}<div>{scope}</div></>}
             subject={`OrgonaTár ujjrend: ${name}`} message={code ? text(false) : ''}
             fileName={`ujjrend ${safeFileName(name)}.txt`} fileText={code ? text(true) : ''}
             hint={<>Importálás egy másik eszközön: Beállítások → Adatok mentése és megosztása → Ujjrendek: Importálás, és
@@ -1461,7 +1473,7 @@ const ImportFingeringModal = ({ initialText = '', blockInfo, hymnByNumber, onClo
         const store = loadFingerings();
         return decoded.map(it => ({ ...it, info: blockInfo.get(it.block) || null, hymn: hymnByNumber.get(String(it.hymnNumber)) || null,
             exists: !!(store[it.block] && store[it.block][it.cls]) }))
-            .sort((a, b) => (parseInt(a.hymnNumber, 10) || 0) - (parseInt(b.hymnNumber, 10) || 0) || a.block.localeCompare(b.block) || a.cls - b.cls);
+            .sort((a, b) => (parseInt(a.hymnNumber, 10) || 0) - (parseInt(b.hymnNumber, 10) || 0) || a.block.localeCompare(b.block) || classOrder(a.cls) - classOrder(b.cls));
     }, [decoded, blockInfo, hymnByNumber]);
     const replacing = rows.filter(r => r.exists).length;
     const unavailable = rows.filter(r => !r.info).length;
@@ -1983,9 +1995,9 @@ const DataSection = ({ playlistCount, onExportPlaylists, onPlaylistsFile, onExpo
     };
     return (
         <SettingsSection title="Adatok mentése és megosztása">
-            <SettingsRow title="Ujjrendek" hint={stats.sets ? `${stats.sets} ujjrend (${stats.blocks} letéthez), összesen ${stats.notes} hang` : 'Még nincs ujjrend ezen az eszközön'}>
+            <SettingsRow title="Ujjrendek és jelek" hint={stats.notes ? `${stats.blocks} letét, összesen ${stats.notes} jelölt hang` : 'Még nincs ujjrend ezen az eszközön'}>
                 <div className="data-actions">
-                    <button onClick={onExportFingerings} disabled={!stats.sets} className="btn btn-outline"><Icons.Download size={18}/> Mentés fájlba</button>
+                    <button onClick={onExportFingerings} disabled={!stats.notes} className="btn btn-outline"><Icons.Download size={18}/> Mentés fájlba</button>
                     <button onClick={onImportFingerings} className="btn btn-outline"><Icons.Import size={18}/> Importálás</button>
                 </div>
             </SettingsRow>
@@ -2229,51 +2241,90 @@ const notePitch = (note) => {
 };
 const meiNoteIndex = (mei) => {
     const doc = new DOMParser().parseFromString(mei, 'application/xml');
-    const byKey = new Map(), byId = new Map();
+    const byKey = new Map(), byId = new Map(), multiLayer = new Set();
     let topStaff = null;
     [...doc.getElementsByTagNameNS(MEI_NS, 'measure')].forEach((measure, mi) => {
         for (const staff of measure.getElementsByTagNameNS(MEI_NS, 'staff')) {
             const s = staff.getAttribute('n') || '1';
             if (topStaff === null || +s < +topStaff) topStaff = s;
-            for (const layer of staff.getElementsByTagNameNS(MEI_NS, 'layer')) {
+            const layers = [...staff.getElementsByTagNameNS(MEI_NS, 'layer')];
+            if (layers.filter(l => l.getElementsByTagNameNS(MEI_NS, 'note').length).length > 1) multiLayer.add(`${mi}.${s}`);
+            for (const layer of layers) {
                 const l = layer.getAttribute('n') || '1';
                 [...layer.getElementsByTagNameNS(MEI_NS, 'note')].forEach((note, ni) => {
                     const id = note.getAttribute('xml:id');
                     if (!id) return;
-                    const info = { key: `${mi}.${s}.${l}.${ni}`, id, staff: s, layer: +l || 1, measure: mi, pitch: notePitch(note) };
+                    const info = { key: `${mi}.${s}.${l}.${ni}`, id, staff: s, layer: +l || 1, measure: mi, pitch: notePitch(note), rank: 0 };
                     byKey.set(info.key, info); byId.set(id, info);
                 });
             }
         }
     });
-    return { byKey, byId, topStaff: topStaff || '1' };
+    // a szólam helye a sorban (rank: 0 a legfelső): az ütem hangjainak átlagos magassága szerint, mert a szólamok
+    // sorszáma nem mindig fentről lefelé halad (pl. a basszus az 1., a tenor a 2.)
+    const sums = new Map();
+    for (const info of byKey.values()) {
+        const k = `${info.measure}.${info.staff}`, layers = sums.get(k) || new Map(), v = layers.get(info.layer) || [0, 0];
+        layers.set(info.layer, [v[0] + info.pitch, v[1] + 1]); sums.set(k, layers);
+    }
+    const ranks = new Map();
+    for (const [k, layers] of sums) {
+        const order = [...layers].sort((a, b) => b[1][0] / b[1][1] - a[1][0] / a[1][1] || a[0] - b[0]).map(x => x[0]);
+        ranks.set(k, new Map(order.map((l, i) => [l, i])));
+    }
+    for (const info of byKey.values()) info.rank = ranks.get(`${info.measure}.${info.staff}`).get(info.layer);
+    return { byKey, byId, multiLayer, topStaff: topStaff || '1' };
 };
-// Az ujjrend beírása a MEI-be: ütemenként <fing> elemek a hangokhoz (a legfelső sornál a kotta fölé, a többinél alá).
-// A Verovio az egy időben szóló hangok számait egymás fölé rakja; a sorrend emelkedő hangmagasság, így felül a
-// legmagasabb hangé áll (akkordban a Verovio maga is így rendezi). Két szólam közös hangjánál a felső szólamé (kisebb
-// sorszámú layer) kerül felülre.
-const withFingerings = (mei, index, fingerings) => {
-    const keys = Object.keys(fingerings || {});
+// A jelek beírása a MEI-be (a Verovio rajzolja őket, így a kottával együtt méreteződnek és tördelődnek):
+// - ujjrend: <fing>, a legfelső sornál a kotta fölé, a többinél alá; pedál: <fing>, a jobb lábé fölé, a bal lábé alá.
+//   A Verovio az egy időben szóló hangok számait egymás fölé rakja; a sorrend emelkedő hangmagasság, így felül a
+//   legmagasabb hangé áll (akkordban a Verovio maga is így rendezi). Két szólam közös hangjánál a felső szólamé kerül
+//   felülre.
+// - staccato, tenuto, akcentus, marcato: a hang <artic> eleme; kétszólamú sorban a felső szólamé fölé, az alsóé alá,
+//   különben a Verovio dönt (a hangfej felőli oldal);
+// - korona (<fermata>) és levegővétel (<breath>, a hang után): a felső szólamnál fölé, az alsónál (és az egyszólamú alsó
+//   soroknál) alá; cezúra (<caesura>): a hang után.
+const withMarks = (mei, index, marks) => {
+    const keys = Object.keys(marks || {});
     if (!keys.length) return mei;
-    const perMeasure = new Map();
+    const perMeasure = new Map(), artics = new Map();
     for (const key of keys) {
-        const info = index.byKey.get(key);
-        if (!info) continue;
+        const info = index.byKey.get(key), m = parseMarks(marks[key]);
+        if (!info || !m) continue;
         if (!perMeasure.has(info.measure)) perMeasure.set(info.measure, []);
-        perMeasure.get(info.measure).push({ ...info, text: fingerings[key] });
+        const list = perMeasure.get(info.measure), top = info.staff === index.topStaff;
+        const multi = index.multiLayer.has(`${info.measure}.${info.staff}`);
+        const side = (multi ? info.rank > 0 : !top) ? 'below' : 'above';
+        if (m.finger) list.push({ ...info, el: 'fing', tag: 'fing', place: top ? 'above' : 'below', text: m.finger });
+        if (m.J) list.push({ ...info, el: 'fing', tag: 'pedj', place: 'above', text: m.J });
+        if (m.B) list.push({ ...info, el: 'fing', tag: 'pedb', place: 'below', text: m.B });
+        const artic = ARTIC_MARKS.filter(p => m.play.includes(p));
+        if (artic.length) artics.set(info.id, { artic: artic.join(' '), place: multi ? side : '' });
+        if (m.play.includes('ferm')) list.push({ ...info, el: 'fermata', tag: 'ferm', place: side });
+        if (m.play.includes('breath')) list.push({ ...info, el: 'breath', tag: 'breath', place: side, extra: ' ho="3"' });
+        if (m.play.includes('caes')) list.push({ ...info, el: 'caesura', tag: 'caes' });
     }
     if (!perMeasure.size) return mei;
     const esc = (t) => String(t).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+    // az artikulációk a hangba (önzáró <note …/> is lehet)
+    let src = mei;
+    if (artics.size) src = src.replace(/<note\b([^>]*?)(\/?)>/g, (tag, attrs, selfClosing) => {
+        const id = /\sxml:id="([^"]+)"/.exec(attrs), artic = id && artics.get(id[1]);
+        if (!artic) return tag;
+        const el = `<artic xml:id="ot-artic-${id[1]}" artic="${artic.artic}"${artic.place ? ` place="${artic.place}"` : ''}/>`;
+        return selfClosing ? `<note${attrs}>${el}</note>` : `${tag}${el}`;
+    });
     let out = '', last = 0, mi = 0;
-    for (const m of mei.matchAll(/<\/measure>/g)) {
-        const fings = perMeasure.get(mi++);
-        if (!fings) continue;
-        fings.sort((a, b) => a.pitch - b.pitch || b.layer - a.layer);
-        out += mei.slice(last, m.index) + fings.map((f, i) => `<fing xml:id="ot-fing-${f.id}" startid="#${f.id}" staff="${f.staff}" `
-            + `place="${f.staff === index.topStaff ? 'above' : 'below'}">${esc(f.text)}</fing>`).join('');
+    for (const m of src.matchAll(/<\/measure>/g)) {
+        const items = perMeasure.get(mi++);
+        if (!items) continue;
+        const fings = items.filter(f => f.el === 'fing').sort((a, b) => a.pitch - b.pitch || b.rank - a.rank);
+        out += src.slice(last, m.index) + [...fings, ...items.filter(f => f.el !== 'fing')].map(f =>
+            `<${f.el} xml:id="ot-${f.tag}-${f.id}" startid="#${f.id}" staff="${f.staff}"${f.place ? ` place="${f.place}"` : ''}${f.extra || ''}`
+            + (f.el === 'fing' ? `>${esc(f.text)}</fing>` : '/>')).join('');
         last = m.index;
     }
-    return out + mei.slice(last);
+    return out + src.slice(last);
 };
 
 const loadTransposed = (tk, mei, semitones) => {
@@ -2352,7 +2403,7 @@ const VerovioViewer = ({ fileUrl, font, transpose = 0, fingerings = NO_FINGERING
     // a kotta betöltése a megjegyzett MEI-ből: transzponálva, az ujjrenddel
     const loadCurrent = (tk) => {
         const fingers = fingeringsRef.current;
-        const mei = Object.keys(fingers).length ? withFingerings(meiRef.current, noteIndex(), fingers) : meiRef.current;
+        const mei = Object.keys(fingers).length ? withMarks(meiRef.current, noteIndex(), fingers) : meiRef.current;
         if (!loadTransposed(tk, mei, transposeRef.current)) return false;
         loadedTransposeRef.current = transposeRef.current;
         loadedFingerRef.current = fingerSignature(fingers);
@@ -2788,30 +2839,67 @@ const saveTranspose = (hymnNumber, value) => {
 const transposeLabel = (value) => !value ? 'eredeti hangnem' : `${Math.abs(value)} félhanggal ${value > 0 ? 'feljebb' : 'lejjebb'}`;
 const transposeShort = (value) => (value > 0 ? `+${value}` : value < 0 ? `−${-value}` : '0');
 
-// --- Ujjrend letétenként (kísérleti) ---
-// orgonista_fingerings: { [letét vagy előjáték azonosítója]: { [hangnem 0–11]: { [hangkulcs]: "3" } } }. A hangnem a
-// transzponálás 12-es maradéka: a +6 és a −6 ugyanaz a billentyűzeten, így egy letéthez legfeljebb 12 ujjrend tartozik.
-// Egy szám: 1–5, ujjcserénél kötőjellel („4–5”), legfeljebb négy ujj.
-const FINGER_VALUE = /^[1-5](?:–?[1-5]){0,3}$/;
+// --- Ujjrend és játékmód letétenként (kísérleti) ---
+// orgonista_fingerings: { [letét vagy előjáték azonosítója]: { [hangnem]: { [hangkulcs]: "<jelek>" } } }.
+// - "0"–"11": a hangnemtől függő jelek, a transzponálás 12-es maradéka szerint (a +6 és a −6 ugyanaz a billentyűzeten,
+//   így egy letéthez legfeljebb 12 ilyen tartozik): az ujjrend (1–5, ujjcserénél kötőjellel: „4–5”, legfeljebb négy
+//   ujj) és a pedál (J: jobb láb, B: bal láb; ∧ lábhegy, ∪ sarok, legfeljebb három egymás után, pl. „J∧∪”, „B∪–∧”);
+// - "a": a játékmód jelei, minden hangnemben ugyanazok: staccato, tenuto, akcentus, marcato, korona, levegővétel, cezúra.
+// Egy hang jelei szóközzel elválasztva, mindig ebben a sorrendben, pl. "3 B∪", "stacc ferm".
+const FINGER_PART = /^[1-5](?:–?[1-5]){0,3}$/;
+const PEDAL_PART = /^[∧∪](?:–?[∧∪]){0,2}$/;
+const PLAY_MARKS = ['stacc', 'ten', 'acc', 'marc', 'ferm', 'breath', 'caes'];
+const ARTIC_MARKS = ['stacc', 'ten', 'acc', 'marc'];     // a hang artikulációi (MEI artic), a többi külön jel
+const PLAY_CLASS = 'a';
 const FINGER_KEY = /^\d{1,4}\.\d{1,2}\.\d{1,2}\.\d{1,3}$/;
+const FINGER_CLASS = /^(?:\d|1[01]|a)$/;
 const FINGERINGS_CHANGED = 'orgonatar-fingerings-changed';
 const fingerClass = (t) => (((t || 0) % 12) + 12) % 12;
-const fingerClassLabel = (c) => c === 0 ? 'eredeti hangnem' : c === 6 ? '6 félhanggal feljebb vagy lejjebb'
-    : c < 6 ? `${c} félhanggal feljebb` : `${12 - c} félhanggal lejjebb`;
-const cleanFingerMap = (map) => {
+const classOf = (c) => (String(c) === PLAY_CLASS ? PLAY_CLASS : +c);
+const classOrder = (c) => (String(c) === PLAY_CLASS ? 12 : +c);
+const fingerClassLabel = (c) => {
+    if (String(c) === PLAY_CLASS) return 'játékmód (minden hangnemben)';
+    c = +c;
+    return c === 0 ? 'eredeti hangnem' : c === 6 ? '6 félhanggal feljebb vagy lejjebb' : c < 6 ? `${c} félhanggal feljebb` : `${12 - c} félhanggal lejjebb`;
+};
+// egy hang jelei: { finger, J, B, play } ↔ szöveg (érvénytelen szövegnél null)
+const parseMarks = (value) => {
+    const m = { finger: '', J: '', B: '', play: [] };
+    for (const t of String(value || '').split(' ')) {
+        if (!t) continue;
+        if (FINGER_PART.test(t) && !m.finger) m.finger = t;
+        else if (/^[JB]/.test(t) && PEDAL_PART.test(t.slice(1)) && !m[t[0]]) m[t[0]] = t.slice(1);
+        else if (PLAY_MARKS.includes(t) && !m.play.includes(t)) m.play.push(t);
+        else return null;
+    }
+    return m;
+};
+const keyMarksText = (m) => [m.finger, m.J && `J${m.J}`, m.B && `B${m.B}`].filter(Boolean).join(' ');
+const playMarksText = (m) => PLAY_MARKS.filter(p => m.play.includes(p)).join(' ');
+// a hangnemhez (ujj, pedál) vagy a játékmódhoz tartozó jelek szövege a megszokott sorrendben; ha érvénytelen, vagy
+// más fajta jel is van benne: null
+const canonMarks = (value, cls) => {
+    const m = parseMarks(value), play = String(cls) === PLAY_CLASS;
+    if (!m || (play ? (m.finger || m.J || m.B) : m.play.length)) return null;
+    return (play ? playMarksText(m) : keyMarksText(m)) || null;
+};
+const cleanFingerMap = (map, cls) => {
     const out = {};
-    if (map && typeof map === 'object') for (const [k, v] of Object.entries(map)) if (FINGER_KEY.test(k) && FINGER_VALUE.test(String(v))) out[k] = String(v);
+    if (map && typeof map === 'object') for (const [k, v] of Object.entries(map)) {
+        const text = FINGER_KEY.test(k) ? canonMarks(String(v), cls) : null;
+        if (text) out[k] = text;
+    }
     return out;
 };
-// a tárolt (vagy importált) adat ellenőrizve: csak érvényes hangnemek, kulcsok és számok maradnak
+// a tárolt (vagy importált) adat ellenőrizve: csak érvényes hangnemek, kulcsok és jelek maradnak
 const cleanFingerStore = (all) => {
     const out = {};
     if (!all || typeof all !== 'object' || Array.isArray(all)) return out;
     for (const [block, classes] of Object.entries(all)) {
         if (!block || !classes || typeof classes !== 'object') continue;
         for (const [c, map] of Object.entries(classes)) {
-            if (!/^(?:\d|1[01])$/.test(c)) continue;
-            const m = cleanFingerMap(map);
+            if (!FINGER_CLASS.test(c)) continue;
+            const m = cleanFingerMap(map, c);
             if (Object.keys(m).length) (out[block] = out[block] || {})[c] = m;
         }
     }
@@ -2822,10 +2910,56 @@ const saveFingerings = (all) => {
     saveJSON(STORAGE_KEYS.fingerings, all);
     window.dispatchEvent(new Event(FINGERINGS_CHANGED));
 };
+// letétek, ujjrendek (hangnemenként) és a jelölt hangok száma (egy hang egyszer, akárhány hangnemben és jele van)
 const fingerStats = (all) => {
     let sets = 0, notes = 0;
-    for (const classes of Object.values(all)) for (const map of Object.values(classes)) { sets++; notes += Object.keys(map).length; }
+    for (const classes of Object.values(all)) {
+        const keys = new Set();
+        for (const [c, map] of Object.entries(classes)) { if (c !== PLAY_CLASS) sets++; Object.keys(map).forEach(k => keys.add(k)); }
+        notes += keys.size;
+    }
     return { blocks: Object.keys(all).length, sets, notes };
+};
+// a hangnem jelei és a játékmód jelei együtt (a kottába rajzoláshoz)
+const marksAt = (classes, cls) => {
+    const own = (classes && classes[cls]) || {}, play = (classes && classes[PLAY_CLASS]) || {};
+    if (!Object.keys(play).length) return own;
+    if (!Object.keys(own).length) return play;
+    const out = { ...own };
+    for (const [k, v] of Object.entries(play)) out[k] = out[k] ? `${out[k]} ${v}` : v;
+    return out;
+};
+// A billentyűzet gombjai: pedál (láb és jel), játékmód (rövidítés, név, billentyű)
+const PEDAL_KEYS = [
+    { side: 'J', mark: '∧', label: 'Jobb lábhegy' }, { side: 'J', mark: '∪', label: 'Jobb sarok' },
+    { side: 'B', mark: '∧', label: 'Bal lábhegy' }, { side: 'B', mark: '∪', label: 'Bal sarok' }
+];
+const PLAY_KEYS = [
+    { id: 'stacc', label: 'Staccato', key: 's' }, { id: 'ten', label: 'Tenuto', key: 't' }, { id: 'acc', label: 'Akcentus', key: 'a' },
+    { id: 'marc', label: 'Marcato', key: 'm' }, { id: 'ferm', label: 'Korona', key: 'k' }, { id: 'breath', label: 'Levegővétel', key: 'l' },
+    { id: 'caes', label: 'Cezúra', key: 'c' }
+];
+// a játékmód jeleinek rajza a gombokon és az előnézetben (24×24)
+const MarkIcon = ({ mark, size = 22 }) => {
+    const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 2.2, strokeLinecap: 'round', strokeLinejoin: 'round' };
+    const shapes = {
+        stacc: <circle cx="12" cy="12" r="2.8" fill="currentColor" />,
+        ten: <rect x="4.5" y="10.8" width="15" height="2.4" rx="0.6" fill="currentColor" />,
+        acc: <polyline points="6,7 18,12 6,17" {...stroke} />,
+        marc: <path d="M6 18 L12 5.5 L18 18 L14.8 18 L12 11.8 L9.2 18 Z" fill="currentColor" />,
+        ferm: <><path d="M3.5 16 A8.5 8.5 0 0 1 20.5 16" {...stroke} /><circle cx="12" cy="14.6" r="1.9" fill="currentColor" /></>,
+        breath: <><circle cx="11.5" cy="9" r="2.8" fill="currentColor" /><path d="M14.1 9.6 Q14.3 14.4 9.8 17" {...stroke} strokeWidth="1.9" /></>,
+        caes: <><line x1="7.5" y1="18.5" x2="11.5" y2="5.5" {...stroke} /><line x1="12.5" y1="18.5" x2="16.5" y2="5.5" {...stroke} /></>
+    };
+    return <svg className="mark-icon" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">{shapes[mark]}</svg>;
+};
+// a billentyűzet kijelzője: a kiválasztott hang beírt jelei (a még nem módosított, felülírandó ujj- és pedáljel kijelölve)
+const MarksPreview = ({ sel }) => {
+    const { m, fresh } = sel, parts = [];
+    if (m.finger) parts.push(<span key="f" className={`mk-finger${fresh.finger ? ' fresh' : ''}`}>{m.finger}</span>);
+    for (const side of ['J', 'B']) if (m[side]) parts.push(<span key={side} className={`mk-pedal${fresh[side] ? ' fresh' : ''}`}>{m[side]}<sub>{side}</sub></span>);
+    for (const k of PLAY_KEYS) if (m.play.includes(k.id)) parts.push(<span key={k.id} className="mk-play" title={k.label}><MarkIcon mark={k.id} size={20} /></span>);
+    return parts.length ? parts : '\u00a0';
 };
 
 // --- A letétek értékelése ---
@@ -3073,7 +3207,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, info = [], descrip
         setTransposeState({ hymn: hymnNumber, value: next });
     };
     // Ujjrend (kísérleti): a tárolt ujjrendek, a szerkesztő mód, a kiválasztott hang (block, key) a beírt, még nem
-    // mentett számmal (value) és a billentyűzet helyével (pos)
+    // mentett jelekkel (m: ujj, pedál, játékmód) és a billentyűzet helyével (pos)
     const [fingerStore, setFingerStore] = useState(() => loadFingerings());
     const fingerStoreRef = useRef(fingerStore);
     fingerStoreRef.current = fingerStore;
@@ -3084,28 +3218,37 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, info = [], descrip
     const [fingerPos, setFingerPos] = useState(null);
     const [fingerShare, setFingerShare] = useState(false);
     const fingerClassNow = fingerClass(transpose);
-    const fingersOf = (blockId) => (blockId && fingerStore[blockId] && fingerStore[blockId][fingerClassNow]) || NO_FINGERINGS;
-    const setFinger = (blockId, cls, key, value) => {
+    // a látott hangnem jelei (ujjrend, pedál) és a játékmód jelei együtt
+    const fingersOf = (blockId) => (blockId && fingerStore[blockId] ? marksAt(fingerStore[blockId], fingerClassNow) : NO_FINGERINGS);
+    // egy hang jeleinek mentése: a hangnemhez tartozók (own) és a játékmódé (play); üres szövegnél törlődik
+    const setNoteMarks = (blockId, cls, key, own, play) => {
         const next = { ...fingerStoreRef.current };
         const classes = { ...(next[blockId] || {}) };
-        const map = { ...(classes[cls] || {}) };
-        if (value) map[key] = value; else delete map[key];
-        if (Object.keys(map).length) classes[cls] = map; else delete classes[cls];
+        for (const [c, value] of [[cls, own], [PLAY_CLASS, play]]) {
+            const map = { ...(classes[c] || {}) };
+            if (value) map[key] = value; else delete map[key];
+            if (Object.keys(map).length) classes[c] = map; else delete classes[c];
+        }
         if (Object.keys(classes).length) next[blockId] = classes; else delete next[blockId];
         fingerStoreRef.current = next;
         setFingerStore(next);
         saveFingerings(next);
     };
-    // a kiválasztott hang beírt száma a tárolóba (ha változott); a kiválasztás megszűnik
+    const storedMarks = (block, cls, key) => {
+        const classes = fingerStoreRef.current[block] || {};
+        return { own: (classes[cls] || {})[key] || '', play: (classes[PLAY_CLASS] || {})[key] || '' };
+    };
+    // a kiválasztott hang beírt jelei a tárolóba (ha változtak); a kiválasztás megszűnik
     const commitFinger = () => {
         const sel = fingerSelRef.current;
         if (!sel) return;
         fingerSelRef.current = null;
         setFingerSel(null);
-        const current = ((fingerStoreRef.current[sel.block] || {})[sel.cls] || {})[sel.key] || '';
-        const typed = sel.value.replace(/–+$/, '');     // a félbehagyott ujjcsere („3–”) nélkül
-        const value = FINGER_VALUE.test(typed) ? typed : '';
-        if (value !== current) setFinger(sel.block, sel.cls, sel.key, value);
+        // a félbehagyott ujjcsere, lábváltás („3–”) nélkül
+        const trim = (v, re) => { const t = v.replace(/–+$/, ''); return re.test(t) ? t : ''; };
+        const m = { finger: trim(sel.m.finger, FINGER_PART), J: trim(sel.m.J, PEDAL_PART), B: trim(sel.m.B, PEDAL_PART), play: sel.m.play };
+        const own = keyMarksText(m), play = playMarksText(m), current = storedMarks(sel.block, sel.cls, sel.key);
+        if (own !== current.own || play !== current.play) setNoteMarks(sel.block, sel.cls, sel.key, own, play);
     };
     const finishFingerEdit = () => { commitFinger(); setFingerEdit(false); };
     // ének váltásakor (pl. lapozás) a kiválasztott hang beírt száma elmentődik
@@ -3238,29 +3381,47 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, info = [], descrip
         const pick = same[at < 0 ? 0 : (at + 1) % same.length];
         lastPickRef.current = id(pick);
         const block = pick.el.closest('.verovio-container').dataset.block, key = pick.el.dataset.fkey;
-        const value = ((fingerStoreRef.current[block] || {})[fingerClassNow] || {})[key] || '';
-        // a meglévő szám az első gombnyomásra cserélődik (mint egy kijelölt szöveg); a „–” és a ⌫ folytatja
-        const sel = { block, key, cls: fingerClassNow, value, fresh: !!value };
+        const stored = storedMarks(block, fingerClassNow, key);
+        const m = parseMarks(`${stored.own} ${stored.play}`) || parseMarks('');
+        // a meglévő ujjrend és pedáljel az első gombnyomásra cserélődik (mint egy kijelölt szöveg); a „–” és a ⌫
+        // folytatja; last: amit utoljára írt (a „–” és a ⌫ erre vonatkozik)
+        const sel = { block, key, cls: fingerClassNow, m, fresh: { finger: !!m.finger, J: !!m.J, B: !!m.B }, last: 'finger' };
         fingerSelRef.current = sel;
         setFingerSel(sel);
     };
-    // a billentyűzet gombjai: szám (1–5), ujjcsere (–), visszatörlés (⌫); legfeljebb négy ujj
-    const typeFinger = (ch) => {
+    const updateSel = (change) => {
         const sel = fingerSelRef.current;
         if (!sel) return;
-        let v = sel.value;
-        if (ch === '⌫') v = v.slice(0, -1);
-        else if (ch === '–') { if (/[1-5]$/.test(v) && (v.match(/[1-5]/g) || []).length < 4) v += '–'; }
-        else if (sel.fresh) v = ch;
-        else if ((v.match(/[1-5]/g) || []).length < 4) v += ch;
-        const next = { ...sel, value: v, fresh: false };
+        const next = change(sel);
         fingerSelRef.current = next;
         setFingerSel(next);
     };
+    // a billentyűzet gombjai: szám (1–5), ujjcsere vagy lábváltás (–), visszatörlés (⌫); legfeljebb négy ujj, három
+    // pedáljel lábanként
+    const count = (v, re) => (v.match(re) || []).length;
+    const typeFinger = (ch) => updateSel(sel => {
+        const part = ch === '⌫' || ch === '–' ? sel.last : 'finger';
+        const pedal = part !== 'finger', re = pedal ? /[∧∪]/g : /[1-5]/g, max = pedal ? 3 : 4;
+        let v = sel.m[part];
+        if (ch === '⌫') v = v.slice(0, -1);
+        else if (ch === '–') { if (/[1-5∧∪]$/.test(v) && count(v, re) < max) v += '–'; }
+        else if (sel.fresh.finger) v = ch;
+        else if (count(v, re) < max) v += ch;
+        return { ...sel, m: { ...sel.m, [part]: v }, fresh: { ...sel.fresh, [part]: false }, last: part };
+    });
+    // pedál: a láb (J, B) jele (∧ lábhegy, ∪ sarok)
+    const typePedal = (side, mark) => updateSel(sel => {
+        let v = sel.m[side];
+        if (sel.fresh[side]) v = mark;
+        else if (count(v, /[∧∪]/g) < 3) v += mark;
+        return { ...sel, m: { ...sel.m, [side]: v }, fresh: { ...sel.fresh, [side]: false }, last: side };
+    });
+    // játékmód: ki- és bekapcsolás
+    const togglePlay = (mark) => updateSel(sel => ({ ...sel, m: { ...sel.m, play: sel.m.play.includes(mark) ? sel.m.play.filter(p => p !== mark) : [...sel.m.play, mark] } }));
     const clearFinger = () => {
         const sel = fingerSelRef.current;
         if (!sel) return;
-        fingerSelRef.current = { ...sel, value: '' };
+        fingerSelRef.current = { ...sel, m: parseMarks('') };
         commitFinger();
     };
     const cancelFinger = () => { fingerSelRef.current = null; setFingerSel(null); };
@@ -3269,7 +3430,9 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, info = [], descrip
         const onKey = (e) => {
             if (e.altKey || e.ctrlKey || e.metaKey || document.querySelector('.modal-overlay, .note-sheet-overlay')) return;
             const map = { '-': '–', '–': '–', Backspace: '⌫' };
+            const play = PLAY_KEYS.find(k => k.key === e.key.toLowerCase());
             if (/^[1-5]$/.test(e.key) || map[e.key]) { e.preventDefault(); typeFinger(map[e.key] || e.key); }
+            else if (play) { e.preventDefault(); togglePlay(play.id); }
             else if (e.key === 'Delete') { e.preventDefault(); clearFinger(); }
             else if (e.key === 'Enter') { e.preventDefault(); commitFinger(); }
             else if (e.key === 'Escape') { e.preventDefault(); cancelFinger(); }
@@ -3285,7 +3448,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, info = [], descrip
         const el = sel && pane && pane.querySelector(`.verovio-container[data-block="${CSS.escape(sel.block)}"] g.note[data-fkey="${sel.key}"]`);
         if (el) {
             const r = (el.querySelector('.notehead') || el).getBoundingClientRect(), p = pane.getBoundingClientRect();
-            const below = r.top + r.height / 2 - p.top < p.height * 0.55, half = 125;
+            const below = r.top + r.height / 2 - p.top < p.height * 0.55, half = 152;   // (a billentyűzet szélességének fele)
             const x = Math.min(Math.max(r.left + r.width / 2 - p.left, half + 8), Math.max(half + 8, p.width - half - 8));
             pos = { x: Math.round(x), y: Math.round(below ? r.bottom - p.top + 12 : r.top - p.top - 12), place: below ? 'below' : 'above' };
         }
@@ -3459,9 +3622,10 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, info = [], descrip
     // transzponálni csak a Verovióval rajzolt kottát (MusicXML, MEI) lehet, a képet nem
     const canTranspose = [prelude, variation].some(b => b && b.xmlUrl && !isImageUrl(b.xmlUrl));
     // a látott ujjrendek (előjáték, letét) a megosztáshoz
-    const fingerBlocks = [[prelude, 'Előjáték'], [variation, 'Letét']]
-        .filter(([b]) => b && Object.keys(fingersOf(b.id)).length)
-        .map(([b, kind]) => ({ hymnNumber: String(hymnNumber), hymnTitle, block: b.id, name: b.name, kind, cls: fingerClassNow, fingers: fingersOf(b.id) }));
+    // (a látott hangnem ujjrendje és pedáljelei, és a játékmód jelei külön tételként)
+    const fingerBlocks = [[prelude, 'Előjáték'], [variation, 'Letét']].filter(([b]) => b && fingerStore[b.id]).flatMap(([b, kind]) =>
+        [fingerClassNow, PLAY_CLASS].filter(c => fingerStore[b.id][c] && Object.keys(fingerStore[b.id][c]).length)
+            .map(c => ({ hymnNumber: String(hymnNumber), hymnTitle, block: b.id, name: b.name, kind, cls: c, fingers: fingerStore[b.id][c] })));
 
     return (
         <div ref={rootRef} style={{display:'flex', height:'100%', flexDirection: isSide ? 'row' : 'column'}}>
@@ -3512,12 +3676,28 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, info = [], descrip
                     </div>
                 )}
                 {fingerSel && fingerPos && (
-                    <div className={`fing-pad ${fingerPos.place}`} style={{ left: fingerPos.x, top: fingerPos.y }} role="dialog" aria-label="Ujjrend beírása">
-                        <div className="fing-pad-value" aria-live="polite"><span className={fingerSel.fresh ? 'fresh' : undefined}>{fingerSel.value || '\u00a0'}</span></div>
-                        <div className="fing-pad-keys">
+                    <div className={`fing-pad ${fingerPos.place}`} style={{ left: fingerPos.x, top: fingerPos.y }} role="dialog" aria-label="Ujjrend és jelek beírása">
+                        <div className="fing-pad-value" aria-live="polite"><MarksPreview sel={fingerSel} /></div>
+                        <div className="fing-pad-label">Ujj</div>
+                        <div className="fing-pad-keys" role="group" aria-label="Ujjrend">
                             {['1', '2', '3', '4', '5'].map(d => <button key={d} type="button" onClick={() => typeFinger(d)}>{d}</button>)}
-                            <button type="button" onClick={() => typeFinger('–')} title="Ujjcsere" aria-label="Ujjcsere">–</button>
+                            <button type="button" onClick={() => typeFinger('–')} title="Ujjcsere, lábváltás (–)" aria-label="Ujjcsere">–</button>
                             <button type="button" onClick={() => typeFinger('⌫')} title="Visszatörlés" aria-label="Visszatörlés">⌫</button>
+                        </div>
+                        <div className="fing-pad-label">Pedál <span>J: jobb láb, fölül · B: bal láb, alul</span></div>
+                        <div className="fing-pad-keys pedal" role="group" aria-label="Pedál">
+                            {PEDAL_KEYS.map(k => (
+                                <button key={k.side + k.mark} type="button" onClick={() => typePedal(k.side, k.mark)} title={k.label} aria-label={k.label}>
+                                    <span className="pedal-mark">{k.mark}</span><span className="pedal-side">{k.side}</span>
+                                </button>
+                            ))}
+                        </div>
+                        <div className="fing-pad-label">Játékmód <span>minden hangnemben</span></div>
+                        <div className="fing-pad-keys marks" role="group" aria-label="Játékmód">
+                            {PLAY_KEYS.map(k => (
+                                <button key={k.id} type="button" onClick={() => togglePlay(k.id)} title={`${k.label} (${k.key.toUpperCase()})`} aria-label={k.label}
+                                    aria-pressed={fingerSel.m.play.includes(k.id)}><MarkIcon mark={k.id} /></button>
+                            ))}
                         </div>
                         <div className="fing-pad-actions">
                             <button type="button" className="btn btn-sm btn-ghost" onClick={clearFinger}>Törlés</button>

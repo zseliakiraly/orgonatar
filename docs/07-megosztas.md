@@ -49,8 +49,8 @@ Tudnivalók:
 ## Ujjrend megosztása
 
 Az ének oldalán vagy a lejátszóban, a kotta beállításainak panelén, az **Ujjrend** sorában: **Megosztás**. Akkor
-nyomható, ha a látott kottában van ujjrend. A látott előjáték és a letét ujjrendje kerül bele, abban a hangnemben,
-amelyben éppen látszik.
+nyomható, ha a látott kottában van ujjrend vagy jel. A látott előjáték és letét ujjrendje és pedáljelei kerülnek bele
+abban a hangnemben, amelyben éppen látszanak, és a játékmód jelei (ezek minden hangnemben ugyanazok).
 
 Az ablak ugyanolyan, mint a listáké: QR-kód, a kód (`OU1…`), Másolás, E-mail, Mentés, Küldés…
 
@@ -61,7 +61,8 @@ Az ablak ugyanolyan, mint a listáké: QR-kód, a kód (`OU1…`), Másolás, E-
   beolvasható.
 - Az előnézet megmutatja, melyik ének melyik letétjéhez és melyik hangnemhez tartozik az ujjrend, és hány hangra.
   Ha ugyanannak a letétnek ugyanabban a hangnemben már van ujjrendje ezen az eszközön, az importált felváltja
-  (az előnézet ezt is jelzi). A többi hangnem ujjrendje megmarad.
+  (az előnézet ezt is jelzi). A többi hangnem ujjrendje megmarad. A játékmód jeleire ugyanez érvényes: az importált
+  jelek a letét meglévő játékmódjeleit váltják fel.
 - Ha a letét ezen az eszközön nem érhető el (pl. nincs letöltve a könyve), az ujjrend ettől még elmentődik, és
   megjelenik, amikor a letét elérhető lesz.
 

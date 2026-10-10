@@ -43,8 +43,9 @@ Az oldalsó szövegpanel szélességét nem itt kell beállítani: a panel fogan
 Itt mentheted fájlba a saját adataidat, és itt töltheted vissza őket. Így biztonsági mentés készíthető, és az adatok
 másik eszközre is átvihetők. A mentett fájl a böngésző adatainak törlése után is visszatölthető.
 
-- **Ujjrendek:** a sorban látszik, hány ujjrend van ezen az eszközön (hány letéthez, összesen hány hang).
-  - **Mentés fájlba:** minden ujjrend egy fájlba (`orgonatar-ujjrendek-<dátum>.json`).
+- **Ujjrendek és jelek:** a sorban látszik, hány letéthez és összesen hány hanghoz van ujjrend, pedál- vagy
+  játékmódjel ezen az eszközön.
+  - **Mentés fájlba:** minden ujjrend és jel egy fájlba (`orgonatar-ujjrendek-<dátum>.json`).
   - **Importálás:** ujjrend betöltése kódból, linkből, fájlból (a mentett `.json` vagy a megosztott `.txt`) vagy
     QR-kódról (lásd: [Ujjrend megosztása](07-megosztas.md#ujjrend-megosztása)). Ugyanannak a letétnek ugyanabban a
     hangnemben lévő ujjrendjét az importált felváltja, a többi megmarad.

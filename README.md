@@ -168,7 +168,7 @@ ahonnan a beállításokba jöttél. A lenyíló menük mindenhol a program saj�
   beállítás: alapméretben a kottanézet 15%-a, legalább 200 px, és énekenként a panel fogantyújával állítható, lásd lent.)
 - **Adatok mentése és megosztása** (`DataSection`): a felhasználó adatainak mentése fájlba és visszatöltése (biztonsági
   mentés, átvitel másik eszközre).
-  - Ujjrendek: a darabszámok (ujjrend, letét, hang), **Mentés fájlba** (`orgonatar-ujjrendek-<dátum>.json`:
+  - Ujjrendek és jelek: a darabszámok (letét, jelölt hang), **Mentés fájlba** (`orgonatar-ujjrendek-<dátum>.json`:
     `{ "type": "orgonatar-ujjrendek", "version": 1, "saved", "blocks": { "<letét>": { "hymn", "name" } },
     "fingerings": <az orgonista_fingerings tartalma> }`; a `blocks` csak az importálás előnézetéhez kell), **Importálás**
     (az ujjrend importálásának ablaka, lásd lent).
@@ -351,8 +351,9 @@ a letétek értékelése, az énekek transzponálása és az ujjrendek a böngé
   visszalapozáskor a megtalált méretet már megjegyezte.
 - **A kotta beállításai** (FAB): a kottaterület jobb alsó sarkában lebegő kerek gomb (`.score-fab`) nyitja a
   panelt; a kotta alatt nincs külön sáv, a kotta a terület aljáig ér. A panel a gombbal, Esc-pel vagy mellé
-  koppintva zárul; a gomb és a panel nem lapoz. Sorai: **Nagyítás**, **Hangnem**, **Ujjrend** (a Verovióval rajzolt
-  kottánál) és az ének oldalán **Értékelés**. A letét éve és szólamszáma már nem látszik a kotta alatt (a lejátszó fejlécében igen).
+  koppintva zárul; a gomb és a panel nem lapoz. Sorai: **Nagyítás**, **Hangnem**, **Ujjrend** (ujjrend, pedál- és
+  játékmódjelek; a Verovióval rajzolt kottánál) és az ének oldalán **Értékelés**. A letét éve és szólamszáma már nem
+  látszik a kotta alatt (a lejátszó fejlécében igen).
   A lejátszóban a gomb nyugalomban csak egy halvány, körvonalas kör, mert ott a kotta gyakran a gomb alá is ér.
 - A Nagyítás −/+ gombja a legnagyobb méretet állítja 10%-os lépésekben, a felirat a ténylegesen látott méretet
   mutatja. A + nem használható, ha a kotta nagyobban már nem férne ki (képes kottánál: ha elérte a
@@ -366,32 +367,49 @@ a letétek értékelése, az énekek transzponálása és az ujjrendek a böngé
     számnál a tiszta, kis vagy nagy hangközt, végül fölfelé a keresztes, lefelé a bés hangnemet.
   - A képként tárolt kotta (PNG, JPG) nem transzponálható: a gombok tiltva, a panel ezt kiírja.
   - A transzponált kotta is a fenti módon igazodik a helyhez (az igazító a transzponálás értékét is figyeli).
-- **Ujjrend:** a panel Ujjrend sorában **Szerkesztés** / **Kész** és **Megosztás**.
-  - A számokat a Verovio rajzolja: a program a betöltött MEI-be `<fing startid="#hang" staff="n" place="…">`
-    elemeket ír (ütemenként, a `</measure>` elé; `withFingerings`), és újratölti. Így a számok a kotta részei: a
-    nagyítással méreteződnek, a sortöréssel a hangjukkal mennek, és a Verovio rendezi el őket. A legfelső sor számai a
-    kotta fölé (`above`), a többieké alá (`below`) kerülnek, a vonalrendszeren kívül. Az egy időben szóló hangok számai
-    egymás fölé kerülnek; a program a hangmagasság szerint emelkedő sorrendben írja be őket (közös hangnál a felső
-    szólamét később), így felül mindig a magasabb hangé áll.
+- **Ujjrend, pedál, játékmód:** a panel Ujjrend sorában **Szerkesztés** / **Kész** és **Megosztás**.
+  - A jeleket a Verovio rajzolja: a program a betöltött MEI-be írja őket (`withMarks`), és újratölti. Így a kotta
+    részei: a nagyítással méreteződnek, a sortöréssel a hangjukkal mennek, és a Verovio rendezi el őket.
+    - Ujjrend: `<fing startid="#hang" staff="n" place="…">`, a legfelső sornál `above`, a többinél `below`.
+    - Pedál: `<fing>` a `∧` (lábhegy) és `∪` (sarok) jelekkel; a jobb lábé `above`, a bal lábé `below`.
+    - Staccato, tenuto, akcentus, marcato: a hang `<artic artic="stacc ten …">` eleme (a staccato és a tenuto együtt a
+      portato). Kétszólamú sorban `place` a szólam szerint, különben a Verovio dönt.
+    - Korona: `<fermata>`; levegővétel: `<breath ho="3">` (a hang után); cezúra: `<caesura>`.
+    - A felső és az alsó szólamot ütemenként a hangok átlagos magassága dönti el (`rank`), nem a MEI `layer`
+      sorszáma: a Fazekas-kottákban pl. az alsó sorban az 1. szólam a basszus. A korona és a levegővétel a felső
+      szólamnál fölé, az alsónál (és az egyszólamú alsó soroknál) alá kerül.
+    - A `<fing>`-ek ütemenként a `</measure>` elé kerülnek, a hangmagasság szerint emelkedő sorrendben (közös hangnál a
+      felső szólamé később), így az egy időben szóló hangok számai közül felül mindig a magasabb hangé áll.
   - A hang azonosítója a kotta szerkezete szerint: `ütem.sor.szólam.sorszám` (az ütem a sorrendje szerint 0-tól, a sor és
     a szólam a MEI `n`-je, a sorszám a hang helye a szólamban; `meiNoteIndex`). A Verovio `xml:id`-je MusicXML-nél
     minden betöltéskor más, ez viszont állandó, és a transzponálás sem változtat rajta.
   - Szerkesztéskor a hangok (`g.note`) `data-fkey` jelet kapnak. Koppintásra a legközelebbi hangfej választódik ki (az
-    egymást fedő hangfejeknél az újabb koppintás a következőt). A kiválasztott hang `fing-selected` osztályt kap, mellette
-    nyílik a számbillentyűzet (`.fing-pad`: 1–5, ujjcsere „–”, ⌫, Törlés, OK). Billentyűzettel: 1–5, `-`, Backspace,
-    Enter, Delete, Esc. Egy hangra legfeljebb négy ujj írható (pl. `4–3`). A kotta fölötti sáv (`.fing-bar`) a kotta
-    helyét csökkenti (a kotta újra kifér), így nem takar ki hangot. Szerkesztés közben a kotta szélére koppintás nem
-    lapoz, nyitott billentyűzetnél a pedál sem.
-  - Tárolás: `orgonista_fingerings` = `{ "<letét vagy előjáték azonosítója>": { "<hangnem 0–11>": { "<hang>": "3" } } }`.
-    A hangnem a transzponálás félhangszáma 12-es maradékkal (`fingerClass`), így letétenként 12 ujjrend lehet, és a +6 és
-    a −6 közös. Változáskor `orgonatar-fingerings-changed` esemény megy ki, erre a nyitott kották és a Beállítások
-    frissülnek.
-  - Megosztás: a látott előjáték és letét ujjrendje az aktuális hangnemben, ugyanabban az ablakban, mint a listáé
-    (`ShareCodeModal`). A kód: `OU1` + base62(CRC-32 alsó 24 bitje + DEFLATE(szöveg)), mint az OT2-nél; a szöveg
-    letétenként egy rekord (RS-sel elválasztva): `énekszám US letét US hangnem US hang=szám;…`. A link:
-    `…#ujjrend=<kód>`. Importálás: `ImportFingeringModal` (kód, link, fájl, QR-kép, kamera, előnézet); letétenként és
-    hangnemenként felülír, a többit megtartja (`mergeFingerings`).
-  - Képként tárolt kottába nem írható ujjrend.
+    egymást fedő hangfejeknél az újabb koppintás a következőt). A kiválasztott hang `fing-selected` osztályt kap.
+  - Mellette nyílik a billentyűzet (`.fing-pad`), a kijelző (`MarksPreview`) alatt három sorral:
+    - Ujj: 1–5, „–” (ujjcsere vagy lábváltás: az utoljára írt ujjra vagy lábra vonatkozik), ⌫.
+    - Pedál: ∧ és ∪, J (jobb) és B (bal) lábra.
+    - Játékmód: kapcsolók (`aria-pressed`).
+
+    Legfeljebb négy ujj és lábanként három pedáljel írható. A meglévő ujjrendet és pedáljelet az első gombnyomás
+    felülírja. Billentyűzettel: 1–5, `-`, Backspace; a játékmód betűi S, T, A, M, K, L, C; Enter, Delete, Esc.
+  - A kotta fölötti sáv (`.fing-bar`) a kotta helyét csökkenti (a kotta újra kifér), így nem takar ki hangot.
+    Szerkesztés közben a kotta szélére koppintás nem lapoz, nyitott billentyűzetnél a pedál sem.
+  - Tárolás: `orgonista_fingerings` = `{ "<letét vagy előjáték azonosítója>": { "<hangnem>": { "<hang>": "<jelek>" } } }`.
+    - `"0"`–`"11"`: az ujjrend és a pedál, pl. `"3 J∧∪"`, `"1–2 B∪"`. A hangnem a transzponálás félhangszáma 12-es
+      maradékkal (`fingerClass`), így letétenként 12 ujjrend lehet, és a +6 és a −6 közös.
+    - `"a"`: a játékmód jelei, minden hangnemben ugyanazok, pl. `"stacc ten ferm"`.
+    - A jelek szóközzel elválasztva, mindig ugyanabban a sorrendben (`parseMarks`, `keyMarksText`, `playMarksText`).
+      Importáláskor a program ellenőrzi és sorba rendezi őket (`canonMarks`).
+    - Változáskor `orgonatar-fingerings-changed` esemény megy ki, erre a nyitott kották és a Beállítások frissülnek.
+  - Megosztás: a látott előjáték és letét ujjrendje és pedáljelei az aktuális hangnemben, és a játékmód jelei,
+    ugyanabban az ablakban, mint a listáé (`ShareCodeModal`).
+    - A kód: `OU1` + base62(CRC-32 alsó 24 bitje + DEFLATE(szöveg)), mint az OT2-nél.
+    - A szöveg letétenként és hangnemenként egy rekord (RS-sel elválasztva): `énekszám US letét US hangnem US
+      hang=jelek;…` (hangnem: 0–11 vagy `a`).
+    - A link: `…#ujjrend=<kód>`.
+    - Importálás: `ImportFingeringModal` (kód, link, fájl, QR-kép, kamera, előnézet). Letétenként és hangnemenként
+      felülír (a játékmódnál a letét összes játékmódjelét), a többit megtartja (`mergeFingerings`).
+  - Képként tárolt kottába nem írható jel.
 - A szövegpanel a kotta mellett vagy alatt lehet (a panel jobb felső sarkának gombjai). Kotta nélküli énekeknél is látszik;
   szöveg nélküli énekeknél csak akkor, ha van leírása, megjegyzése vagy regisztrációja.
   - Két lapja van: **Szöveg** és **Megjegyzések**. A fülek lent a panel eszköztárának sorában balra (a fogantyú
