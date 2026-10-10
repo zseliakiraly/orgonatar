@@ -100,7 +100,11 @@ Egy ének a fájlban (versszakonként egy sor, így kézzel is jól javítható)
 
 ```json
 { "number": "42", "title": "Mint a szép híves patakra", "keywords": ["zsoltár", "bizalom"], "scoreId": "42",
-   "bible": "", "textAuthor": "", "textYear": "", "translator": "", "translationYear": "", "melodyAuthor": "", "melodyYear": "", "source": "", "description": "",
+   "bible": "Zsolt 42", "textAuthor": "Th. de Bèze", "textYear": "", "translator": "Szenci Molnár A.", "translationYear": "", "melodyAuthor": "L. Bourgeois, Genf", "melodyYear": "1551", "source": "Genf, 1551", "highlightedVerses": "",
+   "description": [
+   ["A leírás első bekezdése."],
+   ["Második bekezdés."]
+   ],
    "verses": [
    ["1. versszak 1. sora", "1. versszak 2. sora", "…"],
    ["2. versszak 1. sora", "…"]
@@ -111,15 +115,24 @@ Egy ének a fájlban (versszakonként egy sor, így kézzel is jól javítható)
   utána a refrén sorai.
 - `keywords`: 1–3 kulcsszó a Könyvtár kártyáihoz és a kulcsszavas szűrőhöz. Új kulcsszó is írható, a szűrő magától
   felveszi.
-- A második sor: az ének adatai (lásd lent). Mind megvannak minden énekben, üresen; a kitöltetlen mező nem jelenik meg.
+- A második sor és a `description`: az ének adatai (lásd lent). Minden énekben megvannak; az üres mező nem jelenik meg.
 
 ### Az ének adatai
 
 A szövegpanel Megjegyzések lapján, a **Leírás** részben jelennek meg, címkézett sorokban
-(lásd: [Szövegpanel](04-szovegpanel.md#megjegyzések-lap)). A mezők a
-[Digitális Református Énekeskönyv](https://enekeskonyv.reformatus.hu/digitalis-reformatus-enekeskonyv/) adatlapjait
-követik. Ott egy ének alatt ilyen sor áll: „szöveg: … | fordítás: … | dallam: …”. Ennek részei kerülnek a mezőkbe,
-a nevek és az évszámok külön.
+(lásd: [Szövegpanel](04-szovegpanel.md#megjegyzések-lap)). Az énekeskönyvben egy ének fölött ilyen sor áll:
+„szöveg: … | fordítás: … | dallam: …”. Ennek részei kerülnek a mezőkbe, a nevek és az évszámok külön.
+
+**Honnan valók az adatok?** Mind a 667 énekhez kitöltöttük őket (2026. október):
+- a szerzők, az évszámok, az igehely, a kiemelt versek és az éneklésre vonatkozó megjegyzések a
+  [Református Énekeskönyv](https://enekeskonyv.reformatus.hu/letoltesek/) teljes, nyomtatott változatából (RÉ21, 2025-ös
+  utánnyomás, PDF);
+- a források a könyv függelékéből (*Szerzők és énekgyűjtemények adatai*, 2. Gyűjtemények);
+- a leírások a [Digitális Református Énekeskönyv](https://enekeskonyv.reformatus.hu/digitalis-reformatus-enekeskonyv/)
+  adatlapjairól (a dőlt betűs ismertetők, a szerzőjük nevével).
+
+A két forrást összevetettük. Ahol eltértek, a nyomtatott könyv adata került be (a weboldalon néhány elírás van, pl.
+„Debren, 1560”).
 
 | Mező | Felirat | Tartalma |
 | --- | --- | --- |
@@ -130,7 +143,8 @@ a nevek és az évszámok külön.
 | `translationYear` | | a fordítás évszáma |
 | `melodyAuthor` | Dallam | a dallam szerzője vagy eredete (pl. „G. Franc, Genf”, „finn népi dallam”) |
 | `melodyYear` | | a dallam évszáma |
-| `source` | Forrás | a forrás kottagyűjtemény |
+| `source` | Forrás | a forrás kottagyűjtemény(ek) rövid neve, pl. „Debrecen, 1560; Kolozsvár, 1744” |
+| `highlightedVerses` | Kiemelt versek | a zsoltároknál az énekeskönyv kiemelt versei, pl. „1., 4., 6.” |
 | `description` | | további leírás, a sorok alatt (lásd lent) |
 
 - A név és az évszám egy sorba kerül, vesszővel: `"textAuthor": "C. Marot", "textYear": "1539"` → *Szöveg: C. Marot,
@@ -143,11 +157,15 @@ a nevek és az évszámok külön.
   "melodyAuthor": "G. Franc, Genf", "melodyYear": "1542", "source": "", "description": "",
   ```
 
-- `description`: szabad szöveg. Bekezdések tömbje, egy bekezdés a sorai tömbje:
+- `description`: szabad szöveg. Bekezdések tömbje, egy bekezdés a sorai tömbje (a fájlban bekezdésenként egy sor):
 
   ```json
   "description": [["Első bekezdés első sora.", "Második sora."], ["Második bekezdés."]]
   ```
+
+  A betöltött adatokban a sorrend: az ének alcíme (pl. „Nunc dimittis, Simeon éneke”), az énekeskönyv megjegyzései
+  (pl. „Énekelhető a 134. zsoltár … dallamára is.”, „Az ének másik változata: 703.”), majd a Digitális Református
+  Énekeskönyv ismertetői.
 
   Egyetlen szövegként is megadható: `"Első sor\nMásodik sor\n\nÚj bekezdés"` (sortörés: `\n`, új bekezdés: üres
   sor).
