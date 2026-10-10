@@ -57,8 +57,10 @@ Ha a panelen jobbra vagy lejjebb még van szöveg, a szélén árnyék jelzi.
    - **Szöveg:** a szöveg szerzője vagy eredete, évszámmal;
    - **Fordítás:** a fordító, évszámmal;
    - **Dallam:** a dallam szerzője vagy eredete, évszámmal;
-   - **Forrás:** a kottagyűjtemény, ahonnan a dallam való;
-   - alattuk a további leírás.
+   - **Forrás:** a régi énekeskönyv vagy gyűjtemény, ahonnan a szöveg vagy a dallam való;
+   - **Kiemelt versek:** a zsoltároknál az énekeskönyvben kiemelt versszakok;
+   - alattuk a leírás: az ének alcíme, az énekeskönyv megjegyzései (pl. melyik másik dallamra énekelhető), és a
+     Digitális Református Énekeskönyv ismertetője.
 
    Csak a megadott adatok látszanak; ha egyik sincs, „Ehhez az énekhez még nincs leírás.” áll. Csak olvasható, a
    program adataiból jön (lásd: [Az adatok karbantartása](10-karbantartas.md#az-ének-adatai)).

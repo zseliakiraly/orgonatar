@@ -83,16 +83,18 @@ const hymnDescription = (hymn) => {
     return paragraphs.filter(p => p.length);
 };
 
-// Az ének adatai (enek.json, mind nem kötelező), a Digitális Református Énekeskönyv (enekeskonyv.reformatus.hu)
-// „szöveg / fordítás / dallam” sora mintájára, a Megjegyzések lap Leírás részéhez: kapcsolódó igehely ("bible": szöveg
-// vagy szövegek tömbje), a szöveg, a fordítás és a dallam szerzője vagy eredete évszámmal, a forrás (kottagyűjtemény).
-// Címkézett sorok: [{ label: 'Szöveg', value: 'C. Marot, 1539' }]; az üres mezők kimaradnak.
+// Az ének adatai (enek.json, mind nem kötelező), a Református Énekeskönyv (RÉ21) és a Digitális Református Énekeskönyv
+// (enekeskonyv.reformatus.hu) „szöveg / fordítás / dallam” sora mintájára, a Megjegyzések lap Leírás részéhez: kapcsolódó
+// igehely ("bible": szöveg vagy szövegek tömbje), a szöveg, a fordítás és a dallam szerzője vagy eredete évszámmal, a
+// forrás (kottagyűjtemény), a kiemelt versek (zsoltároknál). Címkézett sorok: [{ label: 'Szöveg', value: 'C. Marot, 1539' }];
+// az üres mezők kimaradnak.
 const HYMN_INFO_FIELDS = [
     { label: 'Igehely', keys: ['bible'] },
     { label: 'Szöveg', keys: ['textAuthor', 'textYear'] },
     { label: 'Fordítás', keys: ['translator', 'translationYear'] },
     { label: 'Dallam', keys: ['melodyAuthor', 'melodyYear'] },
-    { label: 'Forrás', keys: ['source'] }
+    { label: 'Forrás', keys: ['source'] },
+    { label: 'Kiemelt versek', keys: ['highlightedVerses'] }
 ];
 const hymnInfo = (hymn) => {
     const text = (v) => typeof v === 'number' ? String(v) : typeof v === 'string' ? v.trim() : '';
@@ -3462,6 +3464,11 @@ const AboutView = ({ menuButton }) => (
         <p className="about-credits">
             A kottákat a <a href="https://www.verovio.org" target="_blank" rel="noopener noreferrer">Verovio</a> rajzolja
             (LGPL-3.0 licenc, <a href={`https://github.com/rism-digital/verovio/tree/version-${VEROVIO_VERSION}`} target="_blank" rel="noopener noreferrer">forráskód</a>).
+        </p>
+        <p className="about-credits">
+            Az énekek adatai (szerzők, igehely, források, kiemelt versek) a Református Énekeskönyvből (RÉ21), leírásaik
+            a <a href="https://enekeskonyv.reformatus.hu/digitalis-reformatus-enekeskonyv/" target="_blank" rel="noopener noreferrer">Digitális
+            Református Énekeskönyvből</a> valók. © Szerzők és jogutódjaik, © Magyarországi Református Egyház.
         </p>
     </div>
 );

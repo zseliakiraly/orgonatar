@@ -71,19 +71,26 @@ nyilvánossá kell tenni.
     Refrén: egy `"Refr."` sor, utána a refrén sorai (dőlt betűvel jelennek meg). Szöveg nélküli ének: `"verses": []`.
   - A program a régi formát is elfogadja: `"lyrics"` egyetlen szövegként, a versszakok között üres sorral
     (`\n\n`), a sorok között egy sortöréssel (`\n`), a versszak elején a számával (`1. `).
-  - **Az ének adatai** (nem kötelezők; a fájlban minden énekben megvannak, üresen, a `scoreId` utáni sorban). A
-    Digitális Református Énekeskönyv (enekeskonyv.reformatus.hu) adatlapjainak „szöveg / fordítás / dallam” sorát
-    követik, a nevek és az évszámok külön mezőben. A szövegpanel Megjegyzések lapján, a Leírás részben jelennek meg
-    címkézett sorokban (`dl`); az üres mezők kimaradnak. A program a `hymnInfo` függvényben olvassa be őket.
+  - **Az ének adatai** (nem kötelezők; a fájlban minden énekben megvannak, a `scoreId` utáni sorban). Az
+    énekeskönyv „szöveg / fordítás / dallam” sorát követik, a nevek és az évszámok külön mezőben. A szövegpanel
+    Megjegyzések lapján, a Leírás részben jelennek meg címkézett sorokban (`dl`); az üres mezők kimaradnak. A program
+    a `hymnInfo` függvényben olvassa be őket.
+    - Kitöltve mind a 667 énekre: a szerzők, évszámok, igehelyek, kiemelt versek és megjegyzések a Református
+      Énekeskönyv (RÉ21, 2025-ös utánnyomás) PDF-jéből, a források a függelék gyűjteményi listájából, a leírások a
+      Digitális Református Énekeskönyv (enekeskonyv.reformatus.hu) adatlapjairól (503 énekhez van). Eltérésnél a
+      nyomtatott könyv adata került be. A forrásokat a Névjegy oldal is megnevezi.
     - `bible` → *Igehely*: a kapcsolódó igehely, szöveg vagy szövegek tömbje (`"Zsolt 42; Zsolt 43"`,
       `["Zsolt 42", "Zsolt 43"]`; a tömb elemei pontosvesszővel kerülnek egy sorba).
     - `textAuthor`, `textYear` → *Szöveg*: a szöveg szerzője vagy eredete, és az évszáma.
     - `translator`, `translationYear` → *Fordítás*.
     - `melodyAuthor`, `melodyYear` → *Dallam*: a dallam szerzője vagy eredete (pl. „G. Franc, Genf”), és az évszáma.
-    - `source` → *Forrás*: a forrás kottagyűjtemény.
+    - `source` → *Forrás*: a forrás kottagyűjtemény(ek) rövid neve, ahogy az énekeskönyv függeléke hivatkozik rájuk
+      („Debrecen, 1560; Kolozsvár, 1744”), időrendben.
+    - `highlightedVerses` → *Kiemelt versek*: a zsoltároknál az énekeskönyv kiemelt versszakai („1., 4., 6.”).
     - A név és az évszám vesszővel kerül egy sorba („C. Marot, 1539”). Az évszám szöveg vagy szám is lehet; ha csak
       az évszám van meg, csak az látszik.
-  - `description` (nem kötelező): további leírás, az adatsorok alatt. A sortörések ugyanúgy, mint a versszakoknál:
+  - `description` (nem kötelező): további leírás, az adatsorok alatt (a betöltött adatokban: az ének alcíme, az
+    énekeskönyv megjegyzései, majd a Digitális Református Énekeskönyv ismertetői; a fájlban bekezdésenként egy sor). A sortörések ugyanúgy, mint a versszakoknál:
     bekezdések tömbje, egy bekezdés a sorai tömbje, pl. `"description": [["Első sor.", "Második sor."], ["Második
     bekezdés."]]`. Egyszerűbb esetben lehet egyetlen szöveg is (`"Első sor\nMásodik sor"`, új bekezdés: üres sor,
     `\n\n`), vagy sorok tömbje (`["Első sor", "Második sor", "", "Új bekezdés"]`, új bekezdés: üres sor).

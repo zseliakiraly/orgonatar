@@ -885,7 +885,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .hymn-info { margin: 0 0 0.55em; }
 .hymn-info:last-child { margin-bottom: 0; }
 .hymn-info-row { display: flex; align-items: baseline; gap: 0.6em; padding: 0.12em 0; }
-.hymn-info-label { flex: none; width: 5.6em; font-size: 0.85em; color: var(--col-ink-muted, #666); }
+.hymn-info-label { flex: none; width: 7.2em; font-size: 0.85em; color: var(--col-ink-muted, #666); }
 .hymn-info-value { margin: 0; min-width: 0; overflow-wrap: break-word; line-height: 1.35; }
 .lyrics-panel.side .hymn-info-row { flex-direction: column; gap: 0; }
 .lyrics-panel.side .hymn-info-label { width: auto; font-size: 0.75em; }
