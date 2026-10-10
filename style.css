@@ -329,6 +329,9 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     animation: modalFadeIn 0.2s ease-out;
     display: flex; flex-direction: column;
     max-height: 90vh;
+    /* a fejléc és a lábléc háttere a lekerekített sarkoknál ne lógjon ki (a lenyíló menük és a dátumválasztó nem a
+       dobozban nyílnak, azokat ez nem vágja le) */
+    overflow: hidden;
 }
 .modal-header {
     padding: 1rem;
