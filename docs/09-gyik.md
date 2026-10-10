@@ -67,11 +67,15 @@ képernyőn fut.
 **Hol tárolódnak az adataim?**
 Csak ezen a készüléken, a böngészőben:
 - a listák, a beállítások, a megjegyzések és a regisztrációk;
-- a letétek értékelése (csillagok) és az énekek transzponálása;
+- a letétek értékelése (csillagok), az énekek transzponálása és az ujjrendek;
 - a szövegpanel énekenkénti elrendezése;
 - a letöltött kottakönyvek.
 
 A program ezeket nem küldi el sehová; másokhoz csak az kerül, amit te osztasz meg.
+
+**Hogyan menthetem el az adataimat, vagy vihetem át őket másik eszközre?**
+A Beállítások **Adatok mentése és megosztása** részében az ujjrendek és az összes lista fájlba menthető, és
+ugyanott visszatölthető, akár egy másik eszközön is (lásd: [Beállítások](08-beallitasok.md#4-adatok-mentése-és-megosztása)).
 
 **Hogyan jelezhetek hibát, vagy írhatok javaslatot?**
 A **Névjegy** oldalon a **Hiba bejelentése** gomb új levelet nyit a <feedback@zseli.hu> címre, „OrgonaTár

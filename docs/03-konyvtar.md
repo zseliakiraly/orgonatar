@@ -33,8 +33,8 @@ A szűrő menüjében (1) a kulcsszavak mellett az énekek száma látszik. A sz
 5. **Hozzáadás listához (+):** az ének a választott letéttel és előjátékkal egy listára kerül (lásd:
    [Listák](05-listak.md#énekek-hozzáadása)).
 6. Az **előjáték** a letét fölött, a nevével.
-7. **A kotta beállításai:** a jobb alsó sarokban lebegő kerek gomb. A panelje a nagyítás, a hangnem (transzponálás) és
-   az értékelés (lásd lent: [A kotta beállításai](#a-kotta-beállításai)). A kotta alatt így nincs külön sáv, a kotta
+7. **A kotta beállításai:** a jobb alsó sarokban lebegő kerek gomb. A panelje a nagyítás, a hangnem (transzponálás), az
+   ujjrend és az értékelés (lásd lent: [A kotta beállításai](#a-kotta-beállításai)). A kotta alatt így nincs külön sáv, a kotta
    a terület aljáig érhet.
 8. **Szövegpanel:** az ének versszakai (lásd: [Szövegpanel](04-szovegpanel.md)).
 
@@ -62,12 +62,51 @@ mellé koppintva bezárul.
 4. **Értékelés:** a látott letét csillagai (lásd lent: [A letétek értékelése](#a-letétek-értékelése)).
 5. A gomb. Ha a kotta transzponálva van, a gombon zárt panelnél is látszik, mennyivel (pl. **+2**).
 
+A Hangnem alatt az **Ujjrend** sora: **Szerkesztés** és **Megosztás** (lásd lent: [Ujjrend](#ujjrend)). (A képen ez a
+sor még nem látszik.)
+
 **A transzponálásról:**
 - Az **énekhez** tárolódik, csak ezen a készüléken: az ének minden letétjére és előjátékára érvényes, legközelebb is
   így nyílik meg, és a lejátszóban is.
 - A program a legkevesebb előjegyzésű hangnemet választja. Például C-dúrból egy félhanggal feljebb Desz-dúr lesz
   (5 bé), nem Cisz-dúr (7 kereszt).
 - A **képként** tárolt kotta (beszkennelt oldal) nem transzponálható: a Hangnem gombjai ilyenkor nem nyomhatók.
+
+## Ujjrend
+
+A hangok fölé és alá ujjrendet (1–5) írhatsz. A számok a kottába kerülnek, nem rá vannak ragasztva. Ezért nagyításkor
+a kottával együtt nőnek és kisebbednek, és a sortörés változásakor is a hangjukkal maradnak.
+
+**Beírás:**
+1. A kotta beállításainak panelén, az **Ujjrend** sorában: **Szerkesztés**. A kotta fölött megjelenik egy sáv:
+   „Ujjrend: koppints egy hangra”.
+2. Koppints egy hangra. A hang kiemelődik, és mellette megjelenik egy kis billentyűzet:
+   - **1–5:** az ujj;
+   - **–:** ujjcsere (pl. `4–3`);
+   - **⌫:** az utolsó jel törlése.
+3. **OK** (vagy egy másik hangra koppintás): a szám a kottába kerül. **Törlés:** a hang száma törlődik.
+4. Ha végeztél, a sávon vagy a panelen: **Kész**.
+
+**Billentyűzettel:** az 1–5, a kötőjel (ujjcsere) és a Backspace írja a számot. Az Enter elmenti, a Delete törli, az
+Esc elveti.
+
+**Tudnivalók:**
+- **Hol jelenik meg a szám?** A felső sor (jobb kéz) számai a vonalrendszer fölött, a többi sor (bal kéz, pedál)
+  számai alatta vannak, a vonalaktól távolabb, mint a hangok.
+- **Akkordok:** az egyszerre szóló hangok számai egymás fölé kerülnek. Felül mindig a legmagasabb hangé áll.
+- **Közös hang:** ha két szólam ugyanazt a hangot játssza, a hangfejek fedik egymást. Az első koppintás a felső szólam
+  hangját választja, egy újabb koppintás a másikét. A kiemelt szár mutatja, melyik szólam hangja van kiválasztva.
+- **Meglévő szám:** ha egy hangnak már van száma, a billentyűzeten kijelölve látszik, és az első gombnyomás felülírja.
+- **Hangnemenként külön:** minden letétnek és előjátéknak 12 ujjrendje lehet, félhangonként egy. Transzponáláskor a
+  program az adott hangnem ujjrendjét mutatja. A 6 félhanggal feljebb és a 6 félhanggal lejjebb transzponált kotta
+  ugyanaz a hangnem, ezért az ujjrendjük is közös. Szerkesztés közben a sávon látszik, melyik hangnemben vagy
+  (pl. „Ujjrend (+2)”).
+- **Hol tárolódik?** Csak ezen a készüléken. Máshová a **Megosztás** gombbal küldheted át (lásd:
+  [Megosztás és importálás](07-megosztas.md#ujjrend-megosztása)), az összeset pedig fájlba mentheted (lásd:
+  [Beállítások](08-beallitasok.md#4-adatok-mentése-és-megosztása)).
+- Szerkesztés közben a kotta szélére koppintva és a lapozópedállal sem lapoz a program, amíg a billentyűzet nyitva
+  van.
+- **Képként** tárolt kottába (beszkennelt oldal) nem írható ujjrend: ilyenkor a panelen nincs Ujjrend sor.
 
 ## A letétek értékelése
 

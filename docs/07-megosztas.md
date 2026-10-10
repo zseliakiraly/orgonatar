@@ -3,7 +3,8 @@
 [← Tartalom](README.md)
 
 A listák a készüléken tárolódnak. Másik tabletre, telefonra vagy egy kollégának a lista **kódjával** küldhetők át. A
-kód egyetlen betűkből és számokból álló karakterlánc, amely a lista nevét és az énekeket tartalmazza.
+kód egyetlen betűkből és számokból álló karakterlánc, amely a lista nevét és az énekeket tartalmazza. Az ujjrendek
+ugyanígy oszthatók meg (lásd lent: [Ujjrend megosztása](#ujjrend-megosztása)).
 
 ## Megosztás
 
@@ -44,6 +45,25 @@ Tudnivalók:
 - **iPad, iPhone:** ha a programot a kezdőképernyőről használod, a programon belül, a **Kamera** gombbal (vagy a kód
   beillesztésével) importálj. A telefon kamerájából megnyitott link ugyanis a Safariban nyílik meg, és ott a lista nem
   a kezdőképernyős programba kerül.
+
+## Ujjrend megosztása
+
+Az ének oldalán vagy a lejátszóban, a kotta beállításainak panelén, az **Ujjrend** sorában: **Megosztás**. Akkor
+nyomható, ha a látott kottában van ujjrend. A látott előjáték és a letét ujjrendje kerül bele, abban a hangnemben,
+amelyben éppen látszik.
+
+Az ablak ugyanolyan, mint a listáké: QR-kód, a kód (`OU1…`), Másolás, E-mail, Mentés, Küldés…
+
+**Importálás:**
+- A megosztási link vagy a QR-kód megnyitja a programot az **Ujjrendek importálása** ablakkal.
+- Kóddal vagy fájllal: Beállítások → **Adatok mentése és megosztása** → Ujjrendek: **Importálás**. Itt a kód vagy a
+  link beilleszthető, a mentett fájl (`.txt` vagy a teljes mentés `.json` fájlja) megnyitható, a QR-kód a kamerával
+  beolvasható.
+- Az előnézet megmutatja, melyik ének melyik letétjéhez és melyik hangnemhez tartozik az ujjrend, és hány hangra.
+  Ha ugyanannak a letétnek ugyanabban a hangnemben már van ujjrendje ezen az eszközön, az importált felváltja
+  (az előnézet ezt is jelzi). A többi hangnem ujjrendje megmarad.
+- Ha a letét ezen az eszközön nem érhető el (pl. nincs letöltve a könyve), az ujjrend ettől még elmentődik, és
+  megjelenik, amikor a letét elérhető lesz.
 
 ---
 

@@ -38,6 +38,25 @@ Az oldalsó szövegpanel szélességét nem itt kell beállítani: a panel fogan
   - **Bravura:** szellősebb.
   - Mindkettő ugyanazon a mintakottán látszik, így könnyű összehasonlítani.
 
+## 4. Adatok mentése és megosztása
+
+Itt mentheted fájlba a saját adataidat, és itt töltheted vissza őket. Így biztonsági mentés készíthető, és az adatok
+másik eszközre is átvihetők. A mentett fájl a böngésző adatainak törlése után is visszatölthető.
+
+- **Ujjrendek:** a sorban látszik, hány ujjrend van ezen az eszközön (hány letéthez, összesen hány hang).
+  - **Mentés fájlba:** minden ujjrend egy fájlba (`orgonatar-ujjrendek-<dátum>.json`).
+  - **Importálás:** ujjrend betöltése kódból, linkből, fájlból (a mentett `.json` vagy a megosztott `.txt`) vagy
+    QR-kódról (lásd: [Ujjrend megosztása](07-megosztas.md#ujjrend-megosztása)). Ugyanannak a letétnek ugyanabban a
+    hangnemben lévő ujjrendjét az importált felváltja, a többi megmarad.
+- **Liturgikus listák:**
+  - **Mentés fájlba:** az összes lista egy fájlba (`orgonatar-listak-<dátum>.json`).
+  - **Betöltés fájlból:** a mentett fájl listái a meglévők mellé kerülnek. Előtte egy ablak mutatja, melyik listák
+    jönnek. Ami már megvan ezen az eszközön (ugyanilyen nevű és tartalmú lista), az kimarad, így ugyanaz a fájl
+    többször is betölthető.
+
+Egy-egy lista a Listák oldalon, egy ének ujjrendje a kotta beállításainak panelén osztható meg (lásd:
+[Megosztás és importálás](07-megosztas.md)).
+
 ---
 
 [← Megosztás és importálás](07-megosztas.md) · [Tovább: Gyakori kérdések →](09-gyik.md)

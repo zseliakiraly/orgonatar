@@ -15,12 +15,12 @@ kottakönyvekkel internet nélkül is működik.
 1. [Első lépések](01-elso-lepesek.md) – megnyitás, kezdőképernyő, teljes képernyő, a felület részei, telefonon (menü)
 2. [Kottakönyvek](02-kottakonyvek.md) – könyvek letöltése, frissítése és elrejtése; internet nélkül
 3. [Könyvtár és az ének oldala](03-konyvtar.md) – keresés, kulcsszavak, letét és előjáték, nagyítás,
-   transzponálás, a letétek értékelése
+   transzponálás, ujjrend, a letétek értékelése
 4. [Szövegpanel, megjegyzés, regisztráció](04-szovegpanel.md)
 5. [Listák](05-listak.md) – lista összeállítása az istentiszteletre; csempék vagy listás nézet
 6. [Lejátszó](06-lejatszo.md) – az istentisztelet alatt: lapozás koppintással vagy pedállal
-7. [Megosztás és importálás](07-megosztas.md) – lista átküldése másik eszközre kóddal vagy QR-kóddal
-8. [Beállítások](08-beallitasok.md)
+7. [Megosztás és importálás](07-megosztas.md) – lista és ujjrend átküldése másik eszközre kóddal vagy QR-kóddal
+8. [Beállítások](08-beallitasok.md) – megjelenés, kotta, az adatok mentése és visszatöltése
 9. [Gyakori kérdések](09-gyik.md)
 10. [Az adatok karbantartása](10-karbantartas.md) – új könyv, kotta, borítókép, énekleírás feltöltése (a webhely
     gazdájának)

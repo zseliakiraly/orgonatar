@@ -148,7 +148,7 @@ const parseVerses = (text) => {
 };
 
 // --- TÁROLÁS (localStorage) ---
-const STORAGE_KEYS = { playlists: 'orgonista_playlists', settings: 'orgonista_settings', lyricsLayouts: 'orgonista_lyrics_layouts', hymnNotes: 'orgonista_hymn_notes', scoreRatings: 'orgonista_score_ratings', transpositions: 'orgonista_transpositions' };
+const STORAGE_KEYS = { playlists: 'orgonista_playlists', settings: 'orgonista_settings', lyricsLayouts: 'orgonista_lyrics_layouts', hymnNotes: 'orgonista_hymn_notes', scoreRatings: 'orgonista_score_ratings', transpositions: 'orgonista_transpositions', fingerings: 'orgonista_fingerings' };
 
 const SETTINGS_VERSION = 2;
 
@@ -625,10 +625,10 @@ const Modal = ({ title, onClose, children, footer, maxWidth, placement }) => (
     </div>
 );
 
-const AlertModal = ({ isOpen, onClose, message }) => {
+const AlertModal = ({ isOpen, onClose, message, title = 'Figyelmeztetés' }) => {
     if (!isOpen) return null;
     return (
-        <Modal title="Figyelmeztetés" onClose={onClose} footer={<button onClick={onClose} className="btn btn-primary">Rendben</button>}>
+        <Modal title={title} onClose={onClose} footer={<button onClick={onClose} className="btn btn-primary">Rendben</button>}>
             <p className="text-ink text-center">{message}</p>
         </Modal>
     );
@@ -975,6 +975,130 @@ const shareTextOf = (name, rows, link, code) => [
         : ['Vagy a programban: Listák → Importálás, és ott illeszd be a fenti linket.']),
     ''
 ].join('\n');
+// Ujjrend kódja (OU1…): énekszám, letét azonosítója, hangnem (0–11) és a hangok („kulcs=szám;…”), letétenként egy
+// rekord; tömörítve, ellenőrző összeggel, 62-es számrendszerben, mint a listák kódja
+const FINGER_CODE_MAX_LENGTH = 60000;
+const packCode = (text) => {
+    const raw = new TextEncoder().encode(text);
+    const packed = window.fflate.deflateSync(raw, { level: 9 });
+    const crc = crc32(raw);
+    const bytes = new Uint8Array(3 + packed.length);
+    bytes.set([(crc >>> 16) & 255, (crc >>> 8) & 255, crc & 255]);
+    bytes.set(packed, 3);
+    return toBase62(bytes);
+};
+const unpackCode = (code, maxLength) => {
+    const bytes = code.length <= maxLength ? fromBase62(code) : null;
+    if (!bytes || bytes.length < 4) return null;
+    try {
+        const raw = window.fflate.inflateSync(bytes.subarray(3));
+        const crc = crc32(raw);
+        if (bytes[0] !== ((crc >>> 16) & 255) || bytes[1] !== ((crc >>> 8) & 255) || bytes[2] !== (crc & 255)) return null;
+        return new TextDecoder('utf-8', { fatal: true }).decode(raw);
+    } catch (e) { return null; }
+};
+const fingerKeyOrder = (a, b) => {
+    const x = a.split('.').map(Number), y = b.split('.').map(Number);
+    for (let i = 0; i < 4; i++) if (x[i] !== y[i]) return x[i] - y[i];
+    return 0;
+};
+const encodeFingerCode = (items) => `OU1${packCode(items.map(it => [codeField(it.hymnNumber), codeField(it.block), String(it.cls),
+    Object.keys(it.fingers).sort(fingerKeyOrder).map(k => `${k}=${it.fingers[k]}`).join(';')].join(CODE_US)).join(CODE_RS))}`;
+const parseFingerCode = (code) => {
+    const s = unpackCode(code, FINGER_CODE_MAX_LENGTH);
+    if (s === null) return null;
+    const items = [];
+    for (const rec of s.split(CODE_RS)) {
+        const [hymnNumber = '', block = '', cls = '', entries = ''] = rec.split(CODE_US);
+        if (!block || !/^(?:\d|1[01])$/.test(cls)) return null;
+        const fingers = {};
+        for (const entry of entries.split(';')) {
+            if (!entry) continue;
+            const [k, v] = entry.split('=');
+            if (!FINGER_KEY.test(k) || !FINGER_VALUE.test(v || '')) return null;
+            fingers[k] = v;
+        }
+        if (Object.keys(fingers).length) items.push({ hymnNumber, block, cls: +cls, fingers });
+    }
+    return items.length ? items : null;
+};
+// Az ujjrend(ek) kikeresése bármilyen szövegből: a mentett fájl (JSON), vagy kód, link (akár több sorra tördelve)
+const FINGER_FILE_TYPE = 'orgonatar-ujjrendek';
+const decodeFingerings = (text) => {
+    const s = String(text || '');
+    if (s.trim().startsWith('{')) {
+        try {
+            const data = JSON.parse(s);
+            if (data && data.type === FINGER_FILE_TYPE) {
+                const store = cleanFingerStore(data.fingerings), hymns = (data.blocks && typeof data.blocks === 'object') ? data.blocks : {};
+                const items = [];
+                for (const [block, classes] of Object.entries(store)) for (const [cls, fingers] of Object.entries(classes)) {
+                    items.push({ hymnNumber: String((hymns[block] && hymns[block].hymn) || ''), block, cls: +cls, fingers, name: hymns[block] && hymns[block].name });
+                }
+                return items.length ? items : null;
+            }
+        } catch (e) { /* nem JSON: kód */ }
+    }
+    for (const m of s.matchAll(/OU1([0-9A-Za-z]+)/g)) {
+        let code = m[1], rest = s.slice(m.index + m[0].length);
+        for (;;) {
+            const items = parseFingerCode(code);
+            if (items) return items;
+            const next = rest.match(/^[ \t]*\r?\n[ \t>]*([0-9A-Za-z]+)/);
+            if (!next || code.length > FINGER_CODE_MAX_LENGTH) break;
+            code += next[1];
+            rest = rest.slice(next[0].length);
+        }
+    }
+    return null;
+};
+// importálás: a kapott ujjrendek a tárolóba (letét és hangnem szerint felülírva); visszaadja, hány újat és hány
+// felülírtat
+const mergeFingerings = (items) => {
+    const store = loadFingerings();
+    let added = 0, replaced = 0;
+    for (const it of items) {
+        const classes = store[it.block] = { ...(store[it.block] || {}) };
+        if (classes[it.cls]) replaced++; else added++;
+        classes[it.cls] = { ...it.fingers };
+    }
+    saveFingerings(store);
+    return { added, replaced };
+};
+const fingerLinkOf = (code) => `${window.location.origin}${window.location.pathname}#ujjrend=${code}`;
+// mentés fájlba (a böngésző letöltésként menti)
+const downloadText = (fileName, text, type = 'text/plain;charset=utf-8') => {
+    const url = URL.createObjectURL(new Blob([text], { type }));
+    const a = document.createElement('a');
+    a.href = url; a.download = fileName;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+const todayStamp = () => { const d = new Date(), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
+// Az ujjrendek mentett fájlja (JSON): a tároló, mellette a letétek neve és az énekszám (az importálás előnézetéhez)
+const fingeringsFileText = (store, blocks) => JSON.stringify({ type: FINGER_FILE_TYPE, version: 1, saved: new Date().toISOString(), blocks, fingerings: store }, null, 1);
+// Az összes lista mentése egy fájlba (biztonsági mentés, átvitel másik eszközre) és visszatöltése
+const LISTS_FILE_TYPE = 'orgonatar-listak';
+const listItemData = (it) => ({ hymnNumber: String(it.hymnNumber), variationId: it.variationId || null, preludeId: it.preludeId || null, verses: it.verses || [] });
+const playlistsFileText = (playlists) => JSON.stringify({ type: LISTS_FILE_TYPE, version: 1, saved: new Date().toISOString(),
+    playlists: playlists.map(p => ({ id: p.id, name: p.name, items: p.items.map(listItemData) })) }, null, 1);
+const decodePlaylistsFile = (text) => {
+    let data;
+    try { data = JSON.parse(text); } catch (e) { return null; }
+    if (!data || data.type !== LISTS_FILE_TYPE || !Array.isArray(data.playlists)) return null;
+    const idOf = (v) => (v == null || v === '' ? null : String(v));
+    return normalizePlaylists(data.playlists.filter(p => p && typeof p === 'object').map(p => ({
+        id: Number.isSafeInteger(p.id) && p.id > 0 ? p.id : 0,
+        name: typeof p.name === 'string' ? p.name.slice(0, 200) : '',
+        items: (Array.isArray(p.items) ? p.items : []).filter(it => it && typeof it === 'object').map(it => ({
+            hymnNumber: String(it.hymnNumber ?? '').slice(0, 10), variationId: idOf(it.variationId), preludeId: idOf(it.preludeId),
+            verses: Array.isArray(it.verses) ? it.verses.filter(v => Number.isInteger(v) && v >= 0 && v < MAX_VERSE) : []
+        }))
+    })));
+};
+// ugyanaz a lista (név és énekek): fájlból betöltéskor a már meglévők kimaradnak
+const samePlaylist = (a, b) => a.name === b.name && JSON.stringify(a.items.map(listItemData)) === JSON.stringify(b.items.map(listItemData));
+
 const safeFileName = (name) => (name.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim() || 'lista').slice(0, 80);
 
 // Külső könyvtárak igény szerint (libs/qr): QR-kód rajzolása és – ha a böngésző nem ismeri fel magától – olvasása
@@ -1028,7 +1152,7 @@ const readQrFromImage = async (img) => {
 };
 
 // QR-kód SVG-ben: fekete modulok fehér alapon, 4 modulnyi csendes zónával (így olvasható a legbiztosabban)
-const QrCode = ({ text, className = '' }) => {
+const QrCode = ({ text, className = '', label = 'A lista QR-kódja' }) => {
     const [qr, setQr] = useState(null);
     const [failed, setFailed] = useState(false);
     useEffect(() => {
@@ -1056,7 +1180,7 @@ const QrCode = ({ text, className = '' }) => {
     if (failed) return <div className={`qr-code qr-missing ${className}`}>A QR-kód most nem jeleníthető meg</div>;
     if (!qr) return <div className={`qr-code ${className}`} aria-busy="true" />;
     return (
-        <svg className={`qr-code ${className}`} viewBox={`0 0 ${qr.size} ${qr.size}`} shapeRendering="crispEdges" role="img" aria-label="A lista QR-kódja">
+        <svg className={`qr-code ${className}`} viewBox={`0 0 ${qr.size} ${qr.size}`} shapeRendering="crispEdges" role="img" aria-label={label}>
             <rect width={qr.size} height={qr.size} fill="#fff"/>
             <path d={qr.d} fill="#000"/>
         </svg>
@@ -1111,7 +1235,19 @@ const ShareListModal = ({ playlist, rows, onClose }) => {
     // a tömörítő (libs/fflate) nélkül nincs kód: akkor csak egy hibaüzenet jelenik meg
     const code = useMemo(() => { try { return encodeListCode(playlist); } catch (e) { return null; } }, [playlist]);
     const link = code ? shareLinkOf(code) : '';
-    const message = shareTextOf(playlist.name, rows, link);
+    return (
+        <ShareCodeModal title="Lista megosztása" what="lista" code={code} link={link} name={playlist.name} detail={`${playlist.items.length} ének`}
+            subject={`OrgonaTár lista: ${playlist.name}`} message={shareTextOf(playlist.name, rows, link)}
+            fileName={`${safeFileName(playlist.name)}.txt`} fileText={code ? shareTextOf(playlist.name, rows, link, code) : ''}
+            hint={<>Importálás egy másik eszközön: Listák → Importálás, és ott illeszd be a kódot, nyisd meg
+                a mentett fájlt, vagy olvasd be a QR-kódot a kamerával.</>} onClose={onClose} />
+    );
+};
+
+// A megosztás ablaka (lista, ujjrend): QR-kód (a linkkel), a kód, másolás, e-mail, mentés, küldés más alkalmazással.
+// what: „lista” / „ujjrend” (a feliratokban, a névelővel: „a lista”, „az ujjrend”); detail: a név alatti sor(ok)
+const ShareCodeModal = ({ title, what, code, link, name, detail, subject, message, fileName, fileText, hint, onClose }) => {
+    const article = /^[aáeéiíoóöőuúüű]/i.test(what) ? 'Az' : 'A';
     const [copied, setCopied] = useState(false);
     const [zoomed, setZoomed] = useState(false);
     const codeRef = useRef(null);
@@ -1128,34 +1264,27 @@ const ShareListModal = ({ playlist, rows, onClose }) => {
         el.focus(); el.select();
         try { if (document.execCommand('copy')) setCopied(true); } catch (e) { /* marad kijelölve, kézzel másolható */ }
     };
-    const save = () => {
-        const url = URL.createObjectURL(new Blob([shareTextOf(playlist.name, rows, link, code)], { type: 'text/plain;charset=utf-8' }));
-        const a = document.createElement('a');
-        a.href = url; a.download = `${safeFileName(playlist.name)}.txt`;
-        document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-    };
-    const subject = `OrgonaTár lista: ${playlist.name}`;
+    const save = () => downloadText(fileName, fileText);
     const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
     const canShare = typeof navigator.share === 'function';
     const sendOther = () => { navigator.share({ title: subject, text: message }).catch(() => {}); };
 
     if (!code) return (
-        <Modal title="Lista megosztása" onClose={onClose} footer={<button onClick={onClose} className="btn">Bezárás</button>}>
-            <p className="import-message error">A lista kódja most nem készíthető el. Töltsd újra az oldalt, és próbáld újra.</p>
+        <Modal title={title} onClose={onClose} footer={<button onClick={onClose} className="btn">Bezárás</button>}>
+            <p className="import-message error">{article} {what} kódja most nem készíthető el. Töltsd újra az oldalt, és próbáld újra.</p>
         </Modal>
     );
     return (
-        <Modal title="Lista megosztása" onClose={onClose} maxWidth="760px" footer={<button onClick={onClose} className="btn">Bezárás</button>}>
+        <Modal title={title} onClose={onClose} maxWidth="760px" footer={<button onClick={onClose} className="btn">Bezárás</button>}>
             <div className="share-list">
                 <div className="share-qr">
-                    <button type="button" className="share-qr-btn" onClick={() => setZoomed(true)} title="Nagyítás" aria-label="A QR-kód nagyítása"><QrCode text={link} /></button>
+                    <button type="button" className="share-qr-btn" onClick={() => setZoomed(true)} title="Nagyítás" aria-label="A QR-kód nagyítása"><QrCode text={link} label={`${article} ${what} QR-kódja`} /></button>
                     <p className="share-hint">Egy másik eszköz kamerájával lefotózva megnyílik az importálás. Koppints rá a nagyításhoz.</p>
                 </div>
                 <div className="share-main">
-                    <div className="share-name">{playlist.name}</div>
-                    <div className="share-count">{playlist.items.length} ének</div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1" htmlFor="share-code">A lista kódja</label>
+                    <div className="share-name">{name}</div>
+                    <div className="share-count">{detail}</div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1" htmlFor="share-code">{article} {what} kódja</label>
                     <textarea id="share-code" ref={codeRef} className="input share-code" readOnly value={code} rows={4} onFocus={e => e.target.select()} />
                     <div className="share-actions">
                         <button onClick={copy} className="btn btn-primary">{copied ? <><Icons.Check size={18}/> Kimásolva</> : <><Icons.Copy size={18}/> Másolás</>}</button>
@@ -1163,17 +1292,45 @@ const ShareListModal = ({ playlist, rows, onClose }) => {
                         <button onClick={save} className="btn btn-outline"><Icons.Download size={18}/> Mentés</button>
                         {canShare && <button onClick={sendOther} className="btn btn-outline"><Icons.Send size={18}/> Küldés…</button>}
                     </div>
-                    <p className="share-hint">Importálás egy másik eszközön: Listák → Importálás, és ott illeszd be a kódot, nyisd meg
-                        a mentett fájlt, vagy olvasd be a QR-kódot a kamerával.</p>
+                    <p className="share-hint">{hint}</p>
                 </div>
             </div>
             {zoomed && (
-                <div className="qr-zoom" onClick={() => setZoomed(false)} role="dialog" aria-label="A lista QR-kódja nagyítva">
-                    <QrCode text={link} />
-                    <p>{playlist.name} – koppints a bezáráshoz</p>
+                <div className="qr-zoom" onClick={() => setZoomed(false)} role="dialog" aria-label={`${article} ${what} QR-kódja nagyítva`}>
+                    <QrCode text={link} label={`${article} ${what} QR-kódja`} />
+                    <p>{name} – koppints a bezáráshoz</p>
                 </div>
             )}
         </Modal>
+    );
+};
+
+// Az ének látott ujjrendjének (előjáték, letét; az aktuális hangnemben) megosztása
+const ShareFingeringModal = ({ items, onClose }) => {
+    const code = useMemo(() => { try { return encodeFingerCode(items); } catch (e) { return null; } }, [items]);
+    const link = code ? fingerLinkOf(code) : '';
+    const first = items[0];
+    const name = `${first.hymnNumber}. ${first.hymnTitle || ''}`.trim();
+    const lines = items.map(it => `${it.kind}: ${it.name} – ${Object.keys(it.fingers).length} hang`);
+    const text = (withCode) => [
+        `Református OrgonaTár – ujjrend: ${name} (${fingerClassLabel(first.cls)})`,
+        '',
+        ...lines.map(l => `  ${l}`),
+        '',
+        'Megnyitás az OrgonaTárban:',
+        link,
+        '',
+        ...(withCode ? ['Vagy a programban: Beállítások → Adatok mentése és megosztása → Ujjrendek: Importálás, és ott illeszd be ezt a kódot (vagy nyisd meg ezt a fájlt):', code]
+            : ['Vagy a programban: Beállítások → Adatok mentése és megosztása → Ujjrendek: Importálás, és ott illeszd be a fenti linket.']),
+        ''
+    ].join('\n');
+    return (
+        <ShareCodeModal title="Ujjrend megosztása" what="ujjrend" code={code} link={link} name={name}
+            detail={<>{lines.map((l, i) => <div key={i}>{l}</div>)}<div>{fingerClassLabel(first.cls)}</div></>}
+            subject={`OrgonaTár ujjrend: ${name}`} message={code ? text(false) : ''}
+            fileName={`ujjrend ${safeFileName(name)}.txt`} fileText={code ? text(true) : ''}
+            hint={<>Importálás egy másik eszközön: Beállítások → Adatok mentése és megosztása → Ujjrendek: Importálás, és
+                ott illeszd be a kódot, nyisd meg a mentett fájlt, vagy olvasd be a QR-kódot a kamerával.</>} onClose={onClose} />
     );
 };
 
@@ -1285,6 +1442,146 @@ const ImportListModal = ({ initialText = '', hymnByNumber, scoresAvailable, onCl
                             előjáték pedig elmarad.</p>}
                     </div>
                 )}
+            </div>
+        </Modal>
+    );
+};
+
+// Ujjrendek importálása: kód vagy link, fájl (a megosztott szövegfájl, a mentett JSON vagy a QR-kódról készült kép),
+// kamera. Előnézet: melyik ének melyik letétjéhez, melyik hangnemben, és hány meglévő ujjrend íródik felül.
+// blockInfo: a most elérhető letétek és előjátékok (azonosító → { kind, name })
+const ImportFingeringModal = ({ initialText = '', blockInfo, hymnByNumber, onClose, onImport }) => {
+    const [text, setText] = useState(initialText);
+    const [scanning, setScanning] = useState(false);
+    const [message, setMessage] = useState(null); // { kind: 'error' | 'info', text }
+    const fileRef = useRef(null);
+    const decoded = useMemo(() => decodeFingerings(text), [text]);
+    const rows = useMemo(() => {
+        if (!decoded) return [];
+        const store = loadFingerings();
+        return decoded.map(it => ({ ...it, info: blockInfo.get(it.block) || null, hymn: hymnByNumber.get(String(it.hymnNumber)) || null,
+            exists: !!(store[it.block] && store[it.block][it.cls]) }))
+            .sort((a, b) => (parseInt(a.hymnNumber, 10) || 0) - (parseInt(b.hymnNumber, 10) || 0) || a.block.localeCompare(b.block) || a.cls - b.cls);
+    }, [decoded, blockInfo, hymnByNumber]);
+    const replacing = rows.filter(r => r.exists).length;
+    const unavailable = rows.filter(r => !r.info).length;
+
+    const accept = (value) => {
+        if (!decodeFingerings(value)) {
+            const notFinger = 'Ez a QR-kód nem OrgonaTár ujjrend.';
+            setMessage(m => (m && m.text === notFinger ? m : { kind: 'error', text: notFinger }));
+            return false;
+        }
+        setText(value); setScanning(false);
+        setMessage({ kind: 'info', text: 'A QR-kód beolvasva.' });
+        return true;
+    };
+    const openFile = async (e) => {
+        const file = e.target.files && e.target.files[0];
+        e.target.value = '';
+        if (!file) return;
+        setMessage(null);
+        try {
+            if (file.type.startsWith('image/')) {
+                const value = await readQrFromImage(await createImageBitmap(file));
+                if (value && decodeFingerings(value)) setText(value);
+                else setMessage({ kind: 'error', text: 'A képen nem található OrgonaTár ujjrend QR-kódja.' });
+            } else {
+                const content = await file.text();
+                if (decodeFingerings(content)) setText(content);
+                else setMessage({ kind: 'error', text: 'A fájlban nem található OrgonaTár ujjrend.' });
+            }
+        } catch (err) {
+            setMessage({ kind: 'error', text: 'A fájlt nem sikerült beolvasni.' });
+        }
+    };
+    const cameraError = (err) => {
+        setScanning(false);
+        const reason = err && err.name;
+        setMessage({ kind: 'error', text: reason === 'NotAllowedError' || reason === 'SecurityError'
+            ? 'A kamera használata nincs engedélyezve. Engedélyezd a böngésző beállításaiban, vagy fotózd le a QR-kódot, és nyisd meg a képet.'
+            : reason === 'NotFoundError' || reason === 'OverconstrainedError' ? 'Ezen az eszközön nem található kamera.'
+            : 'A kamerát nem sikerült elindítani.' });
+    };
+    const doImport = () => { if (decoded) onImport(decoded); };
+
+    return (
+        <Modal title="Ujjrendek importálása" onClose={onClose} maxWidth="640px" placement="upper" footer={
+            <>
+                <button onClick={onClose} className="btn">Mégse</button>
+                <button onClick={doImport} disabled={!decoded} className="btn btn-primary">Importálás</button>
+            </>
+        }>
+            <div className="import-list">
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1" htmlFor="import-finger-code">Kód vagy link</label>
+                <textarea id="import-finger-code" className="input import-code" rows={3} value={text} placeholder="Illeszd be az ujjrend kódját (OU1…) vagy a megosztási linket"
+                    onChange={e => { setText(e.target.value); setMessage(null); }} />
+                <div className="import-actions">
+                    <button onClick={() => fileRef.current.click()} className="btn btn-outline"><Icons.File size={18}/> Fájl megnyitása</button>
+                    {CAMERA_SUPPORTED && (
+                        <button onClick={() => { setMessage(null); setScanning(!scanning); }} className={`btn ${scanning ? 'btn-primary' : 'btn-outline'}`}>
+                            <Icons.Camera size={18}/> {scanning ? 'Kamera leállítása' : 'Kamera'}
+                        </button>
+                    )}
+                    <input ref={fileRef} type="file" accept=".txt,.json,text/plain,application/json,image/*" className="import-file-input" onChange={openFile} tabIndex={-1} aria-hidden="true" />
+                </div>
+                {scanning && (
+                    <div className="import-camera">
+                        <QrScanner onResult={accept} onError={cameraError} />
+                        <p className="share-hint">Tartsd a QR-kódot a keretbe.</p>
+                    </div>
+                )}
+                {message && <p className={`import-message ${message.kind}`}>{message.text}</p>}
+                {text.trim() && !decoded && !message && <p className="import-message error">Ebben nem található OrgonaTár ujjrend.</p>}
+                {decoded && (
+                    <div className="import-preview">
+                        <div className="import-items">
+                            {rows.map((r, i) => (
+                                <div key={i} className="playlist-card-item finger-import-item">
+                                    <span className="hymn-number text-accent">{r.hymnNumber || '–'}</span>
+                                    <span className="finger-import-text">
+                                        <span className="playlist-card-item-title">{r.hymn ? r.hymn.title : 'Ismeretlen ének'}</span>
+                                        <span className="finger-import-detail">{r.info ? `${r.info.kind}: ${r.info.name}` : `${r.name || r.block} (nem érhető el)`}</span>
+                                        <span className="finger-import-detail">{fingerClassLabel(r.cls)} · {Object.keys(r.fingers).length} hang{r.exists ? ' · a meglévőt felülírja' : ''}</span>
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                        {replacing > 0 && <p className="import-message info">{replacing} letétnél ugyanebben a hangnemben már van ujjrend
+                            ezen az eszközön: azt az importált váltja fel.</p>}
+                        {unavailable > 0 && <p className="import-message info">{unavailable} ujjrend letétje ezen az eszközön most nem érhető el
+                            (pl. nincs letöltve vagy ki van kapcsolva a könyve). Az ujjrend ettől még megmarad, és megjelenik, amikor a letét elérhető lesz.</p>}
+                    </div>
+                )}
+            </div>
+        </Modal>
+    );
+};
+
+// A mentett fájl listái: előnézet; a már meglévők (ugyanilyen nevű és tartalmú listák) kimaradnak
+const ImportPlaylistsModal = ({ lists, playlists, onClose, onImport }) => {
+    const rows = useMemo(() => lists.map(list => ({ list, duplicate: playlists.some(p => samePlaylist(p, list)) })), [lists, playlists]);
+    const fresh = rows.filter(r => !r.duplicate).map(r => r.list);
+    const duplicates = rows.length - fresh.length;
+    return (
+        <Modal title="Listák betöltése" onClose={onClose} maxWidth="640px" placement="upper" footer={
+            <>
+                <button onClick={onClose} className="btn">Mégse</button>
+                <button onClick={() => onImport(fresh)} disabled={!fresh.length} className="btn btn-primary">Betöltés</button>
+            </>
+        }>
+            <div className="import-list">
+                <p className="import-message info">{fresh.length
+                    ? `${fresh.length} lista kerül a meglévők mellé.${duplicates ? ` ${duplicates} már megvan ezen az eszközön, az kimarad.` : ''}`
+                    : 'A fájl minden listája megvan már ezen az eszközön.'}</p>
+                <div className="import-items">
+                    {rows.map((r, i) => (
+                        <div key={i} className={`playlist-card-item lists-import-item${r.duplicate ? ' duplicate' : ''}`}>
+                            <span className="lists-import-name">{r.list.name}</span>
+                            <span className="lists-import-detail">{r.list.items.length} ének{r.duplicate ? ' · már megvan' : ''}</span>
+                        </div>
+                    ))}
+                </div>
             </div>
         </Modal>
     );
@@ -1669,7 +1966,44 @@ const serifFontOption = (font) => (
     </span>
 );
 
-const SettingsView = ({ settings, onUpdateSettings, menuButton }) => {
+// Adatok mentése és megosztása: az ujjrendek (mentés fájlba, importálás kódból, linkből, fájlból vagy QR-kódból) és az
+// összes lista (mentés fájlba, betöltés fájlból). A mentett fájlokkal az adatok másik eszközre is átvihetők.
+const DataSection = ({ playlistCount, onExportPlaylists, onPlaylistsFile, onExportFingerings, onImportFingerings }) => {
+    const [stats, setStats] = useState(() => fingerStats(loadFingerings()));
+    const fileRef = useRef(null);
+    useEffect(() => {
+        const update = () => setStats(fingerStats(loadFingerings()));
+        window.addEventListener(FINGERINGS_CHANGED, update);
+        return () => window.removeEventListener(FINGERINGS_CHANGED, update);
+    }, []);
+    const openFile = (e) => {
+        const file = e.target.files && e.target.files[0];
+        e.target.value = '';
+        if (file) onPlaylistsFile(file);
+    };
+    return (
+        <SettingsSection title="Adatok mentése és megosztása">
+            <SettingsRow title="Ujjrendek" hint={stats.sets ? `${stats.sets} ujjrend (${stats.blocks} letéthez), összesen ${stats.notes} hang` : 'Még nincs ujjrend ezen az eszközön'}>
+                <div className="data-actions">
+                    <button onClick={onExportFingerings} disabled={!stats.sets} className="btn btn-outline"><Icons.Download size={18}/> Mentés fájlba</button>
+                    <button onClick={onImportFingerings} className="btn btn-outline"><Icons.Import size={18}/> Importálás</button>
+                </div>
+            </SettingsRow>
+            <SettingsRow title="Liturgikus listák" hint={playlistCount ? `Mind a ${playlistCount} lista egy fájlba` : 'Még nincs lista ezen az eszközön'}>
+                <div className="data-actions">
+                    <button onClick={onExportPlaylists} disabled={!playlistCount} className="btn btn-outline"><Icons.Download size={18}/> Mentés fájlba</button>
+                    <button onClick={() => fileRef.current.click()} className="btn btn-outline"><Icons.File size={18}/> Betöltés fájlból</button>
+                    <input ref={fileRef} type="file" accept=".json,application/json" className="import-file-input" onChange={openFile} tabIndex={-1} aria-hidden="true" />
+                </div>
+            </SettingsRow>
+            <p className="settings-note">A mentett fájlok ezen az eszközön vagy egy másikon tölthetők vissza, például a böngésző
+                adatainak törlése után. Az egyes listák és ujjrendek megosztása (kód, link, QR-kód) a listáknál, illetve a
+                kottanézet menüjében érhető el.</p>
+        </SettingsSection>
+    );
+};
+
+const SettingsView = ({ settings, onUpdateSettings, menuButton, dataSection }) => {
     const set = (patch) => onUpdateSettings({ ...settings, ...patch });
     return (
     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
@@ -1713,6 +2047,8 @@ const SettingsView = ({ settings, onUpdateSettings, menuButton }) => {
                         </div>
                     </SettingsRow>
                 </SettingsSection>
+
+                {dataSection}
               </div>
 
               <div className="settings-column">
@@ -1878,6 +2214,68 @@ const scoreKey = (url, bytes) => {
 
 // A transzponálás (semitones) a betöltéskor történik; az eredeti (nem transzponált) MEI-t jegyezzük meg, és ezt adjuk
 // vissza (sikertelen betöltésnél null), hogy más transzponáláshoz újra betölthető legyen (loadTransposed).
+// --- Ujjrend a kottában (MEI <fing>) ---
+// A hangok kulcsa a kotta szerkezete szerint: „ütem.sor.szólam.sorszám” (az ütem a sorrendje szerint, 0-tól; a sor
+// és a szólam a MEI n-je; a sorszám a hang helye a szólamban). Ez a fájl minden betöltésekor ugyanaz, a Verovio által
+// adott xml:id viszont nem (MusicXML-nél véletlenszerű), és a transzponálás sem változtat rajta.
+const MEI_NS = 'http://www.music-encoding.org/ns/mei';
+const PITCH_STEPS = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 };
+const ACCID_SHIFT = { s: 1, f: -1, ss: 2, x: 2, ff: -2, n: 0 };
+const notePitch = (note) => {
+    const accidEl = note.getElementsByTagNameNS(MEI_NS, 'accid')[0];
+    const accid = note.getAttribute('accid') || note.getAttribute('accid.ges')
+        || (accidEl && (accidEl.getAttribute('accid') || accidEl.getAttribute('accid.ges'))) || 'n';
+    return (parseInt(note.getAttribute('oct'), 10) || 0) * 12 + (PITCH_STEPS[note.getAttribute('pname')] ?? 0) + (ACCID_SHIFT[accid] ?? 0);
+};
+const meiNoteIndex = (mei) => {
+    const doc = new DOMParser().parseFromString(mei, 'application/xml');
+    const byKey = new Map(), byId = new Map();
+    let topStaff = null;
+    [...doc.getElementsByTagNameNS(MEI_NS, 'measure')].forEach((measure, mi) => {
+        for (const staff of measure.getElementsByTagNameNS(MEI_NS, 'staff')) {
+            const s = staff.getAttribute('n') || '1';
+            if (topStaff === null || +s < +topStaff) topStaff = s;
+            for (const layer of staff.getElementsByTagNameNS(MEI_NS, 'layer')) {
+                const l = layer.getAttribute('n') || '1';
+                [...layer.getElementsByTagNameNS(MEI_NS, 'note')].forEach((note, ni) => {
+                    const id = note.getAttribute('xml:id');
+                    if (!id) return;
+                    const info = { key: `${mi}.${s}.${l}.${ni}`, id, staff: s, layer: +l || 1, measure: mi, pitch: notePitch(note) };
+                    byKey.set(info.key, info); byId.set(id, info);
+                });
+            }
+        }
+    });
+    return { byKey, byId, topStaff: topStaff || '1' };
+};
+// Az ujjrend beírása a MEI-be: ütemenként <fing> elemek a hangokhoz (a legfelső sornál a kotta fölé, a többinél alá).
+// A Verovio az egy időben szóló hangok számait egymás fölé rakja; a sorrend emelkedő hangmagasság, így felül a
+// legmagasabb hangé áll (akkordban a Verovio maga is így rendezi). Két szólam közös hangjánál a felső szólamé (kisebb
+// sorszámú layer) kerül felülre.
+const withFingerings = (mei, index, fingerings) => {
+    const keys = Object.keys(fingerings || {});
+    if (!keys.length) return mei;
+    const perMeasure = new Map();
+    for (const key of keys) {
+        const info = index.byKey.get(key);
+        if (!info) continue;
+        if (!perMeasure.has(info.measure)) perMeasure.set(info.measure, []);
+        perMeasure.get(info.measure).push({ ...info, text: fingerings[key] });
+    }
+    if (!perMeasure.size) return mei;
+    const esc = (t) => String(t).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+    let out = '', last = 0, mi = 0;
+    for (const m of mei.matchAll(/<\/measure>/g)) {
+        const fings = perMeasure.get(mi++);
+        if (!fings) continue;
+        fings.sort((a, b) => a.pitch - b.pitch || b.layer - a.layer);
+        out += mei.slice(last, m.index) + fings.map((f, i) => `<fing xml:id="ot-fing-${f.id}" startid="#${f.id}" staff="${f.staff}" `
+            + `place="${f.staff === index.topStaff ? 'above' : 'below'}">${esc(f.text)}</fing>`).join('');
+        last = m.index;
+    }
+    return out + mei.slice(last);
+};
+
 const loadTransposed = (tk, mei, semitones) => {
     tk.setOptions({ breaks: 'none', transpose: transposeInterval(meiFifths(mei), semitones) });
     return tk.loadData(mei);
@@ -1917,7 +2315,11 @@ const loadScore = (tk, url, buffer, semitones = 0) => {
 //   height()      a kirajzolt kotta magassága (px)
 //   maxZoom       ennél nagyobb nagyításnak nincs hatása (képnél 1 = teljes szélesség); kottánál nincs ilyen
 
-const VerovioViewer = ({ fileUrl, font, transpose = 0, page }) => {
+const NO_FINGERINGS = Object.freeze({});
+const fingerSignature = (f) => Object.keys(f).sort().map(k => `${k}=${f[k]}`).join(';');
+// Ujjrend: fingerings ({ hangkulcs: "3" }) a kottába rajzolva; editing: a hangok kulcsot kapnak (data-fkey), hogy
+// kiválaszthatók legyenek; selectedKey: a kiválasztott hang kiemelve
+const VerovioViewer = ({ fileUrl, font, transpose = 0, fingerings = NO_FINGERINGS, editing = false, selectedKey = null, blockId, page }) => {
     const containerRef = useRef(null);
     const toolkitRef = useRef(null);        // saját Verovio-példány (az előjátéknak és a kottának külön)
     const stateRef = useRef('loading');
@@ -1928,13 +2330,45 @@ const VerovioViewer = ({ fileUrl, font, transpose = 0, page }) => {
     const transposeRef = useRef(transpose);
     const meiRef = useRef(null);            // a betöltött kotta (nem transzponált) MEI-je
     const loadedTransposeRef = useRef(0);   // ennyivel transzponálva van betöltve
+    const indexRef = useRef(null);          // a hangok kulcsai (meiNoteIndex), csak ha kell (ujjrend)
+    const fingeringsRef = useRef(fingerings);
+    const loadedFingerRef = useRef('');     // ezzel az ujjrenddel van betöltve
+    const editingRef = useRef(editing);
+    const selectedKeyRef = useRef(selectedKey);
     const loadIdRef = useRef(0);
     const loadQueueRef = useRef(Promise.resolve());
     const [error, setError] = useState(null);
     fileUrlRef.current = fileUrl;
     fontRef.current = font;
     transposeRef.current = transpose;
-
+    fingeringsRef.current = fingerings;
+    editingRef.current = editing;
+    selectedKeyRef.current = selectedKey;
+    const fingerSig = fingerSignature(fingerings);
+    const noteIndex = () => {
+        if (!indexRef.current && meiRef.current) indexRef.current = meiNoteIndex(meiRef.current);
+        return indexRef.current;
+    };
+    // a kotta betöltése a megjegyzett MEI-ből: transzponálva, az ujjrenddel
+    const loadCurrent = (tk) => {
+        const fingers = fingeringsRef.current;
+        const mei = Object.keys(fingers).length ? withFingerings(meiRef.current, noteIndex(), fingers) : meiRef.current;
+        if (!loadTransposed(tk, mei, transposeRef.current)) return false;
+        loadedTransposeRef.current = transposeRef.current;
+        loadedFingerRef.current = fingerSignature(fingers);
+        return true;
+    };
+    // szerkesztéskor a kirajzolt hangok kulcsa (data-fkey) és a kiválasztott hang kiemelése
+    const annotate = () => {
+        const container = containerRef.current;
+        if (!container || stateRef.current !== 'ready') return;
+        const index = editingRef.current ? noteIndex() : null;
+        for (const el of container.querySelectorAll('g.note')) {
+            const info = index && index.byId.get(el.id);
+            if (info) el.dataset.fkey = info.key; else delete el.dataset.fkey;
+            el.classList.toggle('fing-selected', !!info && info.key === selectedKeyRef.current);
+        }
+    };
     const fail = (message) => {
         stateRef.current = 'error';
         renderedRef.current = null;
@@ -1963,7 +2397,7 @@ const VerovioViewer = ({ fileUrl, font, transpose = 0, page }) => {
     // 1. Bejelentkezés a ScoreViewernél: egyszer, a komponens teljes élettartamára
     useLayoutEffect(() => {
         const unregister = page.register({
-            layoutKey: () => `${fileUrlRef.current}|${fontRef.current}|${transposeRef.current}`,
+            layoutKey: () => `${fileUrlRef.current}|${fontRef.current}|${transposeRef.current}|${fingerSignature(fingeringsRef.current)}`,
             state: () => stateRef.current,
             layout: (zoom) => {
                 const container = containerRef.current, tk = toolkitRef.current;
@@ -1990,6 +2424,7 @@ const VerovioViewer = ({ fileUrl, font, transpose = 0, page }) => {
                             el.dataset.overflow = box && box.width && right > box.width ? String(right / box.width) : '1';
                         }
                         renderedRef.current = { pageWidth, font };
+                        if (editingRef.current) annotate();
                     } catch (err) {
                         console.error('Kotta rajzolási hiba:', err);
                         fail(`Hiba történt a kotta rajzolásakor: ${err.message}`);
@@ -2045,9 +2480,13 @@ const VerovioViewer = ({ fileUrl, font, transpose = 0, page }) => {
                 const tk = toolkitRef.current;
                 laidOutRef.current = null; // betöltve, de még nincs tördelve: a kirajzolás tördeli
                 const semitones = transposeRef.current;
+                indexRef.current = null;
                 meiRef.current = loadScore(tk, fileUrl, buffer, semitones);
                 if (!meiRef.current) throw new Error('a fájl nem olvasható');
                 loadedTransposeRef.current = semitones;
+                loadedFingerRef.current = '';
+                // ujjrenddel: még egyszer, a <fing> elemekkel
+                if (Object.keys(fingeringsRef.current).length && !loadCurrent(tk)) throw new Error('az ujjrend nem írható a kottába');
                 stateRef.current = 'ready';
                 page.notify();
             })
@@ -2061,25 +2500,27 @@ const VerovioViewer = ({ fileUrl, font, transpose = 0, page }) => {
         if (stateRef.current === 'ready') page.notify();
     }, [font]);
 
-    // Transzponálás: a megjegyzett MEI újratöltése az új hangnemben (a betöltések sorában), majd újrarajzolás
+    // Transzponálás vagy új ujjrend: a megjegyzett MEI újratöltése (a betöltések sorában), majd újrarajzolás
     useEffect(() => {
         const loadId = loadIdRef.current;
         loadQueueRef.current = loadQueueRef.current.then(() => {
-            const tk = toolkitRef.current, semitones = transposeRef.current;
+            const tk = toolkitRef.current;
             if (loadId !== loadIdRef.current || stateRef.current !== 'ready' || !tk || !meiRef.current) return;
-            if (semitones === loadedTransposeRef.current) return;
-            if (!loadTransposed(tk, meiRef.current, semitones)) { fail('A kotta nem transzponálható.'); return; }
-            loadedTransposeRef.current = semitones;
+            if (transposeRef.current === loadedTransposeRef.current && fingerSignature(fingeringsRef.current) === loadedFingerRef.current) return;
+            if (!loadCurrent(tk)) { fail('A kotta nem transzponálható.'); return; }
             laidOutRef.current = null;
             renderedRef.current = null;
             page.notify();
         });
-    }, [transpose]);
+    }, [transpose, fingerSig]);
+
+    // Ujjrend szerkesztése: a hangok kulcsa és a kiválasztott hang (újrarajzolás nélkül)
+    useEffect(() => { annotate(); }, [editing, selectedKey]);
 
     return (
         <div className="verovio-viewer">
             {error && <div className="score-missing">⚠️ {error}</div>}
-            <div ref={containerRef} className="verovio-container"></div>
+            <div ref={containerRef} className="verovio-container" data-block={blockId}></div>
         </div>
     );
 };
@@ -2347,6 +2788,46 @@ const saveTranspose = (hymnNumber, value) => {
 const transposeLabel = (value) => !value ? 'eredeti hangnem' : `${Math.abs(value)} félhanggal ${value > 0 ? 'feljebb' : 'lejjebb'}`;
 const transposeShort = (value) => (value > 0 ? `+${value}` : value < 0 ? `−${-value}` : '0');
 
+// --- Ujjrend letétenként (kísérleti) ---
+// orgonista_fingerings: { [letét vagy előjáték azonosítója]: { [hangnem 0–11]: { [hangkulcs]: "3" } } }. A hangnem a
+// transzponálás 12-es maradéka: a +6 és a −6 ugyanaz a billentyűzeten, így egy letéthez legfeljebb 12 ujjrend tartozik.
+// Egy szám: 1–5, ujjcserénél kötőjellel („4–5”), legfeljebb négy ujj.
+const FINGER_VALUE = /^[1-5](?:–?[1-5]){0,3}$/;
+const FINGER_KEY = /^\d{1,4}\.\d{1,2}\.\d{1,2}\.\d{1,3}$/;
+const FINGERINGS_CHANGED = 'orgonatar-fingerings-changed';
+const fingerClass = (t) => (((t || 0) % 12) + 12) % 12;
+const fingerClassLabel = (c) => c === 0 ? 'eredeti hangnem' : c === 6 ? '6 félhanggal feljebb vagy lejjebb'
+    : c < 6 ? `${c} félhanggal feljebb` : `${12 - c} félhanggal lejjebb`;
+const cleanFingerMap = (map) => {
+    const out = {};
+    if (map && typeof map === 'object') for (const [k, v] of Object.entries(map)) if (FINGER_KEY.test(k) && FINGER_VALUE.test(String(v))) out[k] = String(v);
+    return out;
+};
+// a tárolt (vagy importált) adat ellenőrizve: csak érvényes hangnemek, kulcsok és számok maradnak
+const cleanFingerStore = (all) => {
+    const out = {};
+    if (!all || typeof all !== 'object' || Array.isArray(all)) return out;
+    for (const [block, classes] of Object.entries(all)) {
+        if (!block || !classes || typeof classes !== 'object') continue;
+        for (const [c, map] of Object.entries(classes)) {
+            if (!/^(?:\d|1[01])$/.test(c)) continue;
+            const m = cleanFingerMap(map);
+            if (Object.keys(m).length) (out[block] = out[block] || {})[c] = m;
+        }
+    }
+    return out;
+};
+const loadFingerings = () => cleanFingerStore(loadJSON(STORAGE_KEYS.fingerings, {}));
+const saveFingerings = (all) => {
+    saveJSON(STORAGE_KEYS.fingerings, all);
+    window.dispatchEvent(new Event(FINGERINGS_CHANGED));
+};
+const fingerStats = (all) => {
+    let sets = 0, notes = 0;
+    for (const classes of Object.values(all)) for (const map of Object.values(classes)) { sets++; notes += Object.keys(map).length; }
+    return { blocks: Object.keys(all).length, sets, notes };
+};
+
 // --- A letétek értékelése ---
 // A letétek csillagos értékelése (1–5) csak ezen a készüléken tárolódik (orgonista_score_ratings), a letét azonosítója
 // szerint: { "fazekas_kottak_165": 5 }. Az ének megnyitásakor a legjobbra értékelt letét jelenik meg.
@@ -2587,9 +3068,54 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, info = [], descrip
     const transpose = transposeState.value;
     const changeTranspose = (value) => {
         const next = Math.max(-TRANSPOSE_LIMIT, Math.min(TRANSPOSE_LIMIT, value));
+        commitFinger();
         saveTranspose(hymnNumber, next);
         setTransposeState({ hymn: hymnNumber, value: next });
     };
+    // Ujjrend (kísérleti): a tárolt ujjrendek, a szerkesztő mód, a kiválasztott hang (block, key) a beírt, még nem
+    // mentett számmal (value) és a billentyűzet helyével (pos)
+    const [fingerStore, setFingerStore] = useState(() => loadFingerings());
+    const fingerStoreRef = useRef(fingerStore);
+    fingerStoreRef.current = fingerStore;
+    const [fingerEdit, setFingerEdit] = useState(false);
+    const [fingerSel, setFingerSel] = useState(null);
+    const fingerSelRef = useRef(fingerSel);
+    fingerSelRef.current = fingerSel;
+    const [fingerPos, setFingerPos] = useState(null);
+    const [fingerShare, setFingerShare] = useState(false);
+    const fingerClassNow = fingerClass(transpose);
+    const fingersOf = (blockId) => (blockId && fingerStore[blockId] && fingerStore[blockId][fingerClassNow]) || NO_FINGERINGS;
+    const setFinger = (blockId, cls, key, value) => {
+        const next = { ...fingerStoreRef.current };
+        const classes = { ...(next[blockId] || {}) };
+        const map = { ...(classes[cls] || {}) };
+        if (value) map[key] = value; else delete map[key];
+        if (Object.keys(map).length) classes[cls] = map; else delete classes[cls];
+        if (Object.keys(classes).length) next[blockId] = classes; else delete next[blockId];
+        fingerStoreRef.current = next;
+        setFingerStore(next);
+        saveFingerings(next);
+    };
+    // a kiválasztott hang beírt száma a tárolóba (ha változott); a kiválasztás megszűnik
+    const commitFinger = () => {
+        const sel = fingerSelRef.current;
+        if (!sel) return;
+        fingerSelRef.current = null;
+        setFingerSel(null);
+        const current = ((fingerStoreRef.current[sel.block] || {})[sel.cls] || {})[sel.key] || '';
+        const typed = sel.value.replace(/–+$/, '');     // a félbehagyott ujjcsere („3–”) nélkül
+        const value = FINGER_VALUE.test(typed) ? typed : '';
+        if (value !== current) setFinger(sel.block, sel.cls, sel.key, value);
+    };
+    const finishFingerEdit = () => { commitFinger(); setFingerEdit(false); };
+    // ének váltásakor (pl. lapozás) a kiválasztott hang beírt száma elmentődik
+    useEffect(() => { if (fingerSelRef.current) commitFinger(); }, [hymnNumber]);
+    // máshol (pl. importálás) változott: újra beolvassuk
+    useEffect(() => {
+        const reload = () => setFingerStore(loadFingerings());
+        window.addEventListener(FINGERINGS_CHANGED, reload);
+        return () => window.removeEventListener(FINGERINGS_CHANGED, reload);
+    }, []);
     const saveNotes = (next) => {
         setNotes({ ...saveHymnNotes(hymnNumber, next), hymn: hymnNumber });
         setEditing(null);
@@ -2678,6 +3204,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, info = [], descrip
         const handleKeyDown = (e) => {
             if (e.defaultPrevented || e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
             if (document.querySelector('.modal-overlay, .note-sheet-overlay')) return;
+            if (fingerSelRef.current) return;     // ujjrend beírása közben a billentyűk a számokhoz kellenek
             if (e.target.closest && e.target.closest('input, select, textarea, [contenteditable="true"]')) return;
             const { onNext, onPrev } = navRef.current;
             const turn = PAGE_FORWARD_KEYS.includes(e.key) ? onNext : PAGE_BACK_KEYS.includes(e.key) ? onPrev : null;
@@ -2689,8 +3216,85 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, info = [], descrip
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
+    // Ujjrend szerkesztése: a koppintáshoz legközelebbi hangfej (a kicsi hangjegyek miatt nem kell pontosan eltalálni).
+    // Két szólam közös hangjánál (egymást fedő hangfejek) az újabb koppintás a következőt választja; a kiemelt szár
+    // mutatja, melyik szólamé.
+    const lastPickRef = useRef(null);
+    const pickFingerNote = (e) => {
+        if (e.target.closest('button, a, input, select, textarea, .score-fab, .fing-pad, .fing-bar')) return;
+        const found = [];
+        for (const el of e.currentTarget.querySelectorAll('.verovio-container g.note[data-fkey]')) {
+            const r = (el.querySelector('.notehead') || el).getBoundingClientRect();
+            if (!r.width && !r.height) continue;
+            found.push({ el, r, x: r.left + r.width / 2, y: r.top + r.height / 2, d: Math.hypot(r.left + r.width / 2 - e.clientX, r.top + r.height / 2 - e.clientY) });
+        }
+        commitFinger();
+        found.sort((a, b) => a.d - b.d);
+        const best = found[0];
+        if (!best || best.d > Math.max(24, best.r.height * 2.5)) { lastPickRef.current = null; return; }
+        const id = (f) => `${f.el.closest('.verovio-container').dataset.block}|${f.el.dataset.fkey}`;
+        const same = found.filter(f => Math.abs(f.x - best.x) < 2 && Math.abs(f.y - best.y) < 2);
+        const at = same.findIndex(f => id(f) === lastPickRef.current);
+        const pick = same[at < 0 ? 0 : (at + 1) % same.length];
+        lastPickRef.current = id(pick);
+        const block = pick.el.closest('.verovio-container').dataset.block, key = pick.el.dataset.fkey;
+        const value = ((fingerStoreRef.current[block] || {})[fingerClassNow] || {})[key] || '';
+        // a meglévő szám az első gombnyomásra cserélődik (mint egy kijelölt szöveg); a „–” és a ⌫ folytatja
+        const sel = { block, key, cls: fingerClassNow, value, fresh: !!value };
+        fingerSelRef.current = sel;
+        setFingerSel(sel);
+    };
+    // a billentyűzet gombjai: szám (1–5), ujjcsere (–), visszatörlés (⌫); legfeljebb négy ujj
+    const typeFinger = (ch) => {
+        const sel = fingerSelRef.current;
+        if (!sel) return;
+        let v = sel.value;
+        if (ch === '⌫') v = v.slice(0, -1);
+        else if (ch === '–') { if (/[1-5]$/.test(v) && (v.match(/[1-5]/g) || []).length < 4) v += '–'; }
+        else if (sel.fresh) v = ch;
+        else if ((v.match(/[1-5]/g) || []).length < 4) v += ch;
+        const next = { ...sel, value: v, fresh: false };
+        fingerSelRef.current = next;
+        setFingerSel(next);
+    };
+    const clearFinger = () => {
+        const sel = fingerSelRef.current;
+        if (!sel) return;
+        fingerSelRef.current = { ...sel, value: '' };
+        commitFinger();
+    };
+    const cancelFinger = () => { fingerSelRef.current = null; setFingerSel(null); };
+    useEffect(() => {
+        if (!fingerSel) return;
+        const onKey = (e) => {
+            if (e.altKey || e.ctrlKey || e.metaKey || document.querySelector('.modal-overlay, .note-sheet-overlay')) return;
+            const map = { '-': '–', '–': '–', Backspace: '⌫' };
+            if (/^[1-5]$/.test(e.key) || map[e.key]) { e.preventDefault(); typeFinger(map[e.key] || e.key); }
+            else if (e.key === 'Delete') { e.preventDefault(); clearFinger(); }
+            else if (e.key === 'Enter') { e.preventDefault(); commitFinger(); }
+            else if (e.key === 'Escape') { e.preventDefault(); cancelFinger(); }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [!!fingerSel]);
+    // a billentyűzet helye: a kiválasztott hang alatt (a kottaterület alsó felében fölötte), a kottaterületen belül
+    const paneRef = useRef(null);
+    useLayoutEffect(() => {
+        const sel = fingerSel, pane = paneRef.current;
+        let pos = null;
+        const el = sel && pane && pane.querySelector(`.verovio-container[data-block="${CSS.escape(sel.block)}"] g.note[data-fkey="${sel.key}"]`);
+        if (el) {
+            const r = (el.querySelector('.notehead') || el).getBoundingClientRect(), p = pane.getBoundingClientRect();
+            const below = r.top + r.height / 2 - p.top < p.height * 0.55, half = 125;
+            const x = Math.min(Math.max(r.left + r.width / 2 - p.left, half + 8), Math.max(half + 8, p.width - half - 8));
+            pos = { x: Math.round(x), y: Math.round(below ? r.bottom - p.top + 12 : r.top - p.top - 12), place: below ? 'below' : 'above' };
+        }
+        setFingerPos(prev => ((!prev && !pos) || (prev && pos && prev.x === pos.x && prev.y === pos.y && prev.place === pos.place)) ? prev : pos);
+    });
+
     // Koppintás a kottaterület bal/jobb szélére: előző / következő ének
     const handlePaneClick = (e) => {
+        if (fingerEdit) { pickFingerNote(e); return; }   // szerkesztés közben nem lapoz
         const { onNext, onPrev } = navRef.current;
         if (!onNext && !onPrev) return;
         if (e.target.closest('button, a, input, select, textarea, .score-fab')) return; // pl. a lebegő gomb panelje
@@ -2704,7 +3308,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, info = [], descrip
     // Egérrel a lapozó sáv fölött nyíl alakú kurzor jelzi, merre lapoz
     const handlePaneMouseMove = (e) => {
         const { onNext, onPrev } = navRef.current;
-        const spot = (onNext || onPrev) && !e.target.closest('.score-fab') ? hotspotAt(e.currentTarget, e.clientX) : null;
+        const spot = (onNext || onPrev) && !fingerEdit && !e.target.closest('.score-fab') ? hotspotAt(e.currentTarget, e.clientX) : null;
         const cursor = spot === 'prev' && onPrev ? 'w-resize' : spot === 'next' && onNext ? 'e-resize' : '';
         if (e.currentTarget.style.cursor !== cursor) e.currentTarget.style.cursor = cursor;
     };
@@ -2854,11 +3458,15 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, info = [], descrip
     const zoomIn = () => setZoom(Math.min(ZOOM_MAX, Math.floor(Math.round(shownZoom * 1000) / 100 + 1) / 10));
     // transzponálni csak a Verovióval rajzolt kottát (MusicXML, MEI) lehet, a képet nem
     const canTranspose = [prelude, variation].some(b => b && b.xmlUrl && !isImageUrl(b.xmlUrl));
+    // a látott ujjrendek (előjáték, letét) a megosztáshoz
+    const fingerBlocks = [[prelude, 'Előjáték'], [variation, 'Letét']]
+        .filter(([b]) => b && Object.keys(fingersOf(b.id)).length)
+        .map(([b, kind]) => ({ hymnNumber: String(hymnNumber), hymnTitle, block: b.id, name: b.name, kind, cls: fingerClassNow, fingers: fingersOf(b.id) }));
 
     return (
         <div ref={rootRef} style={{display:'flex', height:'100%', flexDirection: isSide ? 'row' : 'column'}}>
             {/* Kotta rész: nem görgethető, az előjáték és a kotta mindig egészben látszik */}
-            <div className="score-pane" onClick={handlePaneClick} onMouseMove={handlePaneMouseMove}>
+            <div ref={paneRef} className={`score-pane${fingerEdit ? ' fing-editing' : ''}`} onClick={handlePaneClick} onMouseMove={handlePaneMouseMove}>
                 <div ref={pageRef} className="score-page">
                     <div ref={contentRef} className="score-page-content">
 
@@ -2868,7 +3476,8 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, info = [], descrip
                                 <div className="prelude-label">Előjáték: {prelude.name}</div>
                                 {prelude.xmlUrl ? (isImageUrl(prelude.xmlUrl)
                                     ? <ScoreImage key={prelude.xmlUrl} src={prelude.xmlUrl} alt={`Előjáték: ${prelude.name}`} page={page} />
-                                    : <VerovioViewer fileUrl={prelude.xmlUrl} font={scoreFont} transpose={transpose} page={page} />
+                                    : <VerovioViewer fileUrl={prelude.xmlUrl} font={scoreFont} transpose={transpose} page={page} blockId={prelude.id}
+                                        fingerings={fingersOf(prelude.id)} editing={fingerEdit} selectedKey={fingerSel && fingerSel.block === prelude.id ? fingerSel.key : null} />
                                 ) : (
                                     <div className="score-missing">Előjáték kotta helye</div>
                                 )}
@@ -2880,7 +3489,8 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, info = [], descrip
                             <div className="score-block" style={{maxWidth: scoreMaxWidth || '100%'}}>
                                 {isImageUrl(variation.xmlUrl)
                                     ? <ScoreImage key={variation.xmlUrl} src={variation.xmlUrl} alt={variation.name || 'Kotta'} page={page} />
-                                    : <VerovioViewer fileUrl={variation.xmlUrl} font={scoreFont} transpose={transpose} page={page} />}
+                                    : <VerovioViewer fileUrl={variation.xmlUrl} font={scoreFont} transpose={transpose} page={page} blockId={variation.id}
+                                        fingerings={fingersOf(variation.id)} editing={fingerEdit} selectedKey={fingerSel && fingerSel.block === variation.id ? fingerSel.key : null} />}
                             </div>
                         ) : (
                             <div className="score-placeholder">
@@ -2895,6 +3505,27 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, info = [], descrip
                 {/* Lebegő gomb (FAB) a kotta jobb alsó sarkában, hogy a kotta alatt ne foglaljon helyet. A panelje:
                     nagyítás, transzponálás, az ének oldalán az értékelés. (A lejátszóban nincs értékelés: ott a kotta
                     széle lapoz, egy véletlen koppintás ne értékeljen.) Zárva is a lapon van (rejtve). */}
+                {fingerEdit && (
+                    <div className="fing-bar" role="toolbar" aria-label="Ujjrend szerkesztése">
+                        <span className="fing-bar-text">Ujjrend{transpose !== 0 ? ` (${transposeShort(transpose)})` : ''}: koppints egy hangra</span>
+                        <button type="button" className="btn btn-sm btn-primary" onClick={finishFingerEdit}>Kész</button>
+                    </div>
+                )}
+                {fingerSel && fingerPos && (
+                    <div className={`fing-pad ${fingerPos.place}`} style={{ left: fingerPos.x, top: fingerPos.y }} role="dialog" aria-label="Ujjrend beírása">
+                        <div className="fing-pad-value" aria-live="polite"><span className={fingerSel.fresh ? 'fresh' : undefined}>{fingerSel.value || '\u00a0'}</span></div>
+                        <div className="fing-pad-keys">
+                            {['1', '2', '3', '4', '5'].map(d => <button key={d} type="button" onClick={() => typeFinger(d)}>{d}</button>)}
+                            <button type="button" onClick={() => typeFinger('–')} title="Ujjcsere" aria-label="Ujjcsere">–</button>
+                            <button type="button" onClick={() => typeFinger('⌫')} title="Visszatörlés" aria-label="Visszatörlés">⌫</button>
+                        </div>
+                        <div className="fing-pad-actions">
+                            <button type="button" className="btn btn-sm btn-ghost" onClick={clearFinger}>Törlés</button>
+                            <button type="button" className="btn btn-sm btn-primary" onClick={commitFinger}>OK</button>
+                        </div>
+                    </div>
+                )}
+                {fingerShare && <ShareFingeringModal items={fingerBlocks} onClose={() => setFingerShare(false)} />}
                 <div ref={fabRef} className={`score-fab${fabOpen ? ' open' : ''}`}>
                     <div id={`score-fab-panel-${fabId}`} className="score-fab-panel" role="group" aria-label="A kotta beállításai" hidden={!fabOpen}>
                         <div className="score-fab-row">
@@ -2921,6 +3552,19 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, info = [], descrip
                                 <button type="button" className="score-fab-reset" onClick={() => changeTranspose(0)}>Eredeti hangnem</button>
                             )}
                         </div>
+                        {canTranspose && (
+                            <div className="score-fab-row">
+                                <span className="score-fab-label">Ujjrend</span>
+                                <div className="fing-fab-actions">
+                                    <button type="button" className={`btn btn-sm ${fingerEdit ? 'btn-primary' : 'btn-outline'}`}
+                                        onClick={() => { if (fingerEdit) finishFingerEdit(); else { setFingerEdit(true); setFabOpen(false); } }}>
+                                        {fingerEdit ? 'Kész' : 'Szerkesztés'}
+                                    </button>
+                                    <button type="button" className="btn btn-sm btn-outline" disabled={!fingerBlocks.length}
+                                        onClick={() => { commitFinger(); setFabOpen(false); setFingerShare(true); }}>Megosztás</button>
+                                </div>
+                            </div>
+                        )}
                         {onRate && variation && (
                             <div className="score-fab-row">
                                 <span className="score-fab-label">Értékelés</span>
@@ -3522,6 +4166,8 @@ function OrganistApp() {
     const [editingItem, setEditingItem] = useState(null);   // { playlistId, itemId }: a szerkesztett ének
     const [sharingPlaylistId, setSharingPlaylistId] = useState(null);
     const [importText, setImportText] = useState(null); // az importálás ablaka a kezdő szöveggel (null: zárva)
+    const [fingerImport, setFingerImport] = useState(null); // az ujjrendek importálása a kezdő szöveggel (null: zárva)
+    const [listsImport, setListsImport] = useState(null);   // a fájlból betöltendő listák (null: zárva)
     const [alertMessage, setAlertMessage] = useState(null);
     const [isFullscreenModalOpen, setIsFullscreenModalOpen] = useState(() => FULLSCREEN_SUPPORTED && !isFullscreen() && !settings.skipFullscreenPrompt);
 
@@ -3730,23 +4376,31 @@ function OrganistApp() {
         if (window.history.state && window.history.state.activeTab) applyNavState(window.history.state);
         else window.history.replaceState({ activeTab: 'library' }, '');
 
-        const handlePopState = (event) => applyNavState(event.state);
+        // a programon belül a címsorba írt megosztási link (#import=, #ujjrend=) nem lapváltás: csak az importálás
+        // ablaka nyílik meg (lásd lent)
+        const handlePopState = (event) => { if (!event.state && /^#(import|ujjrend)=/.test(window.location.hash)) return; applyNavState(event.state); };
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
     }, [applyNavState]);
 
-    // Megosztási link (…#import=<kód>, pl. a QR-kódból): az énekek betöltése után az importálás ablaka nyílik meg vele.
-    // A kód lekerül a címsorból, így újratöltéskor nem nyílik meg újra.
+    // Megosztási link (…#import=<kód>, pl. a QR-kódból): az énekek betöltése után az importálás ablaka nyílik meg vele;
+    // az ujjrend linkje (…#ujjrend=<kód>) az ujjrendek importálását nyitja meg.
+    // A kód lekerül a címsorból, így újratöltéskor nem nyílik meg újra. Ha a program futása közben került a címsorba
+    // (hashchange), az új előzmény-bejegyzést visszavonjuk, így a program ott marad, ahol volt.
     useEffect(() => {
         if (loading) return;
-        const openFromHash = () => {
+        const openFromHash = (event) => {
             const hash = window.location.hash;
-            if (!hash.startsWith('#import=')) return;
-            // a mezőbe a kód olvasható alakja kerül (a böngésző a linkben az ékezetes betűket %XX-ként adja)
-            const text = hash.slice('#import='.length);
-            const list = decodeListCode(text);
-            setImportText(list ? encodeListCode(list) : text);
-            window.history.replaceState(window.history.state || { activeTab: 'library' }, '', window.location.pathname + window.location.search);
+            if (hash.startsWith('#ujjrend=')) {
+                setFingerImport(hash.slice('#ujjrend='.length));
+            } else if (hash.startsWith('#import=')) {
+                // a mezőbe a kód olvasható alakja kerül (a böngésző a linkben az ékezetes betűket %XX-ként adja)
+                const text = hash.slice('#import='.length);
+                const list = decodeListCode(text);
+                setImportText(list ? encodeListCode(list) : text);
+            } else return;
+            if (event && !window.history.state) window.history.back();
+            else window.history.replaceState(window.history.state || { activeTab: 'library' }, '', window.location.pathname + window.location.search);
         };
         openFromHash();
         window.addEventListener('hashchange', openFromHash);
@@ -3885,6 +4539,18 @@ function OrganistApp() {
 
     // Származtatott adatok
     const hymnByNumber = useMemo(() => new Map(hymnBook.map(h => [String(h.number), h])), [hymnBook]);
+    // A most elérhető letétek és előjátékok (az ujjrendek mentéséhez és importálásához): azonosító → { kind, name, hymn }
+    const blockInfo = useMemo(() => {
+        const hymnOfScore = new Map();
+        hymnBook.forEach(h => { if (h.scoreId != null && !hymnOfScore.has(String(h.scoreId))) hymnOfScore.set(String(h.scoreId), String(h.number)); });
+        const map = new Map();
+        activeScores.forEach(s => {
+            const hymn = hymnOfScore.get(String(s.id)) || '';
+            s.variations.forEach(v => map.set(v.id, { kind: 'Letét', name: v.name, hymn }));
+            s.preludes.forEach(p => map.set(p.id, { kind: 'Előjáték', name: p.name, hymn }));
+        });
+        return map;
+    }, [activeScores, hymnBook]);
     const selectedHymn = selectedHymnNumber != null ? hymnByNumber.get(String(selectedHymnNumber)) || null : null;
 
     const resolveItem = (item) => ({
@@ -4032,6 +4698,39 @@ function OrganistApp() {
         setImportText(null);
         openPlaylistEditor(playlist);
     };
+    // Ujjrendek és listák mentése fájlba, betöltése (Beállítások → Adatok mentése és megosztása)
+    const handleImportFingerings = (items) => {
+        const { added, replaced } = mergeFingerings(items);
+        setFingerImport(null);
+        setAlertMessage({ title: 'Ujjrendek importálva', text: `${added + replaced} ujjrend importálva${replaced ? `, ebből ${replaced} a korábbi helyére` : ''}.` });
+    };
+    const exportFingerings = () => {
+        const store = loadFingerings();
+        const blocks = {};
+        Object.keys(store).forEach(id => { const info = blockInfo.get(id); if (info) blocks[id] = { hymn: info.hymn, name: `${info.kind}: ${info.name}` }; });
+        downloadText(`orgonatar-ujjrendek-${todayStamp()}.json`, fingeringsFileText(store, blocks), 'application/json;charset=utf-8');
+    };
+    const exportPlaylists = () => downloadText(`orgonatar-listak-${todayStamp()}.json`, playlistsFileText(playlists), 'application/json;charset=utf-8');
+    const openPlaylistsFile = async (file) => {
+        let lists = null;
+        try { lists = decodePlaylistsFile(await file.text()); } catch (e) { /* olvashatatlan fájl */ }
+        if (lists && lists.length) setListsImport(lists);
+        else setAlertMessage(lists ? 'A fájlban nincs lista.' : 'Ez a fájl nem az OrgonaTár listáinak mentése.');
+    };
+    const handleLoadPlaylists = (lists) => {
+        // az eredeti azonosító (a létrehozás ideje: a listák sorrendje) marad, ha szabad; különben új
+        const used = new Set(playlists.map(p => String(p.id)));
+        let next = Date.now();
+        const added = lists.map(list => {
+            let id = list.id;
+            if (!id || used.has(String(id))) { while (used.has(String(next))) next++; id = next; }
+            used.add(String(id));
+            return { id, name: list.name, items: list.items.map(it => ({ ...it, id: newItemId() })) };
+        });
+        setPlaylists(prev => [...prev, ...added]);
+        setListsImport(null);
+        setAlertMessage({ title: 'Listák betöltve', text: `${added.length} lista betöltve.` });
+    };
     const handleReorderPlaylist = (fromIndex, toIndex) => {
         setPlaylists(prev => prev.map(p => {
             if (!sameId(p.id, selectedPlaylistId)) return p;
@@ -4089,7 +4788,8 @@ function OrganistApp() {
             
             <div className="main-content">
                 {/* Modals */}
-                <AlertModal isOpen={!!alertMessage} onClose={() => setAlertMessage(null)} message={alertMessage} />
+                <AlertModal isOpen={!!alertMessage} onClose={() => setAlertMessage(null)}
+                    title={alertMessage && alertMessage.title} message={alertMessage && (alertMessage.text ?? alertMessage)} />
                 <FullscreenModal 
                     isOpen={isFullscreenModalOpen} 
                     onClose={closeFullscreenModal} 
@@ -4106,6 +4806,11 @@ function OrganistApp() {
                     <ImportListModal key={importText} initialText={importText} hymnByNumber={hymnByNumber} scoresAvailable={scoresAvailable}
                         onClose={() => setImportText(null)} onImport={handleImportPlaylist} />
                 )}
+                {fingerImport !== null && (
+                    <ImportFingeringModal key={fingerImport} initialText={fingerImport} blockInfo={blockInfo} hymnByNumber={hymnByNumber}
+                        onClose={() => setFingerImport(null)} onImport={handleImportFingerings} />
+                )}
+                {listsImport && <ImportPlaylistsModal lists={listsImport} playlists={playlists} onClose={() => setListsImport(null)} onImport={handleLoadPlaylists} />}
                 <HymnSelectorModal isOpen={isHymnSelectorOpen} onClose={() => setIsHymnSelectorOpen(false)} onSelect={handleHymnSelected} hymnBook={hymnBook} />
                 <HymnSelectorModal isOpen={isQuickOpenOpen} onClose={() => setIsQuickOpenOpen(false)} onSelect={handleQuickOpen} hymnBook={hymnBook} title="Gyors megnyitás" action="megnyitása" ItemIcon={Icons.ChevronRight} />
                 <DeleteConfirmModal isOpen={!!itemToDelete} onClose={() => setItemToDelete(null)} onConfirm={confirmDeleteItem} title="Ének törlése" message="Biztosan el szeretnéd távolítani ezt az éneket a listáról?" />
@@ -4133,7 +4838,9 @@ function OrganistApp() {
                 )}
 
                 {/* Content Views */}
-                {view === 'settings' && <SettingsView settings={settings} onUpdateSettings={setSettings} menuButton={menuToggle('corner')} />}
+                {view === 'settings' && <SettingsView settings={settings} onUpdateSettings={setSettings} menuButton={menuToggle('corner')}
+                    dataSection={<DataSection playlistCount={playlists.length} onExportPlaylists={exportPlaylists} onPlaylistsFile={openPlaylistsFile}
+                        onExportFingerings={exportFingerings} onImportFingerings={() => setFingerImport('')} />} />}
 
                 {view === 'about' && <AboutView menuButton={menuToggle('floating')} />}
 
