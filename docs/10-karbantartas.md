@@ -99,7 +99,9 @@ Töltsd fel a fájlokat a könyv mappájába, és bővítsd az `index.json`-t.
 Egy ének a fájlban (versszakonként egy sor, így kézzel is jól javítható):
 
 ```json
-{ "number": "42", "title": "Mint a szép híves patakra", "keywords": ["zsoltár", "bizalom"], "scoreId": "42", "verses": [
+{ "number": "42", "title": "Mint a szép híves patakra", "keywords": ["zsoltár", "bizalom"], "scoreId": "42",
+   "bible": "", "textAuthor": "", "textYear": "", "translator": "", "translationYear": "", "melodyAuthor": "", "melodyYear": "", "source": "", "description": "",
+   "verses": [
    ["1. versszak 1. sora", "1. versszak 2. sora", "…"],
    ["2. versszak 1. sora", "…"]
 ] },
@@ -109,14 +111,46 @@ Egy ének a fájlban (versszakonként egy sor, így kézzel is jól javítható)
   utána a refrén sorai.
 - `keywords`: 1–3 kulcsszó a Könyvtár kártyáihoz és a kulcsszavas szűrőhöz. Új kulcsszó is írható, a szűrő magától
   felveszi.
-- `description` (nem kötelező): az ének himnológiai leírása, a szövegpanel Megjegyzések lapján jelenik meg. Bekezdések
-  tömbje, egy bekezdés a sorai tömbje:
+- A második sor: az ének adatai (lásd lent). Mind megvannak minden énekben, üresen; a kitöltetlen mező nem jelenik meg.
+
+### Az ének adatai
+
+A szövegpanel Megjegyzések lapján, a **Leírás** részben jelennek meg, címkézett sorokban
+(lásd: [Szövegpanel](04-szovegpanel.md#megjegyzések-lap)). A mezők a
+[Digitális Református Énekeskönyv](https://enekeskonyv.reformatus.hu/digitalis-reformatus-enekeskonyv/) adatlapjait
+követik. Ott egy ének alatt ilyen sor áll: „szöveg: … | fordítás: … | dallam: …”. Ennek részei kerülnek a mezőkbe,
+a nevek és az évszámok külön.
+
+| Mező | Felirat | Tartalma |
+| --- | --- | --- |
+| `bible` | Igehely | a kapcsolódó igehely; több is lehet: `"Zsolt 42; Zsolt 43"` vagy `["Zsolt 42", "Zsolt 43"]` |
+| `textAuthor` | Szöveg | a szöveg szerzője vagy eredete (pl. „C. Marot”, „Verbum supernum prodiens adventi himnusz”) |
+| `textYear` | | a szöveg évszáma |
+| `translator` | Fordítás | a fordító vagy átdolgozó |
+| `translationYear` | | a fordítás évszáma |
+| `melodyAuthor` | Dallam | a dallam szerzője vagy eredete (pl. „G. Franc, Genf”, „finn népi dallam”) |
+| `melodyYear` | | a dallam évszáma |
+| `source` | Forrás | a forrás kottagyűjtemény |
+| `description` | | további leírás, a sorok alatt (lásd lent) |
+
+- A név és az évszám egy sorba kerül, vesszővel: `"textAuthor": "C. Marot", "textYear": "1539"` → *Szöveg: C. Marot,
+  1539*.
+- Az évszám szövegként és számként is írható (`"1551"`, `1551`, `"16. sz."`). Ha csak az évszám ismert, csak az látszik.
+- Példa, az 1. zsoltár (a szöveg, a fordítás és a dallam a Digitális Református Énekeskönyv adatlapja szerint):
 
   ```json
-  "description": [["Szöveg: …", "Dallam: …"], ["Második bekezdés."]]
+  "bible": "Zsolt 1", "textAuthor": "C. Marot", "textYear": "", "translator": "Szenci Molnár A.", "translationYear": "",
+  "melodyAuthor": "G. Franc, Genf", "melodyYear": "1542", "source": "", "description": "",
   ```
 
-  Egyetlen szövegként is megadható: `"Szöveg: …\nDallam: …"`.
+- `description`: szabad szöveg. Bekezdések tömbje, egy bekezdés a sorai tömbje:
+
+  ```json
+  "description": [["Első bekezdés első sora.", "Második sora."], ["Második bekezdés."]]
+  ```
+
+  Egyetlen szövegként is megadható: `"Első sor\nMásodik sor\n\nÚj bekezdés"` (sortörés: `\n`, új bekezdés: üres
+  sor).
 
 ## Ha valami nem jelenik meg
 

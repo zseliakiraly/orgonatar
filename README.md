@@ -65,17 +65,28 @@ nyilvánossá kell tenni.
 
 ### Adatformátum (amit a kód használ)
 
-- `enek.json`: `[{ "number": "42", "title": "…", "keywords": ["zsoltár", "bizalom"], "scoreId": "42", "verses": [["1. versszak 1. sora", "2. sora", …], ["2. versszak 1. sora", …]] }]`
+- `enek.json`: `[{ "number": "42", "title": "…", "keywords": ["zsoltár", "bizalom"], "scoreId": "42", "bible": "", "textAuthor": "", …, "description": "", "verses": [["1. versszak 1. sora", "2. sora", …], ["2. versszak 1. sora", …]] }]`
   - `verses`: a versszakok sorrendben; mindegyik versszak az éneksorok tömbje (egy elem = egy éneksor, a szám
     nélkül, a versszak számát a program adja). A fájlban versszakonként egy sor, így kézzel is jól javítható.
     Refrén: egy `"Refr."` sor, utána a refrén sorai (dőlt betűvel jelennek meg). Szöveg nélküli ének: `"verses": []`.
   - A program a régi formát is elfogadja: `"lyrics"` egyetlen szövegként, a versszakok között üres sorral
     (`\n\n`), a sorok között egy sortöréssel (`\n`), a versszak elején a számával (`1. `).
-  - `description` (nem kötelező): az ének himnológiai leírása, a szövegpanel Megjegyzések lapján jelenik meg. A
-    sortörések ugyanúgy, mint a versszakoknál: bekezdések tömbje, egy bekezdés a sorai tömbje, pl.
-    `"description": [["Szöveg: Szenczi Molnár Albert, 1607", "Dallam: Louis Bourgeois, Genf, 1551"], ["Második bekezdés."]]`.
-    Egyszerűbb esetben lehet egyetlen szöveg is (`"Szöveg: …\nDallam: …"`, új bekezdés: üres sor, `\n\n`), vagy sorok
-    tömbje (`["Szöveg: …", "Dallam: …", "", "Új bekezdés"]`, új bekezdés: üres sor).
+  - **Az ének adatai** (nem kötelezők; a fájlban minden énekben megvannak, üresen, a `scoreId` utáni sorban). A
+    Digitális Református Énekeskönyv (enekeskonyv.reformatus.hu) adatlapjainak „szöveg / fordítás / dallam” sorát
+    követik, a nevek és az évszámok külön mezőben. A szövegpanel Megjegyzések lapján, a Leírás részben jelennek meg
+    címkézett sorokban (`dl`); az üres mezők kimaradnak. A program a `hymnInfo` függvényben olvassa be őket.
+    - `bible` → *Igehely*: a kapcsolódó igehely, szöveg vagy szövegek tömbje (`"Zsolt 42; Zsolt 43"`,
+      `["Zsolt 42", "Zsolt 43"]`; a tömb elemei pontosvesszővel kerülnek egy sorba).
+    - `textAuthor`, `textYear` → *Szöveg*: a szöveg szerzője vagy eredete, és az évszáma.
+    - `translator`, `translationYear` → *Fordítás*.
+    - `melodyAuthor`, `melodyYear` → *Dallam*: a dallam szerzője vagy eredete (pl. „G. Franc, Genf”), és az évszáma.
+    - `source` → *Forrás*: a forrás kottagyűjtemény.
+    - A név és az évszám vesszővel kerül egy sorba („C. Marot, 1539”). Az évszám szöveg vagy szám is lehet; ha csak
+      az évszám van meg, csak az látszik.
+  - `description` (nem kötelező): további leírás, az adatsorok alatt. A sortörések ugyanúgy, mint a versszakoknál:
+    bekezdések tömbje, egy bekezdés a sorai tömbje, pl. `"description": [["Első sor.", "Második sor."], ["Második
+    bekezdés."]]`. Egyszerűbb esetben lehet egyetlen szöveg is (`"Első sor\nMásodik sor"`, új bekezdés: üres sor,
+    `\n\n`), vagy sorok tömbje (`["Első sor", "Második sor", "", "Új bekezdés"]`, új bekezdés: üres sor).
   - `keywords`: 1–3 kulcsszó a könyvtár kártyáin és kulcsszavas szűrőjében (szabadon bővíthető, új kulcsszó is
     írható; a szűrő magától felveszi). Az első az énekeskönyv témaköre a számtartomány szerint (pl. 401–423:
     „karácsony”, 651–668: „reggel”); a többit (pl. „bizalom”, „bűnbánat”, „dicséret”) a program az énekszövegből
@@ -343,7 +354,8 @@ a letétek értékelése és az énekek transzponálása a böngésző localStor
     újraindításakor a Szöveg lap jelenik meg. A panel méretét alapméretben a szöveg adja, a Megjegyzések lap ugyanezt
     a területet tölti ki (és görgethető), így fülváltáskor a kotta nem mozdul.
   - **Megjegyzések** lap: lent egymás mellett (ha elfér), oldalt egymás alatt:
-    - **Leírás:** az ének himnológiai leírása az `enek.json`-ból (`description`, lásd fent); csak olvasható.
+    - **Leírás:** az ének adatai (igehely, szöveg, fordítás, dallam, forrás) és a további leírás az `enek.json`-ból
+      (lásd fent); csak olvasható. Ha egyik sincs megadva: „Ehhez az énekhez még nincs leírás.”
     - **Megjegyzés:** koppintásra szerkeszthető szöveg (pl. tempó, az előjáték hossza).
     - **Regisztráció:** négy mező: 3. manuál, 2. manuál, 1. manuál, pedál; koppintásra szerkeszthető (a megérintett
       sor kapja a fókuszt; az Enter a következő mezőre lép, az utolsóban ment).

@@ -881,6 +881,14 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     margin: 0 0 0.4em; font-size: 0.72em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
     color: var(--col-accent-text, var(--col-accent));
 }
+/* az ének adatai (igehely, szöveg, fordítás, dallam, forrás): címke és érték soronként, alattuk a szabad leírás */
+.hymn-info { margin: 0 0 0.55em; }
+.hymn-info:last-child { margin-bottom: 0; }
+.hymn-info-row { display: flex; align-items: baseline; gap: 0.6em; padding: 0.12em 0; }
+.hymn-info-label { flex: none; width: 5.6em; font-size: 0.85em; color: var(--col-ink-muted, #666); }
+.hymn-info-value { margin: 0; min-width: 0; overflow-wrap: break-word; line-height: 1.35; }
+.lyrics-panel.side .hymn-info-row { flex-direction: column; gap: 0; }
+.lyrics-panel.side .hymn-info-label { width: auto; font-size: 0.75em; }
 .hymn-notes-desc { margin: 0 0 0.55em; line-height: 1.4; }
 .hymn-notes-desc:last-child { margin-bottom: 0; }
 .hymn-notes-empty { margin: 0; font-size: 0.9em; font-style: italic; color: var(--col-ink-muted, #666); }
