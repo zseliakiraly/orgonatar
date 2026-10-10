@@ -147,7 +147,7 @@ const parseVerses = (text) => {
     return [...out].sort((x, y) => x - y);
 };
 
-// --- TÁROLÁS (localStorage) ---
+// --- TÁROLÁS (a böngészőben localStorage, az alkalmazásban a saját tárhelye, lásd lent) ---
 const STORAGE_KEYS = { playlists: 'orgonista_playlists', settings: 'orgonista_settings', lyricsLayouts: 'orgonista_lyrics_layouts', hymnNotes: 'orgonista_hymn_notes', scoreRatings: 'orgonista_score_ratings', transpositions: 'orgonista_transpositions', fingerings: 'orgonista_fingerings' };
 
 const SETTINGS_VERSION = 2;
@@ -198,9 +198,173 @@ const PLAYLIST_VIEWS = [{ id: 'tiles', name: 'Csempék' }, { id: 'list', name: '
 
 const DEFAULT_SETTINGS = { theme: 'pergamen', background: 'plain', uiFont: UI_FONTS[0].id, serifFont: SERIF_FONTS[0].id, showLyrics: true, showClock: true, sidebarSide: 'right', scoreMaxWidth: '100%', scoreFont: SCORE_FONTS[0].id, bookActive: {}, skipFullscreenPrompt: false, playlistView: 'tiles', settingsVersion: SETTINGS_VERSION };
 
+// --- ANDROID-ALKALMAZÁS ---
+// Az Android-alkalmazás (Capacitor, android/ mappa) ugyanezt a programot futtatja. Ott a native.js betölti a készülék
+// tárhelyének kezelőit (window.OrgonatarNative), a config.js megadja a szerver címét (window.ORGONATAR_CONFIG);
+// mindkettőt a scripts/build-www.mjs készíti, a webes változatban nincsenek. Az alkalmazásban a beállítások, a listák
+// és a letöltött kottakönyvek az alkalmazás saját tárhelyére kerülnek, nem a böngésző tárolóiba (localStorage,
+// Cache Storage), a szerveren lévő fájlok pedig a PHP API-n (api/) keresztül jönnek.
+const NATIVE = window.OrgonatarNative && window.OrgonatarNative.Capacitor.isNativePlatform() ? window.OrgonatarNative : null;
+const APP_CONFIG = window.ORGONATAR_CONFIG || {};
+const withSlash = (url) => (url && !url.endsWith('/') ? `${url}/` : url || '');
+const SERVER_URL = withSlash(APP_CONFIG.server);   // a webes program címe, pl. https://orgonatar.hu/
+const API_URL = APP_CONFIG.api || '';              // a PHP API, pl. https://orgonatar.hu/api/ (üresen a fájlok közvetlenül)
+// A megosztási linkek címe: a webes programé (az alkalmazás saját címe, https://localhost/, máshol nem nyílik meg)
+const PUBLIC_URL = NATIVE ? withSlash(APP_CONFIG.publicUrl) || SERVER_URL : `${window.location.origin}${window.location.pathname}`;
+const ABSOLUTE_URL = /^([a-z][a-z0-9+.-]*:|\/\/)/i;
+
+// A szerveren lévő fájl címe. A webes programban a relatív cím marad (ugyanarról a webhelyről jön); az alkalmazásban
+// a PHP API-n keresztül kérjük le, ennek hiányában a szerver címe elé kerül.
+const remoteUrl = (url) => {
+    if (!NATIVE || ABSOLUTE_URL.test(url)) return url;
+    const path = url.replace(/^\.?\//, '');
+    return API_URL ? `${API_URL}?path=${encodeURIComponent(path)}` : SERVER_URL + path;
+};
+
+// A fájlnevekben csak betű, szám és -_.!*'()~ marad: a % helyett ~ (a fájl címében a % mást jelentene)
+const fsName = (text) => encodeURIComponent(text).replace(/~/g, '%7E').replace(/%/g, '~');
+const fromFsName = (name) => decodeURIComponent(name.replace(/~/g, '%'));
+
+const readNativeText = async (path) => {
+    const { Filesystem, Directory, Encoding } = NATIVE;
+    return (await Filesystem.readFile({ path, directory: Directory.Data, encoding: Encoding.UTF8 })).data;
+};
+// Írás ideiglenes fájlba, majd átnevezés: félbeszakadt írás (pl. lemerülő telefon) sem rontja el a régi példányt
+const writeNativeText = async (path, data) => {
+    const { Filesystem, Directory, Encoding } = NATIVE;
+    const temp = `${path}.uj`;
+    await Filesystem.writeFile({ path: temp, data, directory: Directory.Data, encoding: Encoding.UTF8, recursive: true });
+    await Filesystem.deleteFile({ path, directory: Directory.Data }).catch(() => {});
+    await Filesystem.rename({ from: temp, to: path, directory: Directory.Data, toDirectory: Directory.Data });
+};
+const readNativeTextSafe = (path) => readNativeText(path).catch(() => readNativeText(`${path}.uj`));
+
+// Kulcs–érték tár: a böngészőben a localStorage. Az alkalmazásban egy JSON-fájl az alkalmazás tárhelyén: induláskor
+// beolvassuk (így az olvasás itt is azonnali), változáskor kis késleltetéssel, és ha az alkalmazás a háttérbe kerül,
+// azonnal visszaírjuk.
+const NATIVE_STORE_FILE = 'adatok/tarolo.json';
+const NATIVE_SAVE_DELAY = 500; // ms
+const nativeStore = { values: {}, timer: null, saving: Promise.resolve() };
+const saveNativeStore = () => {
+    clearTimeout(nativeStore.timer);
+    nativeStore.timer = null;
+    const data = JSON.stringify(nativeStore.values);
+    nativeStore.saving = nativeStore.saving.then(() => writeNativeText(NATIVE_STORE_FILE, data))
+        .catch(err => console.error('Mentési hiba:', err));
+};
+const scheduleNativeSave = () => { if (!nativeStore.timer) nativeStore.timer = setTimeout(saveNativeStore, NATIVE_SAVE_DELAY); };
+const loadNativeStore = async () => {
+    try {
+        const values = JSON.parse(await readNativeTextSafe(NATIVE_STORE_FILE));
+        if (values && typeof values === 'object') nativeStore.values = values;
+    } catch (e) { /* első indítás */ }
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && nativeStore.timer) saveNativeStore(); });
+};
+const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+const kvStore = NATIVE ? {
+    get: (key) => (hasOwn(nativeStore.values, key) ? nativeStore.values[key] : null),
+    set: (key, value) => { nativeStore.values[key] = String(value); scheduleNativeSave(); },
+    remove: (key) => { if (hasOwn(nativeStore.values, key)) { delete nativeStore.values[key]; scheduleNativeSave(); } },
+    keys: () => Object.keys(nativeStore.values)
+} : {
+    get: (key) => localStorage.getItem(key),
+    set: (key, value) => localStorage.setItem(key, value),
+    remove: (key) => localStorage.removeItem(key),
+    keys: () => Object.keys(localStorage)
+};
+
+// A letöltött kottakönyvek tára az alkalmazásban, a Cache Storage-éval azonos felülettel (keys, open, match, put,
+// delete), így a letöltés kódja mindkét változatban ugyanaz. Tárönként egy mappa: konyvek/<tár>/fajlok/<cím> és
+// mellette a fejlécek (ETag, Last-Modified) a konyvek/<tár>/fejlecek/<cím> fájlban. A fájlok listáját a memóriában
+// is tartjuk, így a kották címe (nativeFileSrc) várakozás nélkül megvan.
+const NATIVE_BOOKS_DIR = 'konyvek';
+const nativeBooks = { base: '', caches: new Map() }; // tár neve → a benne lévő fájlok címei (Set)
+const nativeCachePath = (name) => `${NATIVE_BOOKS_DIR}/${fsName(name)}`;
+const nativeFilePath = (name, url) => `${nativeCachePath(name)}/fajlok/${fsName(url)}`;
+const blobToBase64 = (blob) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).slice(String(reader.result).indexOf(',') + 1));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+});
+const nativeFileUrl = (path) => NATIVE.Capacitor.convertFileSrc(`${nativeBooks.base}/${path}`);
+
+const nativeCaches = {
+    keys: async () => [...nativeBooks.caches.keys()],
+    open: async (name) => {
+        if (!nativeBooks.caches.has(name)) nativeBooks.caches.set(name, new Set());
+        const files = nativeBooks.caches.get(name);
+        const { Filesystem, Directory, Encoding } = NATIVE;
+        return {
+            match: async (url) => {
+                if (!files.has(url)) return undefined;
+                const [res, headers] = await Promise.all([
+                    fetch(nativeFileUrl(nativeFilePath(name, url))),
+                    readNativeText(`${nativeCachePath(name)}/fejlecek/${fsName(url)}`).then(JSON.parse).catch(() => ({}))
+                ]);
+                if (!res.ok) return undefined;
+                return new Response(await res.blob(), { headers });
+            },
+            put: async (url, response) => {
+                const blob = await response.blob();
+                await Filesystem.writeFile({ path: nativeFilePath(name, url), data: await blobToBase64(blob), directory: Directory.Data, recursive: true });
+                await Filesystem.writeFile({ path: `${nativeCachePath(name)}/fejlecek/${fsName(url)}`, data: JSON.stringify(Object.fromEntries(response.headers)),
+                    directory: Directory.Data, encoding: Encoding.UTF8, recursive: true });
+                files.add(url);
+            }
+        };
+    },
+    delete: async (name) => {
+        nativeBooks.caches.delete(name);
+        await NATIVE.Filesystem.rmdir({ path: nativeCachePath(name), directory: NATIVE.Directory.Data, recursive: true }).catch(() => {});
+        return true;
+    }
+};
+
+// Induláskor: a tárak és a bennük lévő fájlok listája
+const loadNativeBooks = async () => {
+    const { Filesystem, Directory } = NATIVE;
+    nativeBooks.base = (await Filesystem.getUri({ path: '', directory: Directory.Data })).uri.replace(/\/+$/, '');
+    let dirs = [];
+    try { dirs = (await Filesystem.readdir({ path: NATIVE_BOOKS_DIR, directory: Directory.Data })).files; } catch (e) { return; }
+    await Promise.all(dirs.map(async (dir) => {
+        let files = [];
+        try { files = (await Filesystem.readdir({ path: `${NATIVE_BOOKS_DIR}/${dir.name}/fajlok`, directory: Directory.Data })).files; } catch (e) { /* üres tár */ }
+        nativeBooks.caches.set(fromFsName(dir.name), new Set(files.map(f => fromFsName(f.name))));
+    }));
+};
+
+// A kotta (vagy kép) címe a megjelenítéshez. A böngészőben a service worker szolgálja ki a letöltött könyvekből; az
+// alkalmazásban a legutóbbi letöltés helyi fájlja, ha a fájl le van töltve, különben a szerveren lévő példány.
+const nativeFileSrc = (url) => {
+    const names = [...nativeBooks.caches.keys()].sort().reverse();
+    const name = names.find(n => nativeBooks.caches.get(n).has(url));
+    return name ? nativeFileUrl(nativeFilePath(name, url)) : null;
+};
+const fileSrc = (url) => (NATIVE && url ? nativeFileSrc(url) || remoteUrl(url) : url);
+
+// Szövegfájl mentése (listák, ujjrendek): a böngészőben letöltés; az alkalmazásban a rendszer megosztás ablaka, ahonnan
+// a fájl elmenthető (pl. a Fájlok közé vagy a Drive-ra) vagy elküldhető
+const saveTextFile = async (fileName, text, type) => {
+    if (!NATIVE) {
+        const url = URL.createObjectURL(new Blob([text], { type }));
+        const a = document.createElement('a');
+        a.href = url; a.download = fileName;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        return;
+    }
+    const { Filesystem, Directory, Encoding, Share } = NATIVE;
+    const { uri } = await Filesystem.writeFile({ path: `mentesek/${fileName}`, data: text, directory: Directory.Cache, encoding: Encoding.UTF8, recursive: true });
+    await Share.share({ title: fileName, files: [uri] });
+};
+
+// Az alkalmazás indulása előtt: a tárolt adatok beolvasása
+const loadNativeData = () => (NATIVE ? Promise.all([loadNativeStore(), loadNativeBooks()]).catch(err => console.error('Az adatok beolvasása nem sikerült:', err)) : Promise.resolve());
+
 const loadJSON = (key, fallback) => {
     try {
-        const value = JSON.parse(localStorage.getItem(key));
+        const value = JSON.parse(kvStore.get(key));
         return value ?? fallback;
     } catch (e) {
         return fallback;
@@ -208,7 +372,7 @@ const loadJSON = (key, fallback) => {
 };
 
 const saveJSON = (key, value) => {
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { console.error("Mentési hiba:", e); }
+    try { kvStore.set(key, JSON.stringify(value)); } catch (e) { console.error("Mentési hiba:", e); }
 };
 
 const loadSettings = () => {
@@ -330,7 +494,7 @@ const sameBookText = (a, b) => {
     try { return JSON.stringify(JSON.parse(a)) === JSON.stringify(JSON.parse(b)); } catch (e) { return a === b; }
 };
 
-// --- LETÖLTÖTT KOTTAKÖNYVEK (a böngésző Cache Storage tárolójában) ---
+// --- LETÖLTÖTT KOTTAKÖNYVEK (a böngésző Cache Storage tárolójában, az alkalmazásban a saját tárhelyén) ---
 // Minden letöltés külön tárba kerül ("orgonatar-konyv:<mappa>:<időbélyeg>"); utolsóként a letöltés adatlapja.
 // Ha az adatlap hiányzik, a letöltés félbemaradt, és a tárat töröljük. Így egy megszakadt frissítés sem rontja
 // el a korábban letöltött könyvet. A tárból a service worker (sw.js) szolgálja ki a kottákat internet nélkül is.
@@ -339,11 +503,14 @@ const DOWNLOAD_HEADER = 'X-Letoltes';   // az ilyen kérést a service worker mi
 const DOWNLOAD_CONCURRENCY = 4;
 const REMOTE_TIMEOUT = 10000;           // ms; rossz hálózaton se várjunk a végtelenségig
 const NO_CONNECTION = 'nincs internetkapcsolat';
-const OFFLINE_SUPPORTED = typeof window.caches !== 'undefined' && window.isSecureContext === true;
+const OFFLINE_SUPPORTED = !!NATIVE || (typeof window.caches !== 'undefined' && window.isSecureContext === true);
+const bookCaches = NATIVE ? nativeCaches : window.caches;
 const downloadInfoUrl = (folder) => `data/${folder}/.letoltes.json`;
 const bookCachePrefix = (folder) => `${BOOK_CACHE_PREFIX}${folder}:`;
 
 const isSameOrigin = (url) => { try { return new URL(url, location.href).origin === location.origin; } catch (e) { return false; } };
+// A program saját szerverén lévő fájl (az alkalmazásban minden relatív cím a szerverre mutat)
+const isServerFile = (url) => (NATIVE ? !ABSOLUTE_URL.test(url) : isSameOrigin(url));
 
 // Csak a tároláshoz szükséges fejlécek (a tömörítés fejléceit nem visszük át a már kicsomagolt tartalomhoz)
 const keepHeaders = (headers) => {
@@ -353,13 +520,14 @@ const keepHeaders = (headers) => {
 };
 
 // Hálózati kérés időkorláttal, a service worker megkerülésével (a friss, szerveren lévő változat kell)
-const fetchFromServer = (url, options = {}) => {
+const fetchFromServer = (url, { timeout = REMOTE_TIMEOUT, ...options } = {}) => {
     const controller = new AbortController();
     let timedOut = false;
-    const timer = setTimeout(() => { timedOut = true; controller.abort(); }, REMOTE_TIMEOUT);
+    const timer = setTimeout(() => { timedOut = true; controller.abort(); }, timeout);
     if (options.signal) options.signal.addEventListener('abort', () => controller.abort());
-    const headers = isSameOrigin(url) ? { [DOWNLOAD_HEADER]: '1', ...(options.headers || {}) } : (options.headers || {});
-    return fetch(url, { ...options, headers, signal: controller.signal })
+    const target = remoteUrl(url);
+    const headers = isSameOrigin(target) ? { [DOWNLOAD_HEADER]: '1', ...(options.headers || {}) } : (options.headers || {});
+    return fetch(target, { ...options, headers, signal: controller.signal })
         .catch(err => { throw timedOut ? new Error('a szerver nem válaszolt időben') : err; })
         .finally(() => clearTimeout(timer));
 };
@@ -374,16 +542,36 @@ const fetchRemoteBook = async (folder) => {
     return { text, index: normalizeBook(data, folder) };
 };
 
+// Az adatfájlok (énekek, a könyvek listája). A böngészőben a service worker gondoskodik az internet nélküli
+// működésről. Az alkalmazásban a szerverről jönnek, és a legutóbbi példányt elmentjük; ha a szerver nem érhető el,
+// a mentett, ennek hiányában az alkalmazással telepített példány jön.
+const NATIVE_DATA_TIMEOUT = 4000; // ms; induláskor rossz hálózaton se várjunk sokáig
+const fetchDataFile = async (url) => {
+    if (!NATIVE) return fetch(url, { cache: 'no-cache' });
+    const saved = `adatok/${fsName(url.replace(/^\.?\//, ''))}`;
+    try {
+        const res = await fetchFromServer(url, { cache: 'no-cache', timeout: NATIVE_DATA_TIMEOUT });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+        JSON.parse(text); // hibás fájlt nem mentünk el
+        writeNativeText(saved, text).catch(err => console.info('Az adatfájl mentése nem sikerült:', err.message));
+        return new Response(text);
+    } catch (err) {
+        console.info(`${url}: a szerver nem érhető el (${err.message}), a mentett példány jön`);
+        try { return new Response(await readNativeTextSafe(saved)); } catch (e) { return fetch(url); }
+    }
+};
+
 // A készülékre letöltött könyvek: { [mappa]: { cacheName, text, index, date, files, bytes, missing } }
 const readDownloadedBooks = async () => {
     if (!OFFLINE_SUPPORTED) return {};
     const result = {};
-    for (const name of await caches.keys()) {
+    for (const name of await bookCaches.keys()) {
         if (!name.startsWith(BOOK_CACHE_PREFIX)) continue;
         const rest = name.slice(BOOK_CACHE_PREFIX.length);
         const folder = rest.slice(0, rest.lastIndexOf(':'));
         try {
-            const cache = await caches.open(name);
+            const cache = await bookCaches.open(name);
             const infoRes = await cache.match(downloadInfoUrl(folder));
             const indexRes = infoRes && await cache.match(bookIndexUrl(folder));
             if (!infoRes || !indexRes) throw new Error('félbemaradt letöltés');
@@ -391,11 +579,11 @@ const readDownloadedBooks = async () => {
             const text = await indexRes.text();
             const book = { cacheName: name, text, index: normalizeBook(JSON.parse(text), folder), ...info };
             const previous = result[folder];
-            if (previous && previous.cacheName > name) { await caches.delete(name); continue; } // régebbi letöltés
-            if (previous) await caches.delete(previous.cacheName);
+            if (previous && previous.cacheName > name) { await bookCaches.delete(name); continue; } // régebbi letöltés
+            if (previous) await bookCaches.delete(previous.cacheName);
             result[folder] = book;
         } catch (err) {
-            await caches.delete(name);
+            await bookCaches.delete(name);
         }
     }
     return result;
@@ -433,7 +621,7 @@ const fetchIntoCache = async (cache, url, old, signal) => {
     try {
         res = await fetchFromServer(url, { cache: 'no-store', headers, signal });
     } catch (err) {
-        if (signal.aborted || isSameOrigin(url)) throw err;
+        if (signal.aborted || isServerFile(url)) throw err;
         return null; // más webhely fájlja, amelyet a böngésző nem enged elmenteni
     }
     const source = res.status === 304 && old ? old : res.ok ? res : null;
@@ -451,8 +639,8 @@ const fetchIntoCache = async (cache, url, old, signal) => {
 // felsorolja őket); hálózati hibánál a letöltés megszakad.
 const downloadBook = async ({ folder, remote, previous, onProgress, signal }) => {
     const cacheName = `${bookCachePrefix(folder)}${Date.now()}`;
-    const cache = await caches.open(cacheName);
-    const oldCache = previous ? await caches.open(previous.cacheName) : null;
+    const cache = await bookCaches.open(cacheName);
+    const oldCache = previous ? await bookCaches.open(previous.cacheName) : null;
     const files = bookFiles(remote.index);
     const missing = [];
     let done = 0, bytes = 0;
@@ -465,17 +653,17 @@ const downloadBook = async ({ folder, remote, previous, onProgress, signal }) =>
         const info = { date: new Date().toISOString(), files: files.length, bytes, missing };
         await cache.put(bookIndexUrl(folder), new Response(remote.text, { headers: { 'Content-Type': 'application/json' } }));
         await cache.put(downloadInfoUrl(folder), new Response(JSON.stringify(info), { headers: { 'Content-Type': 'application/json' } }));
-        for (const name of await caches.keys()) if (name.startsWith(bookCachePrefix(folder)) && name !== cacheName) await caches.delete(name);
+        for (const name of await bookCaches.keys()) if (name.startsWith(bookCachePrefix(folder)) && name !== cacheName) await bookCaches.delete(name);
         return { cacheName, text: remote.text, index: remote.index, ...info };
     } catch (err) {
-        await caches.delete(cacheName);
+        await bookCaches.delete(cacheName);
         throw err;
     }
 };
 
 // A letöltéskor hiányzó fájlok pótlása, ha azóta felkerültek a szerverre (csak ezeket kérjük le újra)
 const retryMissingFiles = async ({ folder, local, signal }) => {
-    const cache = await caches.open(local.cacheName);
+    const cache = await bookCaches.open(local.cacheName);
     const missing = [];
     let bytes = local.bytes, added = 0;
     await runPool(local.missing, async (url, stop) => {
@@ -489,7 +677,7 @@ const retryMissingFiles = async ({ folder, local, signal }) => {
 };
 
 const deleteDownloadedBook = async (folder) => {
-    for (const name of await caches.keys()) if (name.startsWith(bookCachePrefix(folder))) await caches.delete(name);
+    for (const name of await bookCaches.keys()) if (name.startsWith(bookCachePrefix(folder))) await bookCaches.delete(name);
 };
 
 const formatBytes = (bytes) => bytes >= 1048576
@@ -502,7 +690,7 @@ const isImageUrl = (url) => IMAGE_FILE.test(url || '');
 
 // --- TELJES KÉPERNYŐ ---
 // iPhone-on nincs Fullscreen API (ott a hívás hibát dobott), régebbi iPadeken csak webkit előtaggal
-const FULLSCREEN_SUPPORTED = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+const FULLSCREEN_SUPPORTED = !NATIVE && !!(document.fullscreenEnabled || document.webkitFullscreenEnabled); // az alkalmazásban nem kell
 const isFullscreen = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
 const toggleFullScreen = () => {
     const el = document.documentElement;
@@ -960,7 +1148,7 @@ const decodeListCode = (text) => {
     const at = s.indexOf('OT1:');
     return at < 0 ? null : parseLegacyCode(s.slice(at).replace(/\s+/g, '').match(LEGACY_CODE_CHARS)[0]);
 };
-const shareLinkOf = (code) => `${window.location.origin}${window.location.pathname}#import=${code}`;
+const shareLinkOf = (code) => `${PUBLIC_URL}#import=${code}`;
 // Az e-mailbe és az üzenetbe: olvasható lista és a link; a mentett fájlba a kód is
 const shareTextOf = (name, rows, link, code) => [
     `Református OrgonaTár – liturgikus lista: ${name}`,
@@ -1067,14 +1255,10 @@ const mergeFingerings = (items) => {
     saveFingerings(store);
     return { added, replaced };
 };
-const fingerLinkOf = (code) => `${window.location.origin}${window.location.pathname}#ujjrend=${code}`;
-// mentés fájlba (a böngésző letöltésként menti)
+const fingerLinkOf = (code) => `${PUBLIC_URL}#ujjrend=${code}`;
+// mentés fájlba (a böngésző letöltésként menti, az alkalmazás a megosztás ablakával)
 const downloadText = (fileName, text, type = 'text/plain;charset=utf-8') => {
-    const url = URL.createObjectURL(new Blob([text], { type }));
-    const a = document.createElement('a');
-    a.href = url; a.download = fileName;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    saveTextFile(fileName, text, type).catch(err => console.info('A fájl mentése elmaradt:', err && err.message));
 };
 const todayStamp = () => { const d = new Date(), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
 // Az ujjrendek mentett fájlja (JSON): a tároló, mellette a letétek neve és az énekszám (az importálás előnézetéhez)
@@ -1888,7 +2072,7 @@ const FONT_SAMPLE_MEI = `<?xml version="1.0" encoding="UTF-8"?>
 </measure>
 </section></score></mdiv></body></music></mei>`;
 
-// A mintakották SVG-je: a memóriában és a localStorage-ban is (a Verovio és a minta változatához kötve), így a
+// A mintakották SVG-je: a memóriában és a tárolóban (localStorage) is (a Verovio és a minta változatához kötve), így a
 // Beállítások lapon csak a legelső megnyitáskor kell kirajzolni őket (az tableten több száz ms).
 // A mintakotta vagy a rajzolás beállításainak változásakor a FONT_SAMPLE_VERSION-t növelni kell.
 const FONT_SAMPLE_VERSION = 1;
@@ -1914,7 +2098,7 @@ const renderFontSample = (vrv, font) => {
     }
     try {
         // a régebbi változatok mentett mintái törlődnek
-        Object.keys(localStorage).filter(k => k.startsWith(FONT_SAMPLE_PREFIX) && k !== fontSampleKey()).forEach(k => localStorage.removeItem(k));
+        kvStore.keys().filter(k => k.startsWith(FONT_SAMPLE_PREFIX) && k !== fontSampleKey()).forEach(k => kvStore.remove(k));
         saveJSON(fontSampleKey(), Object.fromEntries(fontSamples));
     } catch (e) { /* a minta mentése nem fontos */ }
     return fontSamples.get(font);
@@ -2520,7 +2704,7 @@ const VerovioViewer = ({ fileUrl, font, transpose = 0, fingerings = NO_FINGERING
                     if (current()) fail(err.message);
                     return;
                 }
-                const response = await fetch(fileUrl);
+                const response = await fetch(fileSrc(fileUrl));
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const buffer = await response.arrayBuffer();
                 if (!current()) return;
@@ -2606,7 +2790,7 @@ const ScoreImage = ({ src, alt, page }) => {
     if (failed) return <div className="score-missing">⚠️ A kotta nem tölthető be ({src})</div>;
     return (
         <div className="score-image-wrap">
-            <img ref={imgRef} src={src} alt={alt} className="score-image" onLoad={() => settle('ready')} onError={() => settle('error')} />
+            <img ref={imgRef} src={fileSrc(src)} alt={alt} className="score-image" onLoad={() => settle('ready')} onError={() => settle('error')} />
         </div>
     );
 };
@@ -3808,8 +3992,8 @@ const BookCover = ({ url, title, folder }) => {
     if (url && url !== failedUrl) {
         return (
             <div className="scorebook-cover has-image" aria-hidden="true">
-                <div className="scorebook-cover-bg"><img src={url} alt="" loading="lazy" decoding="async" /></div>
-                <img className="scorebook-cover-img" src={url} alt="" loading="lazy" decoding="async" onError={() => setFailedUrl(url)} />
+                <div className="scorebook-cover-bg"><img src={fileSrc(url)} alt="" loading="lazy" decoding="async" /></div>
+                <img className="scorebook-cover-img" src={fileSrc(url)} alt="" loading="lazy" decoding="async" onError={() => setFailedUrl(url)} />
             </div>
         );
     }
@@ -4265,7 +4449,7 @@ const feedbackMailto = () => {
     const body = ['', '', '', '--', 'A hiba kereséséhez:',
         `Böngésző: ${navigator.userAgent}`,
         `Ablak: ${window.innerWidth} × ${window.innerHeight} képpont`,
-        `Megnyitva: ${standalone ? 'a kezdőképernyőről' : 'böngészőben'} (${window.location.origin}${window.location.pathname})`].join('\n');
+        `Megnyitva: ${NATIVE ? `Android-alkalmazásban (${SERVER_URL})` : `${standalone ? 'a kezdőképernyőről' : 'böngészőben'} (${window.location.origin}${window.location.pathname})`}`].join('\n');
     return `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent('OrgonaTár hibabejelentő')}&body=${encodeURIComponent(body)}`;
 };
 
@@ -4312,7 +4496,7 @@ function OrganistApp() {
     const [currentVariationId, setCurrentVariationId] = useState(null);
     const [currentPreludeId, setCurrentPreludeId] = useState(null);
 
-    // STORAGE STATE (induláskor a localStorage-ból töltjük)
+    // STORAGE STATE (induláskor a tárolóból töltjük)
     const [playlists, setPlaylists] = useState(() => normalizePlaylists(loadJSON(STORAGE_KEYS.playlists, [])));
     const [settings, setSettings] = useState(loadSettings);
     const [scoreRatings, setScoreRatings] = useState(loadScoreRatings);   // { letét azonosítója: 1–5 }
@@ -4370,7 +4554,7 @@ function OrganistApp() {
         setLoading(true);
         const errors = [];
         // no-cache: a böngésző mindig rákérdez a szerverre, de változatlan fájlnál nem tölti le újra (304)
-        const loadJSONFile = (url) => fetch(url, { cache: 'no-cache' })
+        const loadJSONFile = (url) => fetchDataFile(url)
             .then(res => {
                 if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
                 return res.json();
@@ -5230,12 +5414,13 @@ loadVerovio().catch(err => console.info(err.message));
 // Offline működés: a service worker (sw.js) az oldalt és a letöltött kottákat internet nélkül is kiszolgálja.
 // Az oldal betöltése után indul: az első látogatáskor a fájlokat (köztük a nagy kottarajzolót) így a böngésző már
 // letöltött példányából menti, nem tölti le újra.
-if ('serviceWorker' in navigator && window.isSecureContext) {
+// Az alkalmazásban nincs rá szükség: ott a program fájljai a készüléken vannak, a kották az alkalmazás tárhelyén.
+if (!NATIVE && 'serviceWorker' in navigator && window.isSecureContext) {
     const registerServiceWorker = () => navigator.serviceWorker.register('sw.js')
         .catch(err => console.info('A service worker nem indult el:', err.message));
     if (document.readyState === 'complete') registerServiceWorker();
     else window.addEventListener('load', registerServiceWorker);
 }
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<OrganistApp />);
+// Az alkalmazásban előbb a tárolt adatokat olvassuk be (a böngészőben ez azonnal megvan)
+loadNativeData().then(() => ReactDOM.createRoot(document.getElementById('root')).render(<OrganistApp />));
