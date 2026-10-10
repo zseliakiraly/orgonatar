@@ -51,7 +51,7 @@ Ha az énekhez nincs elérhető kotta, a „Nincs elérhető kotta” felirat l�
 A jobb alsó sarokban lebegő kerek gombra koppintva nyílik a panel. Újra a gombra (ekkor ✕), az Esc billentyűvel vagy
 mellé koppintva bezárul.
 
-![A kotta beállításai: nagyítás, hangnem, értékelés](kepek/kotta-fab.webp)
+![A kotta beállításai: nagyítás, hangnem, ujjrend, értékelés](kepek/kotta-fab.webp)
 
 1. **Nagyítás:**
    - a − és a + 10%-onként állítja a kotta legnagyobb méretét;
@@ -59,11 +59,9 @@ mellé koppintva bezárul.
 2. **Hangnem:** a − és a + egy félhanggal lejjebb vagy feljebb viszi a kottát, legfeljebb 6 félhanggal. Az előjáték és
    a letét együtt változik; a képen 2 félhanggal feljebb, F-dúrból G-dúrba.
 3. Hány félhanggal változott. Az **Eredeti hangnem** gomb visszaállítja.
-4. **Értékelés:** a látott letét csillagai (lásd lent: [A letétek értékelése](#a-letétek-értékelése)).
-5. A gomb. Ha a kotta transzponálva van, a gombon zárt panelnél is látszik, mennyivel (pl. **+2**).
-
-A Hangnem alatt az **Ujjrend** sora: **Szerkesztés** és **Megosztás** (lásd lent: [Ujjrend, pedál és játékmód](#ujjrend-pedál-és-játékmód)). (A képen ez a
-sor még nem látszik.)
+4. **Ujjrend:** **Szerkesztés** és **Megosztás** (lásd lent: [Ujjrend, pedál és játékmód](#ujjrend-pedál-és-játékmód)).
+5. **Értékelés:** a látott letét csillagai (lásd lent: [A letétek értékelése](#a-letétek-értékelése)).
+6. A gomb. Ha a kotta transzponálva van, a gombon zárt panelnél is látszik, mennyivel (pl. **+2**).
 
 **A transzponálásról:**
 - Az **énekhez** tárolódik, csak ezen a készüléken: az ének minden letétjére és előjátékára érvényes, legközelebb is
@@ -78,18 +76,29 @@ A hangokhoz ujjrendet (1–5), pedáljelet (lábhegy, sarok) és a játékmód j
 marcato, korona, levegővétel, cezúra). A jelek a kottába kerülnek, nem rá vannak ragasztva. Ezért nagyításkor a
 kottával együtt nőnek és kisebbednek, és a sortörés változásakor is a hangjukkal maradnak.
 
-**Beírás:**
-1. A kotta beállításainak panelén, az **Ujjrend** sorában: **Szerkesztés**. A kotta fölött megjelenik egy sáv:
-   „Ujjrend: koppints egy hangra”.
-2. Koppints egy hangra. A hang kiemelődik, és mellette megjelenik egy billentyűzet. Fölül a kijelzőn látszik, mit
-   írtál be eddig. Három sora van:
-   - **Ujj:** **1–5** az ujj; **–** az ujjcsere (pl. `4–3`) vagy a lábváltás; **⌫** az utolsó jel törlése.
-   - **Pedál:** **∧** a lábhegy, **∪** a sarok; **J** a jobb láb (a jele a hang fölé kerül), **B** a bal láb (a hang
-     alá). Egy lábra legfeljebb három jel írható egymás után, pl. `∧∪` (lábhegy, aztán sarok) vagy `∪–∧`.
-   - **Játékmód:** staccato, tenuto, akcentus, marcato, korona, levegővétel, cezúra. Ezek kapcsolók: újra megnyomva
-     kikapcsolnak. A staccato és a tenuto együtt a portato.
-3. **OK** (vagy egy másik hangra koppintás): a jelek a kottába kerülnek. **Törlés:** a hang minden jele törlődik.
-4. Ha végeztél, a sávon vagy a panelen: **Kész**.
+**Beírás:** a kotta beállításainak panelén, az **Ujjrend** sorában: **Szerkesztés**.
+
+![Ujjrend beírása: a kiválasztott hang és a billentyűzet](kepek/ujjrend-billentyuzet.webp)
+
+1. A kotta fölött megjelenik egy sáv: „Ujjrend: koppints egy hangra”. Ha végeztél, a sávon (vagy a panelen):
+   **Kész**.
+2. Koppints egy hangra: a hang kiemelődik, és mellette megjelenik a billentyűzet.
+3. A kijelzőn látszik, mit írtál be eddig (a képen: 2-es ujj, staccato).
+4. **Ujj:** **1–5** az ujj; **–** az ujjcsere (pl. `4–3`) vagy a lábváltás; **⌫** az utolsó jel törlése.
+5. **Pedál:** **∧** a lábhegy, **∪** a sarok; **J** a jobb láb (a jele a hang fölé kerül), **B** a bal láb (a hang
+   alá). Egy lábra legfeljebb három jel írható egymás után, pl. `∧∪` (lábhegy, aztán sarok) vagy `∪–∧`.
+6. **Játékmód:** staccato, tenuto, akcentus, marcato, korona, levegővétel, cezúra. Ezek kapcsolók: újra megnyomva
+   kikapcsolnak. A staccato és a tenuto együtt a portato.
+7. **OK** (vagy egy másik hangra koppintás): a jelek a kottába kerülnek. **Törlés:** a hang minden jele törlődik.
+
+![A beírt jelek a kottában](kepek/ujjrend-kotta.webp)
+
+A képen az első ütem jelei:
+- a jobb kéz ujjrendje a kotta fölött;
+- tenuto (a 4. hangon);
+- levegővétel (a 6. hang után);
+- korona (a tenor 2. hangján);
+- a bal kéz ujjrendje és a bal láb lábhegye (∧) a kotta alatt.
 
 **Billentyűzettel:**
 - Az 1–5, a kötőjel (ujjcsere) és a Backspace az ujjrendet írja.

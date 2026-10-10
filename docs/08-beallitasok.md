@@ -43,6 +43,8 @@ Az oldalsó szövegpanel szélességét nem itt kell beállítani: a panel fogan
 Itt mentheted fájlba a saját adataidat, és itt töltheted vissza őket. Így biztonsági mentés készíthető, és az adatok
 másik eszközre is átvihetők. A mentett fájl a böngésző adatainak törlése után is visszatölthető.
 
+![Adatok mentése és megosztása: ujjrendek és jelek (1), liturgikus listák (2)](kepek/adatok-mentese.webp)
+
 - **Ujjrendek és jelek:** a sorban látszik, hány letéthez és összesen hány hanghoz van ujjrend, pedál- vagy
   játékmódjel ezen az eszközön.
   - **Mentés fájlba:** minden ujjrend és jel egy fájlba (`orgonatar-ujjrendek-<dátum>.json`).
