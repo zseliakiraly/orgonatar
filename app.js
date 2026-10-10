@@ -83,6 +83,25 @@ const hymnDescription = (hymn) => {
     return paragraphs.filter(p => p.length);
 };
 
+// Az ének adatai (enek.json, mind nem kötelező), a Digitális Református Énekeskönyv (enekeskonyv.reformatus.hu)
+// „szöveg / fordítás / dallam” sora mintájára, a Megjegyzések lap Leírás részéhez: kapcsolódó igehely ("bible": szöveg
+// vagy szövegek tömbje), a szöveg, a fordítás és a dallam szerzője vagy eredete évszámmal, a forrás (kottagyűjtemény).
+// Címkézett sorok: [{ label: 'Szöveg', value: 'C. Marot, 1539' }]; az üres mezők kimaradnak.
+const HYMN_INFO_FIELDS = [
+    { label: 'Igehely', keys: ['bible'] },
+    { label: 'Szöveg', keys: ['textAuthor', 'textYear'] },
+    { label: 'Fordítás', keys: ['translator', 'translationYear'] },
+    { label: 'Dallam', keys: ['melodyAuthor', 'melodyYear'] },
+    { label: 'Forrás', keys: ['source'] }
+];
+const hymnInfo = (hymn) => {
+    const text = (v) => typeof v === 'number' ? String(v) : typeof v === 'string' ? v.trim() : '';
+    const value = (v) => Array.isArray(v) ? v.map(text).filter(Boolean).join('; ') : text(v);
+    return HYMN_INFO_FIELDS
+        .map(f => ({ label: f.label, value: f.keys.map(k => value(hymn[k])).filter(Boolean).join(', ') }))
+        .filter(row => row.value);
+};
+
 // Egy versszak saját sorai és a refrénje (a "Refr." sor utáni sorok; a további versszakoknál rendszerint csak a rövidítése)
 const splitRefrain = (lines) => {
     const i = lines.findIndex(l => l.startsWith('Refr.'));
@@ -2412,17 +2431,26 @@ const useVisibleArea = () => {
     return area;
 };
 
-// A Megjegyzések lap: a leírás (az enek.json-ból), a megjegyzés és a regisztráció; az utóbbi kettő koppintásra
-// szerkeszthető (a regisztrációnál a megérintett sor kapja a fókuszt)
-const HymnNotes = ({ description, notes, onEdit }) => (
+// A Megjegyzések lap: a leírás (az enek.json-ból: az ének adatai és a szabad leírás), a megjegyzés és a regisztráció;
+// az utóbbi kettő koppintásra szerkeszthető (a regisztrációnál a megérintett sor kapja a fókuszt)
+const HymnNotes = ({ info, description, notes, onEdit }) => (
     <div className="hymn-notes">
         <section className="hymn-notes-section">
             <h4 className="hymn-notes-title">Leírás</h4>
-            {description.length > 0
-                ? description.map((lines, i) => (
-                    <p key={i} className="hymn-notes-desc">{lines.map((line, j) => <React.Fragment key={j}>{j > 0 && <br/>}{line}</React.Fragment>)}</p>
-                ))
-                : <p className="hymn-notes-empty">Ehhez az énekhez még nincs leírás.</p>}
+            {info.length > 0 && (
+                <dl className="hymn-info">
+                    {info.map(row => (
+                        <div key={row.label} className="hymn-info-row">
+                            <dt className="hymn-info-label">{row.label}</dt>
+                            <dd className="hymn-info-value">{row.value}</dd>
+                        </div>
+                    ))}
+                </dl>
+            )}
+            {description.map((lines, i) => (
+                <p key={i} className="hymn-notes-desc">{lines.map((line, j) => <React.Fragment key={j}>{j > 0 && <br/>}{line}</React.Fragment>)}</p>
+            ))}
+            {info.length === 0 && description.length === 0 && <p className="hymn-notes-empty">Ehhez az énekhez még nincs leírás.</p>}
         </section>
         <section className="hymn-notes-section">
             <h4 className="hymn-notes-title">Megjegyzés</h4>
@@ -2518,7 +2546,7 @@ const HymnNotesEditor = ({ hymnNumber, hymnTitle, notes, editing, onSave, onCanc
 let lyricsTabMemory = 'lyrics';
 let scoreFabSeq = 0;
 
-const ScoreViewer = ({ score, variationId, preludeId, lyrics, description = [], showLyrics, scoreMaxWidth, scoreFont, hymnNumber, hymnTitle, onNext, onPrev, onRate }) => {
+const ScoreViewer = ({ score, variationId, preludeId, lyrics, info = [], description = [], showLyrics, scoreMaxWidth, scoreFont, hymnNumber, hymnTitle, onNext, onPrev, onRate }) => {
     // A szövegpanel elrendezése az aktuális énekhez; ének váltásakor (pl. a lejátszóban lapozva) annak a mentett
     // elrendezése töltődik be
     let [lyricsLayout, setLyricsLayout] = useState(() => ({ hymn: hymnNumber, ...lyricsLayoutOf(hymnNumber) }));
@@ -2752,7 +2780,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, description = [], 
         <button role="tab" id={`lyrics-tab-${id}`} aria-selected={tab === id} aria-controls={`lyrics-pane-${id}`}
             className={`lyrics-tab${tab === id ? ' active' : ''}`} onClick={() => setTab(id)}>{label}{extra}</button>
     );
-    const lyricsPanel = showLyrics && (verses.length > 0 || description.length > 0 || hasNotes) && (
+    const lyricsPanel = showLyrics && (verses.length > 0 || info.length > 0 || description.length > 0 || hasNotes) && (
         <div ref={panelRef} className={`lyrics-panel ${isSide ? 'side' : 'bottom'}`} style={panelStyle}>
             <div className="lyrics-toolbar">
                 <div className="lyrics-tabs" role="tablist" aria-label="A szövegpanel lapjai">
@@ -2795,7 +2823,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, description = [], 
                 </div>
                 <div id="lyrics-pane-notes" role="tabpanel" aria-labelledby="lyrics-tab-notes" aria-hidden={tab !== 'notes'}
                     className={`lyrics-scroll notes${tab === 'notes' ? '' : ' inactive'}`}>
-                    <HymnNotes description={description} notes={notes} onEdit={(e) => setEditing({ ...e, hymn: hymnNumber })} />
+                    <HymnNotes info={info} description={description} notes={notes} onEdit={(e) => setEditing({ ...e, hymn: hymnNumber })} />
                 </div>
             </div>
             {editing && editing.hymn === hymnNumber && (
@@ -3527,7 +3555,7 @@ function OrganistApp() {
                 // A listából azóta kikerült, de letöltött könyv is megmarad (törölni a felhasználó tudja)
                 Object.keys(downloaded).filter(folder => !entries.some(e => e.folder === folder))
                     .forEach(folder => entries.push({ folder, builtin: false, orphan: true, remote: null, remoteError: null, local: downloaded[folder] }));
-                setHymnBook(hymns.map(h => ({ ...h, verses: hymnVerses(h), description: hymnDescription(h) })));
+                setHymnBook(hymns.map(h => ({ ...h, verses: hymnVerses(h), description: hymnDescription(h), info: hymnInfo(h) })));
                 setBooks(entries);
                 if (errors.length) setAlertMessage(`Hiba az adatfájlok betöltésekor: ${errors.join(', ')}`);
                 setLoading(false);
@@ -4135,7 +4163,7 @@ function OrganistApp() {
                             </div>
                         </div>
                         <div style={{flex:1, overflow:'hidden'}}>
-                            <ScoreViewer score={getScoreById(selectedHymn.scoreId)} variationId={currentVariationId} preludeId={currentPreludeId} hymnNumber={selectedHymn.number} hymnTitle={selectedHymn.title} lyrics={lyricsOf(selectedHymn)} description={selectedHymn.description} showLyrics={settings.showLyrics} scoreMaxWidth={settings.scoreMaxWidth} scoreFont={settings.scoreFont} onRate={rateVariation}/>
+                            <ScoreViewer score={getScoreById(selectedHymn.scoreId)} variationId={currentVariationId} preludeId={currentPreludeId} hymnNumber={selectedHymn.number} hymnTitle={selectedHymn.title} lyrics={lyricsOf(selectedHymn)} info={selectedHymn.info} description={selectedHymn.description} showLyrics={settings.showLyrics} scoreMaxWidth={settings.scoreMaxWidth} scoreFont={settings.scoreFont} onRate={rateVariation}/>
                         </div>
                     </div>
                 ) : (
@@ -4286,6 +4314,7 @@ function OrganistApp() {
                                 hymnNumber={playerItem.hymn.number}
                                 hymnTitle={playerItem.hymn.title}
                                 lyrics={lyricsOf(playerItem.hymn, playerItem.verses)}
+                                info={playerItem.hymn.info}
                                 description={playerItem.hymn.description}
                                 showLyrics={settings.showLyrics}
                                 scoreMaxWidth={settings.scoreMaxWidth}

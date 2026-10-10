@@ -52,8 +52,16 @@ Ha a panelen jobbra vagy lejjebb még van szöveg, a szélén árnyék jelzi.
 ![A Megjegyzések lap](kepek/megjegyzesek.webp)
 
 1. **Megjegyzések fül.** A pötty jelzi, ha az énekhez van megjegyzés vagy regisztráció.
-2. **Leírás:** az ének himnológiai leírása (szöveg, dallam, forrás). Csak olvasható, a program adataiból jön; ahol még
-   nincs, „Ehhez az énekhez még nincs leírás.” áll.
+2. **Leírás:** az ének adatai, soronként:
+   - **Igehely:** a kapcsolódó igehely;
+   - **Szöveg:** a szöveg szerzője vagy eredete, évszámmal;
+   - **Fordítás:** a fordító, évszámmal;
+   - **Dallam:** a dallam szerzője vagy eredete, évszámmal;
+   - **Forrás:** a kottagyűjtemény, ahonnan a dallam való;
+   - alattuk a további leírás.
+
+   Csak a megadott adatok látszanak; ha egyik sincs, „Ehhez az énekhez még nincs leírás.” áll. Csak olvasható, a
+   program adataiból jön (lásd: [Az adatok karbantartása](10-karbantartas.md#az-ének-adatai)).
 3. **Megjegyzés:** saját jegyzet az énekhez, pl. tempó, az előjáték hossza. Koppintásra szerkeszthető.
 4. **Regisztráció:** négy mező (3. manuál, 2. manuál, 1. manuál, Pedál). Egy sorra koppintva szerkeszthető.
 
