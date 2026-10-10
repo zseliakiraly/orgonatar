@@ -225,6 +225,26 @@ const remoteUrl = (url) => {
 const fsName = (text) => encodeURIComponent(text).replace(/~/g, '%7E').replace(/%/g, '~');
 const fromFsName = (name) => decodeURIComponent(name.replace(/~/g, '%'));
 
+// A mappák létrehozása egyenként, sorban, és mappánként csak egyszer. A Filesystem a "recursive" írásnál maga hozná
+// létre a hiányzó mappát, de ha több fájl párhuzamosan íródik ugyanabba az új mappába (a letöltés négy szálon fut),
+// a létrehozás összeakad, és az írás "Missing parent directory" hibával megáll.
+const nativeDirs = new Map(); // "<tár>:<mappa>" → a létrehozás (Promise)
+let nativeDirQueue = Promise.resolve();
+const ensureNativeDir = (dir, directory = NATIVE.Directory.Data) => {
+    const key = `${directory}:${dir}`;
+    if (!nativeDirs.has(key)) {
+        const { Filesystem } = NATIVE;
+        const made = nativeDirQueue.then(() => Filesystem.mkdir({ path: dir, directory, recursive: true })
+            .catch(err => Filesystem.stat({ path: dir, directory }).catch(() => { throw err; }))) // már megvan: rendben
+            .catch(err => { nativeDirs.delete(key); throw err; });
+        nativeDirQueue = made.catch(() => {});
+        nativeDirs.set(key, made);
+    }
+    return nativeDirs.get(key);
+};
+const forgetNativeDirs = (dir) => { for (const key of [...nativeDirs.keys()]) if (key.split(':').slice(1).join(':').startsWith(dir)) nativeDirs.delete(key); };
+const parentDir = (path) => path.slice(0, path.lastIndexOf('/'));
+
 const readNativeText = async (path) => {
     const { Filesystem, Directory, Encoding } = NATIVE;
     return (await Filesystem.readFile({ path, directory: Directory.Data, encoding: Encoding.UTF8 })).data;
@@ -233,7 +253,8 @@ const readNativeText = async (path) => {
 const writeNativeText = async (path, data) => {
     const { Filesystem, Directory, Encoding } = NATIVE;
     const temp = `${path}.uj`;
-    await Filesystem.writeFile({ path: temp, data, directory: Directory.Data, encoding: Encoding.UTF8, recursive: true });
+    await ensureNativeDir(parentDir(path));
+    await Filesystem.writeFile({ path: temp, data, directory: Directory.Data, encoding: Encoding.UTF8 });
     await Filesystem.deleteFile({ path, directory: Directory.Data }).catch(() => {});
     await Filesystem.rename({ from: temp, to: path, directory: Directory.Data, toDirectory: Directory.Data });
 };
@@ -307,9 +328,11 @@ const nativeCaches = {
             },
             put: async (url, response) => {
                 const blob = await response.blob();
-                await Filesystem.writeFile({ path: nativeFilePath(name, url), data: await blobToBase64(blob), directory: Directory.Data, recursive: true });
+                await ensureNativeDir(`${nativeCachePath(name)}/fajlok`);
+                await ensureNativeDir(`${nativeCachePath(name)}/fejlecek`);
+                await Filesystem.writeFile({ path: nativeFilePath(name, url), data: await blobToBase64(blob), directory: Directory.Data });
                 await Filesystem.writeFile({ path: `${nativeCachePath(name)}/fejlecek/${fsName(url)}`, data: JSON.stringify(Object.fromEntries(response.headers)),
-                    directory: Directory.Data, encoding: Encoding.UTF8, recursive: true });
+                    directory: Directory.Data, encoding: Encoding.UTF8 });
                 files.add(url);
             }
         };
@@ -317,6 +340,7 @@ const nativeCaches = {
     delete: async (name) => {
         nativeBooks.caches.delete(name);
         await NATIVE.Filesystem.rmdir({ path: nativeCachePath(name), directory: NATIVE.Directory.Data, recursive: true }).catch(() => {});
+        forgetNativeDirs(nativeCachePath(name));
         return true;
     }
 };
@@ -355,7 +379,8 @@ const saveTextFile = async (fileName, text, type) => {
         return;
     }
     const { Filesystem, Directory, Encoding, Share } = NATIVE;
-    const { uri } = await Filesystem.writeFile({ path: `mentesek/${fileName}`, data: text, directory: Directory.Cache, encoding: Encoding.UTF8, recursive: true });
+    await ensureNativeDir('mentesek', Directory.Cache);
+    const { uri } = await Filesystem.writeFile({ path: `mentesek/${fileName}`, data: text, directory: Directory.Cache, encoding: Encoding.UTF8 });
     await Share.share({ title: fileName, files: [uri] });
 };
 
