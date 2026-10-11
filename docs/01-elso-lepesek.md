@@ -4,7 +4,7 @@
 
 ## Megnyitás
 
-A program címe: <https://zseliakiraly.github.io/orgonatar/>. Böngészőben fut (Safari, Chrome, Edge, Firefox).
+A program címe: <https://orgonatar.martone.hu/webkantor/>. Böngészőben fut (Safari, Chrome, Edge, Firefox).
 Az első megnyitáskor a program elmenti magát a készülékre, így később internet nélkül is elindul.
 
 ### A kezdőképernyőre téve (ajánlott)

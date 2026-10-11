@@ -71,13 +71,20 @@ Kipróbálás helyben: `php -S 127.0.0.1:8000` a repó gyökerében, majd <http:
 ### Feltöltés a cPanel Git Version Control-jával
 
 A program címe <https://orgonatar.martone.hu/webkantor/>, az aldomain gyökerében a kezdőoldal (`landing/index.html`:
-leírás, link a webes változatra és az APK-ra). A `.cpanel.yml` írja le, mi hová kerül. Beállítás egyszer:
+leírás, link a webes változatra és az APK-ra), a `help/` alatt a használati útmutató (`help/index.html` a `docs/`
+Markdown-fájljait jeleníti meg, a marked-del: `libs/marked/`). A `.cpanel.yml` írja le, mi hová kerül. Beállítás egyszer:
 
 1. cPanel → Domains: az `orgonatar.martone.hu` „Document Root”-ja. Ha nem `~/orgonatar.martone.hu`, a `.cpanel.yml`
    `DEPLOYROOT` sorát kell átírni.
-2. cPanel → Git Version Control → Create: Clone URL `https://github.com/zseliakiraly/orgonatar.git`, Repository Path
+2. Privát repónál kulcs kell: cPanel → SSH Access → Manage SSH Keys → Generate a New Key (jelszó nélkül), majd
+   Manage → Authorize; a nyilvános kulcsot (View/Download) a GitHubon: repó → Settings → Deploy keys → Add deploy key
+   (írási jog nélkül). A Clone URL ekkor `git@github.com:zseliakiraly/orgonatar.git`.
+3. cPanel → Git Version Control → Create: Clone URL `https://github.com/zseliakiraly/orgonatar.git` (nyilvános repó), Repository Path
    `repositories/orgonatar` (nem az aldomain mappájában), ág: `main`.
-3. Minden GitHub-feltöltés után: Manage → Pull or Deploy → **Update from Remote**, majd **Deploy HEAD Commit**.
+4. Minden GitHub-feltöltés után: Manage → Pull or Deploy → **Update from Remote**, majd **Deploy HEAD Commit**.
+
+Az APK (`orgonatar.apk` az aldomain gyökerében) nincs a repóban: kiadáskor a GitHub Actions tölti fel FTP-n
+(lásd [android/README.md](android/README.md)), vagy kézzel kell feltölteni (cPanel → File Manager).
 
 ## Adatok és könyvtárak
 

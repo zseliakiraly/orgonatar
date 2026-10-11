@@ -4484,7 +4484,8 @@ const PlaylistRowName = ({ name }) => {
 
 // --- NÉVJEGY ---
 // A használati útmutató (docs/) a GitHubon olvasható, a képekkel együtt
-const GUIDE_URL = 'https://github.com/zseliakiraly/orgonatar/blob/main/docs/README.md';
+// Az útmutató a webhelyen, a program mappája mellett (orgonatar.martone.hu/help/; a .cpanel.yml teszi oda)
+const GUIDE_URL = new URL('../help/', NATIVE ? SERVER_URL || window.location.href : window.location.href).href;
 const FEEDBACK_EMAIL = 'feedback@zseli.hu';
 // A hibabejelentő levél: rögzített tárgy, a levél végén a hiba kereséséhez hasznos adatok (küldés előtt átírhatók)
 const feedbackMailto = () => {

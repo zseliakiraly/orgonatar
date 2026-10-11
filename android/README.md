@@ -50,11 +50,22 @@ ugyanazzal a kulccsal van aláírva. Kulcs nélkül fejlesztői (debug) APK kés
 3. Az `orgonatar.jks`-t és a jelszavakat őrizd meg biztos helyen (ne a repóban): ha elvész, a meglévő
    telepítéseket nem lehet frissíteni, csak törlés után újratelepíteni.
 
+### Az APK a tárhelyen
+
+A kezdőoldal linkje a tárhelyen lévő `orgonatar.apk`-ra mutat. Kiadáskor (címke) a munkafolyamat FTP-n tölti fel, ha
+be vannak állítva a titkok:
+
+1. cPanel → FTP Accounts → új fiók, a **Directory** az aldomain mappája (`orgonatar.martone.hu`), így a fiók csak oda ír.
+2. GitHub titkok: `ORGONATAR_FTP_HOST` (pl. `ftp.martone.hu`), `ORGONATAR_FTP_USER` (a teljes név, pl.
+   `apk@martone.hu`), `ORGONATAR_FTP_PASSWORD`. A feltöltés titkosított (FTPS).
+
+FTP nélkül: a kiadás után az APK-t az Actions futás oldaláról (vagy a Releases oldalról) letöltve, `orgonatar.apk`
+néven kell feltölteni az aldomain gyökerébe (cPanel → File Manager → Upload).
+
 ## Telepítés a telefonra
 
-1. A telefonon nyisd meg a <https://orgonatar.martone.hu/> kezdőoldalt (vagy a Releases oldalt), és töltsd le az APK-t.
-   A kezdőoldal linkje mindig a legutóbbi kiadásra mutat
-   (`https://github.com/zseliakiraly/orgonatar/releases/latest/download/orgonatar.apk`).
+1. A telefonon nyisd meg a <https://orgonatar.martone.hu/> kezdőoldalt, és töltsd le az APK-t
+   (`https://orgonatar.martone.hu/orgonatar.apk`).
 2. Az Android rákérdez, hogy a böngésző telepíthet-e alkalmazást („Ismeretlen alkalmazások telepítése”): engedélyezd.
 3. Frissítéskor ugyanígy: az új APK a régi helyére települ, az adatok megmaradnak.
 

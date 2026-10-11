@@ -5,6 +5,7 @@
 # Beállítások (Settings → Secrets and variables → Actions), a részletek az android/README.md-ben:
 #   Variables: ORGONATAR_SERVER (a webes program címe), ORGONATAR_API (a PHP API címe), ORGONATAR_PUBLIC_URL
 #   Secrets:   ORGONATAR_KEYSTORE_BASE64, ORGONATAR_KEYSTORE_PASSWORD, ORGONATAR_KEY_ALIAS, ORGONATAR_KEY_PASSWORD
+#              ORGONATAR_FTP_HOST, ORGONATAR_FTP_USER, ORGONATAR_FTP_PASSWORD (a kiadott APK feltöltése a tárhelyre)
 # Aláíró kulcs nélkül fejlesztői (debug) APK készül: kipróbálni jó, de minden futásé más kulccsal van aláírva, így
 # frissítéskor a régit előbb le kell törölni a telefonról (a listák és a letöltött könyvek is törlődnek vele).
 name: Android-alkalmazás
@@ -79,3 +80,19 @@ jobs:
         run: |
           cp dist/*.apk "$RUNNER_TEMP/orgonatar.apk"
           gh release create "$GITHUB_REF_NAME" dist/*.apk "$RUNNER_TEMP/orgonatar.apk" --title "OrgonaTár $GITHUB_REF_NAME" --generate-notes
+      - name: Feltöltés a tárhelyre (orgonatar.martone.hu/orgonatar.apk)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          FTP_HOST: ${{ secrets.ORGONATAR_FTP_HOST }}
+          FTP_USER: ${{ secrets.ORGONATAR_FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.ORGONATAR_FTP_PASSWORD }}
+        # Az FTP-fiók gyökere az aldomain mappája legyen (cPanel → FTP Accounts, a Directory: orgonatar.martone.hu).
+        # Ideiglenes néven tölt fel, és csak a végén nevezi át, így félbeszakadt feltöltés sem ront el letöltést.
+        run: |
+          if [ -z "$FTP_HOST" ]; then
+            echo "::notice title=Nincs FTP-beállítás::Az APK-t kézzel kell feltölteni: orgonatar.martone.hu/orgonatar.apk"
+            exit 0
+          fi
+          curl --fail --silent --show-error --ssl-reqd --user "$FTP_USER:$FTP_PASSWORD" \
+            -T "$RUNNER_TEMP/orgonatar.apk" "ftp://$FTP_HOST/orgonatar.apk.uj" \
+            -Q "-RNFR orgonatar.apk.uj" -Q "-RNTO orgonatar.apk"

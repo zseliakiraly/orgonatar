@@ -5,8 +5,8 @@ A Református OrgonaTár orgonistáknak készült tabletre, telefonra és szám�
 - az istentiszteletre összeállított listák;
 - a lejátszó, amelyben a lista énekei egymás után, lapozva jelennek meg.
 
-A program a böngészőben fut, telepíteni nem kell: <https://zseliakiraly.github.io/orgonatar/>. A letöltött
-kottakönyvekkel internet nélkül is működik.
+A program a böngészőben fut, telepíteni nem kell: <https://orgonatar.martone.hu/webkantor/>. A letöltött
+kottakönyvekkel internet nélkül is működik. Androidra alkalmazásként is telepíthető: <https://orgonatar.martone.hu/>.
 
 ![A lejátszó fekvő tableten: előjáték, letét és a kiválasztott versszakok](kepek/cimlap.webp)
 
