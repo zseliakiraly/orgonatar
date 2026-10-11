@@ -4323,9 +4323,9 @@ const BookDetailsModal = ({ book, hymnOfScore, onClose }) => {
     );
 };
 
-// A kottakönyv-készítő lap (a program mellett): a saját könyv zip-fájlját állítja össze. Az alkalmazásban a szerveren
-// lévő lap nyílik meg (a webes programban a SERVER_URL üres, ott a program melletti fájl).
-const BOOK_MAKER_URL = `${SERVER_URL}kottakonyv-keszito.html`;
+// A kottakönyv-készítő lap a kezdőoldal mellett, a program mappája fölött (orgonatar.martone.hu/kottakonyv-keszito.html; a
+// .cpanel.yml teszi oda): a saját könyv zip-fájlját állítja össze. Az alkalmazásban a szerveren lévő lap nyílik meg.
+const BOOK_MAKER_URL = new URL('../kottakonyv-keszito.html', NATIVE ? SERVER_URL || window.location.href : window.location.href).href;
 
 // Saját kottakönyv importálása zip-fájlból: a fájl kiválasztása, előnézet (cím, kották száma, hiányzó fájlok), majd mentés
 // a készülékre. Ha ugyanilyen azonosítójú (id) könyv a kottakönyvek listájában már van, nem importálható; ha egy korábban

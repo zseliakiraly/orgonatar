@@ -7,8 +7,8 @@ készülékre kerül, ahol importálták (a szerverre nem), és ott ugyanúgy m�
 nélkül is, a kapcsolóval elrejthető, a **Törlés** gombbal eltávolítható. Másik eszközre a zip-fájl átküldésével és
 ott újbóli importálásával vihető át.
 
-A zip-fájlt a legegyszerűbb a **Kottakönyv-készítővel** összeállítani (`kottakonyv-keszito.html`, a program mellett; a
-Kottakönyvek oldalról is elérhető): ott a könyv adatait egy űrlapon kell kitölteni, a kottafájlokat behúzni, és a lap
+A zip-fájlt a legegyszerűbb a **Kottakönyv-készítővel** összeállítani (a kezdőoldalon, `orgonatar.martone.hu/kottakonyv-keszito.html`;
+a Kottakönyvek oldalról is elérhető): ott a könyv adatait egy űrlapon kell kitölteni, a kottafájlokat behúzni, és a lap
 elkészíti a zipet. A korábban elkészített zip ott meg is nyitható, javítható, bővíthető. Ez a leírás a formátumot
 mutatja be (pl. ha kézzel készül a zip).
 

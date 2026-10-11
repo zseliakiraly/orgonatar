@@ -4,22 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kottakönyv-készítő – OrgonaTár</title>
-<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="webkantor/icons/favicon.svg" type="image/svg+xml">
 <!--
   Kottakönyv-készítő: a saját kottakönyv zip-fájlját állítja össze (index.json + kottafájlok, + borítókép), amit az
   OrgonaTár Kottakönyvek oldalán a „Kottakönyv importálása” gomb vesz fel. A formátum: docs/11-kottakonyv-zip.md.
   Minden a böngészőben történik, semmi nem kerül a szerverre. A zip-et a program saját fflate-je készíti
   (libs/fflate, zipSync); a betűk és a színek a programéi (Pergamen színséma).
+  A kezdőoldal mellett van (a .cpanel.yml az aldomain gyökerébe másolja), a program fájljait a webkantor/ mappából veszi.
 -->
 <style>
 @font-face { font-family: 'Figtree'; font-style: normal; font-weight: 300 900; font-display: swap;
-    src: url('fonts/figtree/figtree-latin.woff2') format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+    src: url('webkantor/fonts/figtree/figtree-latin.woff2') format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
 @font-face { font-family: 'Figtree'; font-style: normal; font-weight: 300 900; font-display: swap;
-    src: url('fonts/figtree/figtree-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+    src: url('webkantor/fonts/figtree/figtree-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
 @font-face { font-family: 'Old Standard TT'; font-style: normal; font-weight: 400 700; font-display: swap;
-    src: url('fonts/old-standard-tt/old-standard-tt-latin.woff2') format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+    src: url('webkantor/fonts/old-standard-tt/old-standard-tt-latin.woff2') format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
 @font-face { font-family: 'Old Standard TT'; font-style: normal; font-weight: 400 700; font-display: swap;
-    src: url('fonts/old-standard-tt/old-standard-tt-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+    src: url('webkantor/fonts/old-standard-tt/old-standard-tt-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
 
 /* A program Pergamen színsémája (style.css: --pergamen-*) */
 :root {
@@ -148,7 +149,7 @@ footer { text-align: center; font-size: 0.8rem; color: var(--ink-muted); }
 <body>
 <header class="top">
     <div class="top-inner">
-        <a href="./" title="Vissza a programba">← OrgonaTár</a>
+        <a href="./" title="Vissza a kezdőoldalra">← OrgonaTár</a>
         <h1>Kottakönyv-készítő</h1>
         <span class="spacer"></span>
     </div>
@@ -253,7 +254,7 @@ footer { text-align: center; font-size: 0.8rem; color: var(--ink-muted); }
     </div>
 </div>
 
-<script src="libs/fflate/fflate.min.js"></script>
+<script src="webkantor/libs/fflate/fflate.min.js"></script>
 <script>
 (() => {
     'use strict';
@@ -271,7 +272,7 @@ footer { text-align: center; font-size: 0.8rem; color: var(--ink-muted); }
     const hymns = new Map();
     const hymnsOfScore = new Map();
     const serverBookIds = new Map();   // azonosító → cím
-    const hymnsReady = fetch('data/enek.json').then(r => r.ok ? r.json() : []).then(list => {
+    const hymnsReady = fetch('webkantor/data/enek.json').then(r => r.ok ? r.json() : []).then(list => {
         list.forEach(h => {
             const number = String(h.number), scoreId = String(h.scoreId ?? h.number);
             hymns.set(number, { title: h.title || '', scoreId });
@@ -280,10 +281,10 @@ footer { text-align: center; font-size: 0.8rem; color: var(--ink-muted); }
         });
         document.querySelectorAll('.file').forEach(li => updateHymnInfo(li));
     }).catch(() => {});
-    fetch('data/kottakonyvek.json').then(r => r.ok ? r.json() : []).then(catalog => Promise.all((Array.isArray(catalog) ? catalog : []).map(entry => {
+    fetch('webkantor/data/kottakonyvek.json').then(r => r.ok ? r.json() : []).then(catalog => Promise.all((Array.isArray(catalog) ? catalog : []).map(entry => {
         const folder = typeof entry === 'string' ? entry : entry && entry.folder;
         if (!folder || /[\/\\]/.test(folder)) return null;
-        return fetch(`data/${folder}/index.json`).then(r => r.ok ? r.json() : null)
+        return fetch(`webkantor/data/${folder}/index.json`).then(r => r.ok ? r.json() : null)
             .then(book => { if (book) serverBookIds.set(String(book.id ?? folder), book.title || folder); }).catch(() => {});
     }))).then(updateIdHint).catch(() => {});
 
