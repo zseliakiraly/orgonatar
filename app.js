@@ -4323,6 +4323,10 @@ const BookDetailsModal = ({ book, hymnOfScore, onClose }) => {
     );
 };
 
+// A kottakönyv-készítő lap a kezdőoldal mellett, a program mappája fölött (orgonatar.martone.hu/kottakonyv-keszito.html; a
+// .cpanel.yml teszi oda): a saját könyv zip-fájlját állítja össze. Az alkalmazásban a szerveren lévő lap nyílik meg.
+const BOOK_MAKER_URL = new URL('../kottakonyv-keszito.html', NATIVE ? SERVER_URL || window.location.href : window.location.href).href;
+
 // Saját kottakönyv importálása zip-fájlból: a fájl kiválasztása, előnézet (cím, kották száma, hiányzó fájlok), majd mentés
 // a készülékre. Ha ugyanilyen azonosítójú (id) könyv a kottakönyvek listájában már van, nem importálható; ha egy korábban
 // importált könyvé, az lecserélődik.
@@ -4377,6 +4381,10 @@ const BookImportModal = ({ books, onClose, onImport }) => {
             <div className="import-list">
                 <p className="import-message info">Válaszd ki a kottakönyv zip-fájlját: benne a könyv adatai (index.json) és a kottafájlok.
                     A könyv erre a készülékre kerül, és a letöltött könyvekhez hasonlóan internet nélkül is használható.</p>
+                <div className="book-import-maker">
+                    <span>Nincs még zip-fájlod? Az OrgonaTár weboldalán elkészítheted a kottáidból:</span>
+                    <a href={BOOK_MAKER_URL} target="_blank" rel="noopener" className="btn btn-outline"><Icons.Book size={18}/> Kottakönyv-készítő megnyitása</a>
+                </div>
                 <div className="import-actions">
                     <button onClick={() => fileRef.current.click()} disabled={busy} className="btn btn-outline"><Icons.File size={18}/> Zip-fájl kiválasztása</button>
                     <input ref={fileRef} type="file" accept=".zip,application/zip,application/x-zip-compressed" className="import-file-input" onChange={openFile} tabIndex={-1} aria-hidden="true" />
@@ -4421,6 +4429,7 @@ const ScorebooksView = ({ books, downloads, bookActive, online, onToggle, onDown
             {OFFLINE_SUPPORTED && (
                 <div className="scorebook-import">
                     <button onClick={onImport} className="btn btn-outline"><Icons.Import size={18}/> Kottakönyv importálása</button>
+                    <a href={BOOK_MAKER_URL} target="_blank" rel="noopener" className="btn btn-ghost"><Icons.Book size={18}/> Kottakönyv-készítő</a>
                 </div>
             )}
 
@@ -5223,10 +5232,15 @@ function OrganistApp() {
     // Származtatott adatok
     const hymnByNumber = useMemo(() => new Map(hymnBook.map(h => [String(h.number), h])), [hymnBook]);
     // A most elérhető letétek és előjátékok (az ujjrendek mentéséhez és importálásához): azonosító → { kind, name, hymn }
-    // A kották scoreId-je → az ének száma
+    // A kották scoreId-je → az ének száma: ha több ének használja ugyanazt a kottát, az azonos számú (pl. 165 → 165, nem
+    // a szintén ezt használó 155.), különben az első
     const hymnOfScore = useMemo(() => {
         const map = new Map();
-        hymnBook.forEach(h => { if (h.scoreId != null && !map.has(String(h.scoreId))) map.set(String(h.scoreId), String(h.number)); });
+        hymnBook.forEach(h => {
+            if (h.scoreId == null) return;
+            const scoreId = String(h.scoreId);
+            if (!map.has(scoreId) || String(h.number) === scoreId) map.set(scoreId, String(h.number));
+        });
         return map;
     }, [hymnBook]);
     const blockInfo = useMemo(() => {

@@ -1,6 +1,6 @@
 # Közzététel a cPanel Git Version Control-jával: Manage → Pull or Deploy → "Update from Remote", majd "Deploy HEAD
 # Commit". Csak a weboldal fájljai kerülnek fel (az android/, a docs/ és a többi fejlesztői fájl nem):
-#   <aldomain gyökere>/            a kezdőoldal (landing/index.html)
+#   <aldomain gyökere>/            a kezdőoldal (landing/index.html) és a kottakönyv-készítő (landing/kottakonyv-keszito.html)
 #   <aldomain gyökere>/webkantor/  a program és az API (webkantor/api/)
 #   <aldomain gyökere>/help/       a használati útmutató (help/index.html és a docs/ fájljai)
 # Az APK-t (<aldomain gyökere>/orgonatar.apk) a GitHub Actions tölti fel FTP-n, vagy kézzel kell feltölteni.
@@ -13,7 +13,7 @@ deployment:
     - export APPDIR=$DEPLOYROOT/webkantor
     - export HELPDIR=$DEPLOYROOT/help
     - /bin/mkdir -p $APPDIR $HELPDIR
-    - /bin/cp landing/index.html $DEPLOYROOT/
+    - /bin/cp landing/index.html landing/kottakonyv-keszito.html $DEPLOYROOT/
     - /bin/cp index.html app.min.js style.css sw.js orgonatar-logo.svg $APPDIR/
     - /bin/cp -R libs fonts icons data api $APPDIR/
     - /bin/cp help/index.html libs/marked/marked.umd.js docs/*.md $HELPDIR/

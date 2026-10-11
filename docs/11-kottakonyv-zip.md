@@ -7,7 +7,10 @@ készülékre kerül, ahol importálták (a szerverre nem), és ott ugyanúgy m�
 nélkül is, a kapcsolóval elrejthető, a **Törlés** gombbal eltávolítható. Másik eszközre a zip-fájl átküldésével és
 ott újbóli importálásával vihető át.
 
-Ez a leírás a zip-fájl összeállításához kell (kézzel vagy a később készülő generátorral).
+A zip-fájlt a legegyszerűbb a **Kottakönyv-készítővel** összeállítani (a kezdőoldalon, `orgonatar.martone.hu/kottakonyv-keszito.html`;
+a Kottakönyvek oldalról is elérhető): ott a könyv adatait egy űrlapon kell kitölteni, a kottafájlokat behúzni, és a lap
+elkészíti a zipet. A korábban elkészített zip ott meg is nyitható, javítható, bővíthető. Ez a leírás a formátumot
+mutatja be (pl. ha kézzel készül a zip).
 
 ## A zip tartalma
 
@@ -75,8 +78,8 @@ A letétek és az előjátékok mezői:
 
 | Mező | Kötelező | Jelentése |
 | --- | --- | --- |
-| `id` | igen | Az **énekszám** (szövegként: `"42"`). Ez köti a kottát az énekhez. Egy énekhez több letét is tartozhat (ugyanazzal az `id`-vel). |
-| `scoreId` | nem | Ha az énekeskönyvben az énekhez más `scoreId` tartozik (`data/enek.json`), az ide írható; ekkor ez köt. |
+| `id` | igen | A kotta azonosítója (szövegként: `"42"`): az énekeskönyvben (`data/enek.json`) az ének `scoreId`-je, ez köti a kottát az énekhez. A legtöbb éneknél ez maga az énekszám, de néhánynál más (pl. a 60. énekhez `"108"`); ha több ének ugyanazt a `scoreId`-t használja, a kotta mindegyiknél megjelenik. A Kottakönyv-készítő az énekszámból magától kiszámolja. Egy énekhez több letét is tartozhat (ugyanazzal az `id`-vel). |
+| `scoreId` | nem | Ha megvan, ez köt az `id` helyett (ugyanúgy, mint fent). |
 | `xmlUrl` | igen | A kottafájl útvonala a zipben. |
 | `name` | nem | A változat neve a választóban (hiányában a könyv címe). |
 | `composer` | nem | Szerző (hiányában a könyv szerzője). |
@@ -94,7 +97,7 @@ A letétek és az előjátékok mezői:
 
 ## A program oldaláról
 
-- Kicsomagolás: `libs/fflate/` (`unzipSync`); a generátor ugyanebből a fájlból a `zipSync`-et használhatja.
+- Kicsomagolás: `libs/fflate/` (`unzipSync`); a Kottakönyv-készítő ugyanebből a fájlból a `zipSync`-kel tömörít.
 - `app.js`: `readBookZip` (a zip ellenőrzése és beolvasása), `saveImportedBook` (mentés a készülékre),
   `BookImportModal` (az importálás ablaka). Az importált könyv mappája `sajat-<az id egyszerűsítve>-<ellenőrzőösszeg>`,
   a letöltés adatlapján `"imported": true`.

@@ -18,6 +18,7 @@ A korábbi, OpenSheetMusicDisplay-jel (OSMD) rajzoló változat az `osmd` ágon 
 | `app.js` | A forráskód (React 18, JSX). |
 | `app.min.js` | Generált fájl (`npm run build`), kézzel ne szerkeszd. |
 | `style.css` | Stílusok. |
+| `landing/kottakonyv-keszito.html` | Kottakönyv-készítő: a saját kottakönyv importálható zip-fájlját állítja össze (önálló lap, a program színeivel; `libs/fflate` `zipSync`, `data/enek.json` az énekek címéhez és kottájához, a `webkantor/` mappából). A kezdőoldal mellé kerül (`orgonatar.martone.hu/kottakonyv-keszito.html`), a kezdőoldalról és a Kottakönyvek oldalról nyílik. Formátum: [docs/11-kottakonyv-zip.md](docs/11-kottakonyv-zip.md). |
 | `orgonatar-logo.svg` | A program logója (eredeti rajz); a Névjegy oldalon az `app.js` `Logo` komponense ugyanezt rajzolja, a téma színével. |
 | `docs/` | Használati útmutató (Markdown), a képernyőképek a `docs/kepek/` mappában (WebP). |
 | `icons/` | A böngészőfül és a kezdőképernyő ikonja: a logó vastagabb vonalú változatai (`favicon.svg`, sötét böngészőben világos vonallal; `apple-touch-icon.png`, `icon-192.png`). Ha a logó változik, ezeket is újra kell készíteni. |
