@@ -1288,6 +1288,43 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     width: 100%;
 }
 
+/* A kártya kattintható: a könyv adatlapja nyílik meg (billentyűzettel a cím gombja) */
+.card.list-item.scorebook-item.clickable { cursor: pointer; }
+.scorebook-open {
+    padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.scorebook-open:focus-visible { outline: 2px solid var(--col-accent); outline-offset: 2px; border-radius: 2px; }
+.scorebook-import { display: flex; justify-content: center; margin: 0 auto 1rem; }
+
+/* A könyv adatlapja: balra a borító, jobbra az adatai, alatta énekszám szerint a letétek és az előjátékok */
+.book-details { display: flex; flex-direction: column; gap: 1rem; }
+.book-details-head { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+.book-details-head .scorebook-cover { grid-area: auto; height: 300px; border-radius: 0.5rem; }
+.book-details-info { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; }
+.book-details-title { margin: 0; font-size: 1.25rem; font-weight: 700; line-height: 1.25; }
+.book-details-author { font-weight: 600; }
+.book-details-total { font-size: 0.9rem; color: var(--col-ink-muted, #666); }
+.book-details-description { margin: 0.25rem 0 0; line-height: 1.4; white-space: pre-line; }
+.book-details-copyright { font-size: 0.8rem; color: var(--col-ink-muted, #666); }
+.book-details-section { padding-top: 0.75rem; border-top: 1px solid var(--col-border, #d1d5db); }
+.book-details-section h4 { margin: 0 0 0.4rem; font-size: 1rem; font-weight: 700; }
+.book-details-count { font-weight: 400; font-size: 0.85rem; color: var(--col-ink-muted, #666); }
+.book-details-numbers { margin: 0; line-height: 1.6; }
+.book-details-number { white-space: nowrap; }
+.book-details-number .hymn-number { color: var(--col-accent-text, var(--col-accent)); }
+.book-details-multi { font-size: 0.85rem; color: var(--col-ink-muted, #666); }
+.book-details-none { margin: 0; color: var(--col-ink-muted, #666); }
+@media (max-width: 640px) {
+    .book-details-head { grid-template-columns: 110px minmax(0, 1fr); gap: 0.9rem; }
+    .book-details-head .scorebook-cover { height: 165px; }
+    .book-details-title { font-size: 1.1rem; }
+}
+
+/* Kottakönyv importálása: előnézet */
+.book-import-file { align-self: center; font-size: 0.85rem; color: var(--col-ink-muted, #666); overflow-wrap: anywhere; }
+.book-import-title { font-weight: 700; }
+.book-import-detail { font-size: 0.85rem; color: var(--col-ink-muted, #666); }
+
 /* Letöltés, offline mentés */
 .scorebook-intro { max-width: 800px; margin: 0 auto 0.75rem; }
 .scorebook-notice {
@@ -1384,11 +1421,11 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     .card.list-item.scorebook-item { display: block; display: flow-root; min-height: 0; padding: 0.75rem 0.75rem 0.75rem 1rem; }
     .scorebook-main, .scorebook-body { display: block; padding: 0; }
     .scorebook-main > * + *, .scorebook-body > *, .scorebook-body > .scorebook-status { margin-top: 4px; }
-    .scorebook-cover { float: right; width: 60px; margin: 0 0 6px 10px; container-type: normal; overflow: visible; }
-    .scorebook-cover-bg { display: none; }
-    .scorebook-cover-img { position: static; display: block; width: 100%; height: auto; max-height: 100px; }
-    .scorebook-cover-book { position: relative; top: auto; bottom: auto; left: auto; transform: none; width: 60px; height: 90px; max-width: none; aspect-ratio: auto; }
-    .scorebook-cover-book > * { display: none; }
+    .scorebook-item .scorebook-cover { float: right; width: 60px; margin: 0 0 6px 10px; container-type: normal; overflow: visible; }
+    .scorebook-item .scorebook-cover-bg { display: none; }
+    .scorebook-item .scorebook-cover-img { position: static; display: block; width: 100%; height: auto; max-height: 100px; }
+    .scorebook-item .scorebook-cover-book { position: relative; top: auto; bottom: auto; left: auto; transform: none; width: 60px; height: 90px; max-width: none; aspect-ratio: auto; }
+    .scorebook-item .scorebook-cover-book > * { display: none; }
 }
 /* --- Ének fejléce (könyvtár) --- */
 .hymn-header { gap: 0.75rem; }
