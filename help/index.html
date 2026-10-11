@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Használati útmutató – Református OrgonaTár</title>
+    <!-- Az útmutató oldala (orgonatar.martone.hu/help/). A docs/ mappa Markdown-fájljait jeleníti meg (a .cpanel.yml
+         mellé másolja őket); a lap a ?p=<fájlnév> paraméterből tudja, melyiket: ?p=05-listak → 05-listak.md. -->
+    <link rel="icon" href="../webkantor/icons/favicon.svg" type="image/svg+xml">
+    <style>
+        @font-face { font-family: 'Figtree'; font-weight: 300 900; font-display: swap; src: url('../webkantor/fonts/figtree/figtree-latin.woff2') format('woff2'); unicode-range: U+0000-00FF,U+2000-206F; }
+        @font-face { font-family: 'Figtree'; font-weight: 300 900; font-display: swap; src: url('../webkantor/fonts/figtree/figtree-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA,U+1E00-1E9F; }
+        @font-face { font-family: 'Old Standard TT'; font-display: swap; src: url('../webkantor/fonts/old-standard-tt/old-standard-tt-latin.woff2') format('woff2'); unicode-range: U+0000-00FF,U+2000-206F; }
+        @font-face { font-family: 'Old Standard TT'; font-display: swap; src: url('../webkantor/fonts/old-standard-tt/old-standard-tt-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA,U+1E00-1E9F; }
+        :root { --bg: #F7F4EB; --card: #FAF7F0; --border: #D8CEB7; --ink: #221C18; --muted: #574B40; --teal: #123540; --teal-mid: #194C5C; --wash: #E5EFF2; }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Figtree', system-ui, sans-serif; line-height: 1.6; }
+        nav { position: sticky; top: 0; background: var(--teal); color: #fff; z-index: 1; }
+        nav .bar { max-width: 860px; margin: 0 auto; padding: 10px 20px; display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+        nav a { color: #fff; text-decoration: none; font-weight: 600; }
+        nav a:hover, nav a:focus-visible { text-decoration: underline; }
+        nav .home { font-family: 'Old Standard TT', Georgia, serif; font-weight: 400; font-size: 1.15rem; margin-right: auto; }
+        main { max-width: 860px; margin: 0 auto; padding: 28px 20px 64px; overflow-wrap: break-word; }
+        h1, h2 { font-family: 'Old Standard TT', Georgia, serif; font-weight: 400; color: var(--teal); line-height: 1.2; }
+        h1 { font-size: 2rem; margin: 0.4em 0 0.6em; }
+        h2 { font-size: 1.5rem; margin: 1.6em 0 0.5em; padding-top: 0.4em; border-top: 1px solid var(--border); }
+        h3, h4 { color: var(--teal); margin: 1.4em 0 0.4em; }
+        h1, h2, h3, h4 { scroll-margin-top: 64px; }
+        a { color: var(--teal-mid); }
+        img { max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px; display: block; margin: 12px 0; }
+        code { background: var(--wash); padding: 0.1em 0.35em; border-radius: 4px; font-size: 0.92em; }
+        pre { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; overflow-x: auto; }
+        pre code { background: none; padding: 0; }
+        table { border-collapse: collapse; display: block; overflow-x: auto; margin: 12px 0; }
+        th, td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; vertical-align: top; }
+        th { background: var(--card); }
+        blockquote { margin: 12px 0; padding: 8px 16px; border-left: 4px solid var(--border); color: var(--muted); }
+        .pager { display: flex; justify-content: space-between; gap: 16px; margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border); }
+        .error { color: #8a1c1c; }
+    </style>
+</head>
+<body>
+<nav><div class="bar">
+    <a class="home" href="../">Református OrgonaTár</a>
+    <a href="./">Tartalom</a>
+    <a href="../webkantor/" target="_blank" rel="noopener">A program megnyitása</a>
+</div></nav>
+<main id="content"><p>Betöltés…</p></main>
+<script src="marked.umd.js"></script>
+<script>
+(() => {
+    // A fejezetek sorrendje a lapozóhoz (a tartalomjegyzék a README.md)
+    const PAGES = ['README', '01-elso-lepesek', '02-kottakonyvek', '03-konyvtar', '04-szovegpanel', '05-listak', '06-lejatszo',
+        '07-megosztas', '08-beallitasok', '09-gyik', '10-karbantartas', '11-kottakonyv-zip'];
+    const content = document.getElementById('content');
+    const param = new URLSearchParams(location.search).get('p') || 'README';
+    const page = /^[\w-]+$/.test(param) ? param : 'README';
+    const pageUrl = (name) => (name === 'README' ? './' : `?p=${encodeURIComponent(name)}`);
+    // A címsorok azonosítója a GitHubéval egyezik, így a Markdown-fájlok #hivatkozásai itt is működnek
+    const slug = (text) => text.trim().toLowerCase().replace(/[^\p{L}\p{N}\s_-]/gu, '').replace(/\s/g, '-');
+
+    fetch(`${page}.md`, { cache: 'no-cache' })
+        .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.text(); })
+        .then(md => {
+            content.innerHTML = marked.parse(md);
+            const used = new Map();
+            content.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(h => {
+                const base = slug(h.textContent);
+                const n = used.get(base) || 0;
+                used.set(base, n + 1);
+                h.id = n ? `${base}-${n}` : base;
+            });
+            content.querySelectorAll('a[href]').forEach(a => {
+                const href = a.getAttribute('href');
+                const doc = /^([\w-]+)\.md(#.*)?$/.exec(href);
+                if (doc) a.setAttribute('href', pageUrl(doc[1]) + (doc[2] || ''));
+                else if (/\.md(#.*)?$/.test(href)) a.replaceWith(...a.childNodes); // a fejlesztői leírás (README) nincs a webhelyen
+                else if (/^https?:/.test(href)) { a.target = '_blank'; a.rel = 'noopener'; }
+            });
+            const h1 = content.querySelector('h1');
+            if (h1 && page !== 'README') document.title = `${h1.textContent} – Református OrgonaTár`;
+            const i = PAGES.indexOf(page);
+            if (i >= 0) {
+                const pager = document.createElement('div');
+                pager.className = 'pager';
+                pager.innerHTML = '<span></span><span></span>';
+                if (i > 0) pager.firstChild.innerHTML = `<a href="${pageUrl(PAGES[i - 1])}">← Előző</a>`;
+                if (i < PAGES.length - 1) pager.lastChild.innerHTML = `<a href="${pageUrl(PAGES[i + 1])}">Következő →</a>`;
+                content.appendChild(pager);
+            }
+            if (location.hash) {
+                const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+                if (target) target.scrollIntoView();
+            }
+        })
+        .catch(err => {
+            content.innerHTML = `<h1>Az oldal nem található</h1><p class="error">${page}.md: ${err.message}</p><p><a href="./">Vissza a tartalomhoz</a></p>`;
+        });
+})();
+</script>
+</body>
+</html>
