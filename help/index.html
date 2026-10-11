@@ -51,7 +51,7 @@
 (() => {
     // A fejezetek sorrendje a lapozóhoz (a tartalomjegyzék a README.md)
     const PAGES = ['README', '01-elso-lepesek', '02-kottakonyvek', '03-konyvtar', '04-szovegpanel', '05-listak', '06-lejatszo',
-        '07-megosztas', '08-beallitasok', '09-gyik', '10-karbantartas'];
+        '07-megosztas', '08-beallitasok', '09-gyik', '10-karbantartas', '11-kottakonyv-zip'];
     const content = document.getElementById('content');
     const param = new URLSearchParams(location.search).get('p') || 'README';
     const page = /^[\w-]+$/.test(param) ? param : 'README';
