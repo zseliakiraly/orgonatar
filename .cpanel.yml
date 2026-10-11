@@ -1,0 +1,11 @@
+# Közzététel a cPanel Git Version Control-jával: Manage → Pull or Deploy → "Update from Remote", majd "Deploy HEAD
+# Commit". Csak a weboldal fájljai kerülnek a webhely mappájába (az android/, a docs/ és a többi fejlesztői fájl nem).
+# A repó klónja ne a public_html-ben legyen (pl. ~/repositories/orgonatar), különben a .git mappa is elérhető lenne.
+# Ha a webhely nem a public_html-ben van (pl. aldomain vagy kiegészítő domain), a DEPLOYPATH-t ahhoz kell igazítani.
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=$HOME/public_html/
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/cp index.html app.min.js style.css sw.js orgonatar-logo.svg $DEPLOYPATH
+    - /bin/cp -R libs fonts icons data api $DEPLOYPATH

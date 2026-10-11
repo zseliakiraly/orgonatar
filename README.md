@@ -68,6 +68,17 @@ webhelyről közvetlenül éri el a fájlokat).
 
 Kipróbálás helyben: `php -S 127.0.0.1:8000` a repó gyökerében, majd <http://127.0.0.1:8000/api/>.
 
+### Feltöltés a cPanel Git Version Control-jával
+
+A `.cpanel.yml` írja le, mi kerül a webhely mappájába (alapból `~/public_html/`). Beállítás egyszer:
+
+1. Privát repónál: cPanel → SSH Access → Manage SSH Keys → Generate a New Key (jelszó nélkül), a nyilvános kulcsot
+   (`id_rsa.pub`) a GitHubon: Settings → Deploy keys → Add deploy key (írási jog nélkül). A klónozás címe ekkor
+   `git@github.com:zseliakiraly/orgonatar.git`; nyilvános repónál `https://github.com/zseliakiraly/orgonatar.git`.
+2. cPanel → Git Version Control → Create: a fenti cím, Repository Path: `repositories/orgonatar` (nem a
+   `public_html` alatt), ág: `main`.
+3. Minden GitHub-feltöltés után: Manage → Pull or Deploy → **Update from Remote**, majd **Deploy HEAD Commit**.
+
 ## Adatok és könyvtárak
 
 - `libs/`: `react.js` és `react-dom.js` (React 18 UMD build); a `babel.js` csak a `dev.html`-hez kell.
