@@ -36,6 +36,12 @@
         ol { margin: 0 0 14px; padding-left: 22px; }
         a { color: var(--teal-mid); }
         footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 0.9rem; color: var(--muted); }
+        .ic { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -0.15em; flex: none; }
+        .choice h2 { display: flex; align-items: center; gap: 10px; }
+        .choice h2 .ic { width: 26px; height: 26px; stroke-width: 1.75; color: var(--gold); }
+        footer a { display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
+        footer a:hover, footer a:focus-visible { text-decoration: underline; }
+        footer .ic { width: 16px; height: 16px; }
         @media (max-width: 480px) { header { flex-direction: column; align-items: flex-start; } h1 { font-size: 1.8rem; } }
     </style>
 </head>
@@ -55,12 +61,12 @@
 
     <div class="choices">
         <section class="choice">
-            <h2>Böngészőben</h2>
+            <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="12" x="3" y="4" rx="2" ry="2" /><line x1="2" x2="22" y1="20" y2="20" /></svg>Böngészőben</h2>
             <p>Telepítés nélkül, számítógépen, tableten és telefonon. A letöltött kották internet nélkül is megnyílnak.</p>
             <a class="btn" href="webkantor/">A program megnyitása</a>
         </section>
         <section class="choice">
-            <h2>Android-alkalmazás</h2>
+            <h2><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="20" x="5" y="2" rx="2" ry="2" /><path d="M12 18h.01" /></svg>Android-alkalmazás</h2>
             <p>Ugyanez a program alkalmazásként. Az énekeskönyv kottái benne vannak, így internet nélkül is működik az első indítástól.</p>
             <a class="btn gold" href="orgonatar.apk" download>Letöltés (APK)</a>
         </section>
@@ -75,9 +81,9 @@
     <p class="small">Az alkalmazás nincs a Google Playen: ingyenes, reklám nélküli, hobbiból készült program.</p>
 
     <footer>
-        <a href="help/" target="_blank" rel="noopener">Használati útmutató</a> ·
-        <a href="kottakonyv-keszito.html">Kottakönyv-készítő</a> .
-        <a href="mailto:feedback@zseli.hu?subject=OrgonaT%C3%A1r">Visszajelzés</a>
+        <a href="help/" target="_blank" rel="noopener"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v14" /><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" /></svg>Használati útmutató</a> ·
+        <a href="kottakonyv-keszito.html"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v6" /><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20" /><path d="M9 10h6" /></svg>Kottakönyv-készítő</a> ·
+        <a href="mailto:feedback@zseli.hu?subject=OrgonaT%C3%A1r"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>Visszajelzés</a>
     </footer>
 </main>
 </body>
