@@ -2,9 +2,8 @@
 // Előtte az app.min.js-t le kell fordítani (npm run build; az npm run android:sync mindkettőt elvégzi).
 //
 // A szerver címe környezeti változóban adható meg (a GitHub Actions a repó változóiból veszi):
-//   ORGONATAR_SERVER      a webes program címe, ahonnan a kották jönnek (alapból a GitHub Pages-en lévő változat)
-//   ORGONATAR_API         a PHP API címe (pl. https://orgonatar.hu/api/); ha üres, a fájlok közvetlenül jönnek
-//                         a szerverről (ehhez a szervernek CORS-fejlécet kell küldenie, a GitHub Pages küld)
+//   ORGONATAR_SERVER      a webes program címe, ahonnan a kották jönnek (alapból https://orgonatar.martone.hu/webkantor/)
+//   ORGONATAR_API         a PHP API címe (alapból a szerver címe + api/)
 //   ORGONATAR_PUBLIC_URL  a megosztási linkek címe (alapból az ORGONATAR_SERVER)
 import { build } from 'esbuild';
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync, statSync } from 'node:fs';
@@ -15,8 +14,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const out = join(root, 'www');
 const withSlash = (url) => (url && !url.endsWith('/') ? `${url}/` : url || '');
 
-const server = withSlash(process.env.ORGONATAR_SERVER || 'https://zseliakiraly.github.io/orgonatar/');
-const api = process.env.ORGONATAR_API || '';
+const server = withSlash(process.env.ORGONATAR_SERVER || 'https://orgonatar.martone.hu/webkantor/');
+const api = process.env.ORGONATAR_API || `${server}api/`;
 const publicUrl = withSlash(process.env.ORGONATAR_PUBLIC_URL || server);
 for (const [name, url] of [['ORGONATAR_SERVER', server], ['ORGONATAR_API', api], ['ORGONATAR_PUBLIC_URL', publicUrl]]) {
     if (url && !/^https:\/\//.test(url)) throw new Error(`${name}: https:// címet kell megadni (${url})`);

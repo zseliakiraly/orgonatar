@@ -70,13 +70,13 @@ Kipróbálás helyben: `php -S 127.0.0.1:8000` a repó gyökerében, majd <http:
 
 ### Feltöltés a cPanel Git Version Control-jával
 
-A `.cpanel.yml` írja le, mi kerül a webhely mappájába (alapból `~/public_html/`). Beállítás egyszer:
+A program címe <https://orgonatar.martone.hu/webkantor/>, az aldomain gyökerében a kezdőoldal (`landing/index.html`:
+leírás, link a webes változatra és az APK-ra). A `.cpanel.yml` írja le, mi hová kerül. Beállítás egyszer:
 
-1. Privát repónál: cPanel → SSH Access → Manage SSH Keys → Generate a New Key (jelszó nélkül), a nyilvános kulcsot
-   (`id_rsa.pub`) a GitHubon: Settings → Deploy keys → Add deploy key (írási jog nélkül). A klónozás címe ekkor
-   `git@github.com:zseliakiraly/orgonatar.git`; nyilvános repónál `https://github.com/zseliakiraly/orgonatar.git`.
-2. cPanel → Git Version Control → Create: a fenti cím, Repository Path: `repositories/orgonatar` (nem a
-   `public_html` alatt), ág: `main`.
+1. cPanel → Domains: az `orgonatar.martone.hu` „Document Root”-ja. Ha nem `~/orgonatar.martone.hu`, a `.cpanel.yml`
+   `DEPLOYROOT` sorát kell átírni.
+2. cPanel → Git Version Control → Create: Clone URL `https://github.com/zseliakiraly/orgonatar.git`, Repository Path
+   `repositories/orgonatar` (nem az aldomain mappájában), ág: `main`.
 3. Minden GitHub-feltöltés után: Manage → Pull or Deploy → **Update from Remote**, majd **Deploy HEAD Commit**.
 
 ## Adatok és könyvtárak

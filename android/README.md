@@ -27,9 +27,11 @@ onnan egy linkkel megosztható.
 
 | Név | Példa | Jelentés |
 | --- | --- | --- |
-| `ORGONATAR_SERVER` | `https://orgonatar.hu/` | A webes program címe. Alapból a GitHub Pages-en lévő változat. |
-| `ORGONATAR_API` | `https://orgonatar.hu/api/` | A PHP API címe. Üresen a fájlok közvetlenül a szerverről jönnek (ehhez a szervernek CORS-fejlécet kell küldenie; a GitHub Pages küld). |
-| `ORGONATAR_PUBLIC_URL` | `https://orgonatar.hu/` | A megosztási linkek címe (alapból az `ORGONATAR_SERVER`). |
+| `ORGONATAR_SERVER` | `https://orgonatar.martone.hu/webkantor/` | A webes program címe (ez az alapérték is). |
+| `ORGONATAR_API` | `https://orgonatar.martone.hu/webkantor/api/` | A PHP API címe (alapból a szerver címe + `api/`). |
+| `ORGONATAR_PUBLIC_URL` | `https://orgonatar.martone.hu/webkantor/` | A megosztási linkek címe (alapból az `ORGONATAR_SERVER`). |
+
+A változókat csak akkor kell beállítani, ha a program máshová költözik.
 
 **Secrets** (az aláíró kulcs). Az Android csak akkor engedi az új változatot a régi helyére telepíteni, ha
 ugyanazzal a kulccsal van aláírva. Kulcs nélkül fejlesztői (debug) APK készül, amelyet minden futás más kulccsal
@@ -50,7 +52,9 @@ ugyanazzal a kulccsal van aláírva. Kulcs nélkül fejlesztői (debug) APK kés
 
 ## Telepítés a telefonra
 
-1. A telefonon nyisd meg az APK linkjét (Releases oldal), és töltsd le.
+1. A telefonon nyisd meg a <https://orgonatar.martone.hu/> kezdőoldalt (vagy a Releases oldalt), és töltsd le az APK-t.
+   A kezdőoldal linkje mindig a legutóbbi kiadásra mutat
+   (`https://github.com/zseliakiraly/orgonatar/releases/latest/download/orgonatar.apk`).
 2. Az Android rákérdez, hogy a böngésző telepíthet-e alkalmazást („Ismeretlen alkalmazások telepítése”): engedélyezd.
 3. Frissítéskor ugyanígy: az új APK a régi helyére települ, az adatok megmaradnak.
 
@@ -60,7 +64,7 @@ Android Studio (vagy Android SDK és Java 21) kell hozzá.
 
 ```sh
 npm install
-ORGONATAR_SERVER=https://orgonatar.hu/ ORGONATAR_API=https://orgonatar.hu/api/ npm run android:sync
+npm run android:sync
 cd android && ./gradlew assembleDebug    # vagy: npx cap open android (Android Studio)
 ```
 
