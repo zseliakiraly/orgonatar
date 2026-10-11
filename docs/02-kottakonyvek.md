@@ -33,7 +33,9 @@ megnyitható, így letöltés előtt látszik, mi van bennük.
 
 A **Kottakönyv importálása** gombbal (a kártyák fölött) zip-fájlból vehetsz fel új könyvet, pl. a saját letéteidet.
 
-1. **Zip-fájl kiválasztása:** a zipben a könyv adatai (`index.json`) és a kottafájlok vannak (a formátum:
+1. **Zip-fájl kiválasztása:** a zipben a könyv adatai (`index.json`) és a kottafájlok vannak. Ilyen zipet a
+   **Kottakönyv-készítő** (a gomb az importálás mellett) állít össze: kitöltöd a könyv adatait, behúzod a kottákat, és
+   letölti a zipet; egy korábbi zip ott javítható, bővíthető is (a formátum:
    [Saját kottakönyv: a zip-fájl formátuma](11-kottakonyv-zip.md)).
 2. Az ablak megmutatja a könyv címét, a letétek és az előjátékok számát, és szól, ha egy kotta hiányzik a zipből.
 3. **Importálás:** a könyv a többi könyv után, **Saját** jelöléssel jelenik meg, és a letöltött könyvekhez hasonlóan
