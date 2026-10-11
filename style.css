@@ -1324,6 +1324,12 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 /* Kottakönyv importálása: előnézet */
 .book-import-file { align-self: center; font-size: 0.85rem; color: var(--col-ink-muted, #666); overflow-wrap: anywhere; }
 .book-import-title { font-weight: 700; }
+.book-import-maker {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; padding: 0.6rem 0.75rem;
+    border-radius: 0.5rem; background-color: var(--col-wash, rgba(0,0,0,0.04)); font-size: 0.85rem;
+}
+.book-import-maker span { flex: 1 1 14rem; }
+.book-import-maker a.btn { text-decoration: none; font-size: 0.875rem; }
 .book-import-detail { font-size: 0.85rem; color: var(--col-ink-muted, #666); }
 
 /* Letöltés, offline mentés */

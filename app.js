@@ -4380,8 +4380,11 @@ const BookImportModal = ({ books, onClose, onImport }) => {
         }>
             <div className="import-list">
                 <p className="import-message info">Válaszd ki a kottakönyv zip-fájlját: benne a könyv adatai (index.json) és a kottafájlok.
-                    A könyv erre a készülékre kerül, és a letöltött könyvekhez hasonlóan internet nélkül is használható. Ilyen zip-fájlt
-                    a <a href={BOOK_MAKER_URL} target="_blank" rel="noopener">Kottakönyv-készítővel</a> állíthatsz össze.</p>
+                    A könyv erre a készülékre kerül, és a letöltött könyvekhez hasonlóan internet nélkül is használható.</p>
+                <div className="book-import-maker">
+                    <span>Nincs még zip-fájlod? Az OrgonaTár weboldalán elkészítheted a kottáidból:</span>
+                    <a href={BOOK_MAKER_URL} target="_blank" rel="noopener" className="btn btn-outline"><Icons.Book size={18}/> Kottakönyv-készítő megnyitása</a>
+                </div>
                 <div className="import-actions">
                     <button onClick={() => fileRef.current.click()} disabled={busy} className="btn btn-outline"><Icons.File size={18}/> Zip-fájl kiválasztása</button>
                     <input ref={fileRef} type="file" accept=".zip,application/zip,application/x-zip-compressed" className="import-file-input" onChange={openFile} tabIndex={-1} aria-hidden="true" />
