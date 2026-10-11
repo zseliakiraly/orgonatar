@@ -492,6 +492,111 @@ const deleteDownloadedBook = async (folder) => {
     for (const name of await caches.keys()) if (name.startsWith(bookCachePrefix(folder))) await caches.delete(name);
 };
 
+// --- SAJÁT KOTTAKÖNYV IMPORTÁLÁSA (zip-fájlból) ---
+// A zip gyökerében a könyv index.json-ja (ugyanaz, mint a szerveren: data/<mappa>/index.json), mellette a kottafájlok
+// és a borítókép, az index.json-ban megadott útvonalon (a formátum leírása: docs/11-kottakonyv-zip.md). Ha minden egy
+// mappában van a zipben (pl. a mappát tömörítették), az is jó. Az importált könyv a letöltött könyvek mellé, ugyanúgy
+// a készülékre kerül (a letöltés adatlapján "imported": true), a szerverre nem: így minden ugyanúgy működik vele, mint
+// egy letöltött könyvvel, csak frissíteni nem lehet (helyette újra importálható, ilyenkor lecserélődik).
+// A mappája "sajat-<az id egyszerűsítve>-<az id ellenőrzőösszege>", így nem ütközik a szerveren lévő könyvekkel, és
+// ugyanannak a könyvnek (azonos id) mindig ugyanaz.
+const IMPORT_FOLDER_PREFIX = 'sajat-';
+const BOOK_ZIP_MAX_BYTES = 300 * 1048576;
+const CONTENT_TYPES = { json: 'application/json', xml: 'application/xml', musicxml: 'application/vnd.recordare.musicxml+xml',
+    mxl: 'application/vnd.recordare.musicxml', mei: 'application/mei+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+    gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml' };
+const contentTypeOf = (path) => CONTENT_TYPES[(/\.([a-z0-9]+)$/i.exec(path) || [])[1]?.toLowerCase()] || 'application/octet-stream';
+
+const importFolderOf = (id) => {
+    let hash = 0;
+    for (const ch of id) hash = (hash * 31 + ch.codePointAt(0)) >>> 0;
+    const slug = normalizeText(id).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+    return `${IMPORT_FOLDER_PREFIX}${slug ? `${slug}-` : ''}${hash.toString(36)}`;
+};
+
+// A zip tartalma: { text, index, files: Map(cím → bájtok), missing: [cím], bytes }. Hibás fájlnál magyar nyelvű hibát dob.
+const readBookZip = (buffer) => {
+    const bytes = new Uint8Array(buffer);
+    if (bytes.length < 4 || bytes[0] !== 0x50 || bytes[1] !== 0x4b) throw new Error('ez nem zip-fájl');
+    if (!window.fflate || !window.fflate.unzipSync) throw new Error('a kicsomagoló nem töltődött be');
+    let entries;
+    try {
+        entries = window.fflate.unzipSync(bytes, { filter: (f) => !f.name.endsWith('/') && !/(^|\/)(__MACOSX\/|\.DS_Store$)/.test(f.name) });
+    } catch (err) {
+        throw new Error(`a zip-fájl sérült vagy nem olvasható (${err.message})`);
+    }
+    const names = Object.keys(entries).map(name => name.replace(/\\/g, '/'));
+    const raw = Object.values(entries);
+    // az index.json a gyökérben, vagy egyetlen mappában
+    let prefix = '';
+    if (!names.includes('index.json')) {
+        const nested = names.filter(name => /^[^/]+\/index\.json$/.test(name));
+        if (nested.length !== 1) throw new Error('nincs benne index.json (a könyv adatai)');
+        prefix = nested[0].slice(0, -'index.json'.length);
+    }
+    const text = new TextDecoder('utf-8').decode(raw[names.indexOf(`${prefix}index.json`)]).replace(/^﻿/, '');
+    let data;
+    try { data = JSON.parse(text); } catch (err) { throw new Error(`hibás index.json (${err.message})`); }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('az index.json nem egy kottakönyv leírása');
+    const title = typeof data.title === 'string' ? data.title.trim() : '';
+    if (!title) throw new Error('az index.json-ból hiányzik a könyv címe ("title")');
+    const id = String(data.id ?? '').trim() || title;
+    const folder = importFolderOf(id);
+    const index = normalizeBook({ ...data, id }, folder);
+    if (!index.scores.length && !index.preludes.length) throw new Error('a könyvben nincs egy kotta sem ("scores", "preludes")');
+    // a zip fájljai a könyv mappájában (ugyanúgy, mint a letöltött könyveknél)
+    const zipped = new Map();
+    names.forEach((name, i) => { if (name.startsWith(prefix)) zipped.set(resolveBookUrl(name.slice(prefix.length), folder), raw[i]); });
+    const files = new Map(), missing = [];
+    let size = 0;
+    bookFiles(index).forEach(url => {
+        const content = zipped.get(url);
+        if (content) { files.set(url, content); size += content.length; } else missing.push(url);
+    });
+    return { text: JSON.stringify({ ...data, id }, null, 1), index, files, missing, bytes: size };
+};
+
+// Az importált könyv mentése a készülékre (a letöltött könyvekhez hasonlóan, új tárba; a korábbi példánya törlődik)
+const saveImportedBook = async (parsed) => {
+    const folder = parsed.index.folder;
+    const cacheName = `${bookCachePrefix(folder)}${Date.now()}`;
+    const cache = await caches.open(cacheName);
+    try {
+        for (const [url, content] of parsed.files) {
+            await cache.put(url, new Response(new Blob([content], { type: contentTypeOf(url) }), { headers: { 'Content-Type': contentTypeOf(url) } }));
+        }
+        const info = { date: new Date().toISOString(), files: parsed.files.size + parsed.missing.length, bytes: parsed.bytes, missing: parsed.missing, imported: true };
+        await cache.put(bookIndexUrl(folder), new Response(parsed.text, { headers: { 'Content-Type': 'application/json' } }));
+        await cache.put(downloadInfoUrl(folder), new Response(JSON.stringify(info), { headers: { 'Content-Type': 'application/json' } }));
+        for (const name of await caches.keys()) if (name.startsWith(bookCachePrefix(folder)) && name !== cacheName) await caches.delete(name);
+        return { cacheName, text: parsed.text, index: parsed.index, ...info };
+    } catch (err) {
+        await caches.delete(cacheName);
+        throw err;
+    }
+};
+
+// A könyv kottái énekenként: { variations: [[énekszám, darab]], preludes: [[énekszám, darab]], variationCount, preludeCount }.
+// Az énekszám a kotta scoreId-jéhez (ennek hiányában az id-jéhez) tartozó ének száma (enek.json → scoreId), ha nincs
+// ilyen ének, maga a scoreId. A letét "type": "prelude" mezővel előjáték is lehet, és a letéthez tartozhat előjáték is.
+const bookHymnNumbers = (book, hymnOfScore) => {
+    const variations = new Map(), preludes = new Map();
+    const add = (map, item) => {
+        const linkId = String(item.scoreId || item.hymnId || item.id || '');
+        if (!linkId) return;
+        const number = hymnOfScore.get(linkId) || linkId;
+        map.set(number, (map.get(number) || 0) + 1);
+    };
+    book.scores.forEach(score => {
+        add(score.type === 'prelude' ? preludes : variations, score);
+        if (Array.isArray(score.preludes)) score.preludes.forEach(p => add(preludes, { ...p, scoreId: score.scoreId || score.hymnId || score.id }));
+    });
+    book.preludes.forEach(p => add(preludes, p));
+    const sorted = (map) => [...map].sort(([a], [b]) => (parseInt(a, 10) || Infinity) - (parseInt(b, 10) || Infinity) || a.localeCompare(b, 'hu', { numeric: true }));
+    const total = (map) => [...map.values()].reduce((sum, n) => sum + n, 0);
+    return { variations: sorted(variations), preludes: sorted(preludes), variationCount: total(variations), preludeCount: total(preludes) };
+};
+
 const formatBytes = (bytes) => bytes >= 1048576
     ? `${(bytes / 1048576).toLocaleString('hu-HU', { maximumFractionDigits: 1 })} MB`
     : `${bytes > 0 ? Math.max(1, Math.round(bytes / 1024)) : 0} kB`;
@@ -3838,7 +3943,7 @@ const BookCover = ({ url, title, folder }) => {
 
 // Egy könyv kártyája: a beépített mindig elérhető, a többit le lehet tölteni, frissíteni és törölni.
 // Balra a könyv adatai, a kapcsoló és a letöltés, jobbra a borító.
-const ScorebookCard = ({ book, download, active, onToggle, onDownload, onCancel, onDelete }) => {
+const ScorebookCard = ({ book, download, active, onToggle, onDownload, onCancel, onDelete, onOpen }) => {
     const data = book.remote ? book.remote.index : book.local ? book.local.index : null;
     const title = (data && data.title) || book.folder;
     const author = data ? bookAuthor(data.author) : '';
@@ -3852,7 +3957,7 @@ const ScorebookCard = ({ book, download, active, onToggle, onDownload, onCancel,
     const missingScores = local && local.missing ? local.missing.filter(url => url !== bookCoverUrl(local.index)).length : 0;
     const savedText = local && [
         `${formatBytes(local.bytes)}`,
-        missingScores ? `${missingScores} kotta hiányzik a szerverről` : null
+        missingScores ? `${missingScores} kotta hiányzik ${book.imported ? 'a zip-fájlból' : 'a szerverről'}` : null
     ].filter(Boolean).join(' • ');
 
     let status = null, actions = null;
@@ -3867,6 +3972,9 @@ const ScorebookCard = ({ book, download, active, onToggle, onDownload, onCancel,
         if (failed && data) actions = <button onClick={() => onDownload(book.folder)} className="btn btn-ghost">Újra</button>;
     } else if (!OFFLINE_SUPPORTED) {
         status = data ? 'Csak internettel érhető el (ez a böngésző nem tud menteni)' : `Nem érhető el: ${book.remoteError || 'betöltés...'}`;
+    } else if (book.imported) {
+        status = `Importálva ${new Date(local.date).toLocaleDateString('hu-HU')} • ${savedText}`;
+        actions = <button onClick={() => onDelete({ folder: book.folder, title, imported: true })} className="btn btn-ghost btn-danger">Törlés</button>;
     } else if (book.orphan) {
         status = 'Ez a könyv már nem szerepel a kottakönyvek listájában.';
         actions = <button onClick={() => onDelete({ folder: book.folder, title })} className="btn btn-ghost btn-danger">Törlés</button>;
@@ -3883,16 +3991,23 @@ const ScorebookCard = ({ book, download, active, onToggle, onDownload, onCancel,
         status = `Nem érhető el: ${book.remoteError || 'betöltés...'}`;
     }
 
+    // A kártyára kattintva (a gombokon és a kapcsolón kívül) nyílik meg a könyv adatlapja; billentyűzettel a cím gombja
+    const open = (e) => {
+        if (!data || e.target.closest('button, label, input, a')) return;
+        onOpen(book.folder);
+    };
+
     return (
-        <div className={`card list-item scorebook-item ${usable && !active ? 'inactive' : ''}`} data-folder={book.folder}>
+        <div className={`card list-item scorebook-item ${usable && !active ? 'inactive' : ''} ${data ? 'clickable' : ''}`} data-folder={book.folder} onClick={open}>
             <div className="card-decoration"></div>
             {/* elöl, hogy telefonon a szöveg körbefolyhassa (a nagyobb kijelzőn a rács a jobb oldalra teszi) */}
             <BookCover url={data && bookCoverUrl(data)} title={title} folder={book.folder} />
             <div className="scorebook-main">
                 <div className="scorebook-header">
                     <h3 className="font-bold text-ink scorebook-title">
-                        {title}
+                        {data ? <button type="button" className="scorebook-open" onClick={() => onOpen(book.folder)} title="A könyv adatai">{title}</button> : title}
                         {book.builtin && <span className="scorebook-badge">Beépített</span>}
+                        {book.imported && <span className="scorebook-badge">Saját</span>}
                     </h3>
                     {usable && (
                         <label className="toggle-switch scorebook-toggle" title={active ? 'Elrejtés' : 'Megjelenítés'}>
@@ -3928,7 +4043,141 @@ const ScorebookCard = ({ book, download, active, onToggle, onDownload, onCancel,
     );
 };
 
-const ScorebooksView = ({ books, downloads, bookActive, online, onToggle, onDownload, onCancel, onDelete, menuButton }) => (
+// A könyv adatlapja (a kártyára kattintva): nagy borító, cím, szerző, leírás, a kották száma, és énekszám szerint a
+// letétek és az előjátékok; ha egy énekhez több kotta is van, az énekszám után zárójelben a darabszám.
+const BookHymnList = ({ title, items, count }) => (
+    <section className="book-details-section">
+        <h4>{title} <span className="book-details-count">({count} db)</span></h4>
+        {items.length
+            ? <p className="book-details-numbers">{items.map(([number, n], i) => (
+                <React.Fragment key={number}>
+                    {i > 0 && ', '}
+                    <span className="book-details-number"><span className="hymn-number">{number}</span>{n > 1 && <span className="book-details-multi"> ({n})</span>}</span>
+                </React.Fragment>
+            ))}</p>
+            : <p className="book-details-none">Nincs.</p>}
+    </section>
+);
+
+const BookDetailsModal = ({ book, hymnOfScore, onClose }) => {
+    const data = book.remote ? book.remote.index : book.local.index;
+    const title = data.title || book.folder;
+    const author = bookAuthor(data.author);
+    const copyright = typeof data.copyright === 'string' && !/^[-–—\s]*$/.test(data.copyright) ? data.copyright.trim() : '';
+    const numbers = useMemo(() => bookHymnNumbers(data, hymnOfScore), [data, hymnOfScore]);
+    useEffect(() => {
+        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [onClose]);
+    return (
+        <Modal title="A kottakönyv adatai" onClose={onClose} maxWidth="760px">
+            <div className="book-details">
+                <div className="book-details-head">
+                    <BookCover url={bookCoverUrl(data)} title={title} folder={book.folder} />
+                    <div className="book-details-info">
+                        <h3 className="book-details-title">
+                            {title}
+                            {book.builtin && <span className="scorebook-badge">Beépített</span>}
+                            {book.imported && <span className="scorebook-badge">Saját</span>}
+                        </h3>
+                        {author && <div className="book-details-author">{author}</div>}
+                        <div className="book-details-total">
+                            {numbers.variationCount + numbers.preludeCount} kotta: {numbers.variationCount} letét, {numbers.preludeCount} előjáték
+                        </div>
+                        {data.description && <p className="book-details-description">{data.description}</p>}
+                        {copyright && <div className="book-details-copyright">{copyright}</div>}
+                    </div>
+                </div>
+                <BookHymnList title="Letétek" items={numbers.variations} count={numbers.variationCount} />
+                <BookHymnList title="Előjátékok" items={numbers.preludes} count={numbers.preludeCount} />
+            </div>
+        </Modal>
+    );
+};
+
+// Saját kottakönyv importálása zip-fájlból: a fájl kiválasztása, előnézet (cím, kották száma, hiányzó fájlok), majd mentés
+// a készülékre. Ha ugyanilyen azonosítójú (id) könyv a kottakönyvek listájában már van, nem importálható; ha egy korábban
+// importált könyvé, az lecserélődik.
+const BookImportModal = ({ books, onClose, onImport }) => {
+    const [parsed, setParsed] = useState(null);
+    const [fileName, setFileName] = useState('');
+    const [error, setError] = useState(null);
+    const [busy, setBusy] = useState(false);
+    const fileRef = useRef(null);
+
+    const bookData = (b) => (b.remote ? b.remote.index : b.local ? b.local.index : null);
+    const clash = parsed && books.find(b => !b.imported && bookData(b) && bookData(b).id === parsed.index.id);
+    const previous = parsed && books.find(b => b.imported && b.folder === parsed.index.folder);
+    const canImport = !!parsed && !clash && !busy;
+
+    const openFile = async (e) => {
+        const file = e.target.files && e.target.files[0];
+        e.target.value = '';
+        if (!file) return;
+        setParsed(null); setError(null); setFileName(file.name);
+        if (file.size > BOOK_ZIP_MAX_BYTES) { setError(`A fájl túl nagy (${formatBytes(file.size)}; legfeljebb ${formatBytes(BOOK_ZIP_MAX_BYTES)}).`); return; }
+        setBusy(true);
+        try {
+            setParsed(readBookZip(await file.arrayBuffer()));
+        } catch (err) {
+            setError(`A fájl nem importálható: ${err.message}.`);
+        } finally {
+            setBusy(false);
+        }
+    };
+    const doImport = () => {
+        if (!canImport) return;
+        setBusy(true);
+        onImport(parsed)
+            .then(onClose)
+            .catch(err => {
+                setBusy(false);
+                setError(`A mentés nem sikerült: ${err && err.name === 'QuotaExceededError' ? 'nincs elég szabad hely a készüléken' : err.message}.`);
+            });
+    };
+    const counts = parsed && bookHymnNumbers(parsed.index, new Map());
+    const missingScores = parsed ? parsed.missing.filter(url => url !== bookCoverUrl(parsed.index)) : [];
+    const shortName = (url) => url.slice(`data/${parsed.index.folder}/`.length) || url;
+
+    return (
+        <Modal title="Kottakönyv importálása" onClose={onClose} maxWidth="640px" placement="upper" footer={
+            <>
+                <button onClick={onClose} className="btn">Mégse</button>
+                <button onClick={doImport} disabled={!canImport} className="btn btn-primary">{previous ? 'Csere' : 'Importálás'}</button>
+            </>
+        }>
+            <div className="import-list">
+                <p className="import-message info">Válaszd ki a kottakönyv zip-fájlját: benne a könyv adatai (index.json) és a kottafájlok.
+                    A könyv erre a készülékre kerül, és a letöltött könyvekhez hasonlóan internet nélkül is használható.</p>
+                <div className="import-actions">
+                    <button onClick={() => fileRef.current.click()} disabled={busy} className="btn btn-outline"><Icons.File size={18}/> Zip-fájl kiválasztása</button>
+                    <input ref={fileRef} type="file" accept=".zip,application/zip,application/x-zip-compressed" className="import-file-input" onChange={openFile} tabIndex={-1} aria-hidden="true" />
+                    {fileName && <span className="book-import-file">{fileName}</span>}
+                </div>
+                {busy && !parsed && <p className="import-message info">Beolvasás...</p>}
+                {error && <p className="import-message error">{error}</p>}
+                {parsed && (
+                    <div className="import-preview">
+                        <div className="book-import-title">{parsed.index.title}</div>
+                        {bookAuthor(parsed.index.author) && <div className="book-import-detail">{bookAuthor(parsed.index.author)}</div>}
+                        <div className="book-import-detail">
+                            {counts.variationCount} letét, {counts.preludeCount} előjáték • {parsed.files.size} fájl, {formatBytes(parsed.bytes)}
+                        </div>
+                        {clash && <p className="import-message error">Ezzel az azonosítóval („{parsed.index.id}”) már van könyv a kottakönyvek
+                            listájában: {bookData(clash).title}. Az importált könyvnek más azonosító (az index.json „id” mezője) kell.</p>}
+                        {previous && !clash && <p className="import-message info">Ezt a könyvet már importáltad
+                            ({new Date(previous.local.date).toLocaleDateString('hu-HU')}): a korábbi példánya lecserélődik.</p>}
+                        {missingScores.length > 0 && <p className="import-message error">{missingScores.length} kotta hiányzik a zip-fájlból, ezek
+                            nem fognak megjelenni: {missingScores.slice(0, 5).map(shortName).join(', ')}{missingScores.length > 5 ? ', …' : ''}</p>}
+                    </div>
+                )}
+            </div>
+        </Modal>
+    );
+};
+
+const ScorebooksView = ({ books, downloads, bookActive, online, onToggle, onDownload, onCancel, onDelete, onOpen, onImport, menuButton }) => (
     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
         <div className="header centered">
             <h1 className="header-title main page-title">Kottakönyvek</h1>
@@ -3942,6 +4191,11 @@ const ScorebooksView = ({ books, downloads, bookActive, online, onToggle, onDown
             </p>
             {!online && <p className="text-center scorebook-notice">Nincs internetkapcsolat: csak a készüléken lévő könyvek érhetők el.</p>}
             {!OFFLINE_SUPPORTED && <p className="text-center scorebook-notice">Ez a böngésző itt nem tudja a könyveket a készülékre menteni (ehhez https kell), ezért minden könyv internettel, a szerverről használható.</p>}
+            {OFFLINE_SUPPORTED && (
+                <div className="scorebook-import">
+                    <button onClick={onImport} className="btn btn-outline"><Icons.Import size={18}/> Kottakönyv importálása</button>
+                </div>
+            )}
 
             {/* ÜRES ÁLLAPOT KEZELÉSE */}
             {books.length === 0 && (
@@ -3960,7 +4214,7 @@ const ScorebooksView = ({ books, downloads, bookActive, online, onToggle, onDown
                     return (
                         <ScorebookCard key={book.folder} book={book} download={downloads[book.folder]}
                             active={data ? isBookActive(data, bookActive) : true}
-                            onToggle={onToggle} onDownload={onDownload} onCancel={onCancel} onDelete={onDelete} />
+                            onToggle={onToggle} onDownload={onDownload} onCancel={onCancel} onDelete={onDelete} onOpen={onOpen} />
                     );
                 })}
             </div>
@@ -4323,9 +4577,11 @@ function OrganistApp() {
     const [loading, setLoading] = useState(true);
 
     // KOTTAKÖNYVEK: a lista könyvei, mindegyiknél a szerveren lévő (remote) és a készülékre letöltött (local) változat
-    const [books, setBooks] = useState([]);          // [{ folder, builtin, orphan, remote, remoteError, local }]
+    const [books, setBooks] = useState([]);          // [{ folder, builtin, orphan, imported, remote, remoteError, local }]
     const [downloads, setDownloads] = useState({});  // { [mappa]: { done, total } (folyamatban) | { error } }
     const [bookToDelete, setBookToDelete] = useState(null);
+    const [openBookFolder, setOpenBookFolder] = useState(null);   // a megnyitott adatlapú könyv
+    const [isBookImportOpen, setIsBookImportOpen] = useState(false);
     const [online, setOnline] = useState(navigator.onLine);
     const booksRef = useRef(books);
     booksRef.current = books;
@@ -4354,7 +4610,7 @@ function OrganistApp() {
     // A könyvek szerveren lévő változata. A háttérben töltődik: indulásnál nem várunk rá, így rossz hálózaton
     // (vagy internet nélkül) is azonnal használható a program a készüléken lévő könyvekkel.
     const refreshRemoteBooks = useCallback((entries) => {
-        entries.filter(entry => !entry.orphan).forEach(({ folder }) => {
+        entries.filter(entry => !entry.orphan && !entry.imported).forEach(({ folder }) => {
             fetchRemoteBook(folder)
                 .then(remote => setBooks(bs => bs.map(b => b.folder === folder ? { ...b, remote, remoteError: null } : b)))
                 .catch(err => {
@@ -4384,10 +4640,15 @@ function OrganistApp() {
 
         Promise.all([loadJSONFile('./data/enek.json'), loadJSONFile(CATALOG_URL), readDownloadedBooks().catch(() => ({}))])
             .then(([hymns, catalog, downloaded]) => {
-                const entries = normalizeCatalog(catalog).map(entry => ({ ...entry, orphan: false, remote: null, remoteError: null, local: downloaded[entry.folder] || null }));
-                // A listából azóta kikerült, de letöltött könyv is megmarad (törölni a felhasználó tudja)
+                const entries = normalizeCatalog(catalog).map(entry => ({ ...entry, orphan: false, imported: false, remote: null, remoteError: null, local: downloaded[entry.folder] || null }));
+                // A listából azóta kikerült, de letöltött könyv is megmarad (törölni a felhasználó tudja); az importált
+                // könyvek a lista végén
                 Object.keys(downloaded).filter(folder => !entries.some(e => e.folder === folder))
-                    .forEach(folder => entries.push({ folder, builtin: false, orphan: true, remote: null, remoteError: null, local: downloaded[folder] }));
+                    .sort((a, b) => !!downloaded[a].imported - !!downloaded[b].imported)
+                    .forEach(folder => {
+                        const imported = downloaded[folder].imported === true;
+                        entries.push({ folder, builtin: false, orphan: !imported, imported, remote: null, remoteError: null, local: downloaded[folder] });
+                    });
                 setHymnBook(hymns.map(h => ({ ...h, verses: hymnVerses(h), description: hymnDescription(h), info: hymnInfo(h) })));
                 setBooks(entries);
                 if (errors.length) setAlertMessage(`Hiba az adatfájlok betöltésekor: ${errors.join(', ')}`);
@@ -4471,9 +4732,22 @@ function OrganistApp() {
         setBookToDelete(null);
         stopFillingMissing(folder);
         deleteDownloadedBook(folder)
-            .then(() => setBooks(bs => bs.filter(b => !(b.folder === folder && b.orphan)).map(b => b.folder === folder ? { ...b, local: null } : b)))
+            .then(() => setBooks(bs => bs.filter(b => !(b.folder === folder && (b.orphan || b.imported))).map(b => b.folder === folder ? { ...b, local: null } : b)))
             .catch(err => setAlertMessage(`A könyv törlése nem sikerült: ${err.message}`));
     };
+
+    // Saját kottakönyv importálása (a zip-fájl előnézete után); az azonos azonosítójú, korábban importált könyv lecserélődik
+    const importBook = (parsed) => saveImportedBook(parsed).then(local => {
+        if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+        const folder = parsed.index.folder;
+        setBooks(bs => bs.some(b => b.folder === folder)
+            ? bs.map(b => b.folder === folder ? { ...b, local } : b)
+            : [...bs, { folder, builtin: false, orphan: false, imported: true, remote: null, remoteError: null, local }]);
+    });
+
+    // A megnyitott adatlapú könyv (csak ha van adata; pl. törlés után az adatlap bezárul)
+    const openBook = openBookFolder != null ? books.find(b => b.folder === openBookFolder && (b.remote || b.local)) || null : null;
+    const closeBookDetails = useCallback(() => setOpenBookFolder(null), []);
 
     // A beépített könyv magától mentődik a készülékre, és frissül, ha a szerveren változott.
     // Egy változatot csak egyszer próbálunk (hiba után a Kottakönyvek oldalon lehet újrapróbálni).
@@ -4720,9 +4994,13 @@ function OrganistApp() {
     // Származtatott adatok
     const hymnByNumber = useMemo(() => new Map(hymnBook.map(h => [String(h.number), h])), [hymnBook]);
     // A most elérhető letétek és előjátékok (az ujjrendek mentéséhez és importálásához): azonosító → { kind, name, hymn }
+    // A kották scoreId-je → az ének száma
+    const hymnOfScore = useMemo(() => {
+        const map = new Map();
+        hymnBook.forEach(h => { if (h.scoreId != null && !map.has(String(h.scoreId))) map.set(String(h.scoreId), String(h.number)); });
+        return map;
+    }, [hymnBook]);
     const blockInfo = useMemo(() => {
-        const hymnOfScore = new Map();
-        hymnBook.forEach(h => { if (h.scoreId != null && !hymnOfScore.has(String(h.scoreId))) hymnOfScore.set(String(h.scoreId), String(h.number)); });
         const map = new Map();
         activeScores.forEach(s => {
             const hymn = hymnOfScore.get(String(s.id)) || '';
@@ -4730,7 +5008,7 @@ function OrganistApp() {
             s.preludes.forEach(p => map.set(p.id, { kind: 'Előjáték', name: p.name, hymn }));
         });
         return map;
-    }, [activeScores, hymnBook]);
+    }, [activeScores, hymnOfScore]);
     const selectedHymn = selectedHymnNumber != null ? hymnByNumber.get(String(selectedHymnNumber)) || null : null;
 
     const resolveItem = (item) => ({
@@ -4995,7 +5273,13 @@ function OrganistApp() {
                 <HymnSelectorModal isOpen={isQuickOpenOpen} onClose={() => setIsQuickOpenOpen(false)} onSelect={handleQuickOpen} hymnBook={hymnBook} title="Gyors megnyitás" action="megnyitása" ItemIcon={Icons.ChevronRight} />
                 <DeleteConfirmModal isOpen={!!itemToDelete} onClose={() => setItemToDelete(null)} onConfirm={confirmDeleteItem} title="Ének törlése" message="Biztosan el szeretnéd távolítani ezt az éneket a listáról?" />
                 <DeleteConfirmModal isOpen={!!playlistToDelete} onClose={() => setPlaylistToDelete(null)} onConfirm={confirmDeletePlaylist} title="Lista törlése" message={`Biztosan törölni szeretnéd a(z) "${playlistToDelete?.name}" listát?`} />
-                <DeleteConfirmModal isOpen={!!bookToDelete} onClose={() => setBookToDelete(null)} onConfirm={confirmDeleteBook} title="Letöltött könyv törlése" message={`A(z) „${bookToDelete?.title}” kottái törlődnek erről a készülékről, és addig nem jelennek meg, amíg újra le nem töltöd.`} />
+                <DeleteConfirmModal isOpen={!!bookToDelete} onClose={() => setBookToDelete(null)} onConfirm={confirmDeleteBook}
+                    title={bookToDelete?.imported ? 'Importált könyv törlése' : 'Letöltött könyv törlése'}
+                    message={bookToDelete?.imported
+                        ? `A(z) „${bookToDelete?.title}” törlődik erről a készülékről. Visszatenni a zip-fájl újbóli importálásával lehet.`
+                        : `A(z) „${bookToDelete?.title}” kottái törlődnek erről a készülékről, és addig nem jelennek meg, amíg újra le nem töltöd.`} />
+                {openBook && <BookDetailsModal book={openBook} hymnOfScore={hymnOfScore} onClose={closeBookDetails} />}
+                {isBookImportOpen && <BookImportModal books={books} onClose={() => setIsBookImportOpen(false)} onImport={importBook} />}
                 
                 {editedItem && (
                     <AddToPlaylistModal key={editedItem.id} mode="edit" onClose={() => setEditingItem(null)} onConfirm={handleEditItem}
@@ -5164,6 +5448,7 @@ function OrganistApp() {
                 {view === 'scorebooks' && (
                     <ScorebooksView books={books} downloads={downloads} bookActive={settings.bookActive} online={online}
                         onToggle={toggleBookActive} onDownload={startDownload} onCancel={cancelDownload} onDelete={setBookToDelete}
+                        onOpen={setOpenBookFolder} onImport={() => setIsBookImportOpen(true)}
                         menuButton={menuToggle('corner')} />
                 )}
 
