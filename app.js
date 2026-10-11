@@ -4767,7 +4767,7 @@ const AboutView = ({ menuButton }) => (
         <h1 className="page-title text-3xl text-galaxy mb-2">Református OrgonaTár</h1>
         <p className="text-accent uppercase font-bold tracking-widest mb-8">Fazekas Márton</p>
         <div className="content-box">
-            <p>Református énekek orgonakíséretei, a 2021-es énekeskönyvhöz igazítva. Több korálkönyvből válogattam, elsősorban saját használatra - így számos kíséret kimaradt, például a "művészi" B letétek a genfi korálkönyvből.</p>
+            <p>Református énekek orgonakíséretei, a 2021-es énekeskönyvhöz igazítva. Több korálkönyvből válogattam, elsősorban saját használatra - így számos kíséret kimaradt, például a "művészi" B letétek és az egyszerű C letétek a genfi korálkönyvből, továbbá minden ének, ahol változott a dallam vagy a ritmus. Ahol hangnem változott, ott a régi letét transzponálva lett.</p>
         </div>
         <div className="about-actions">
             <a href={GUIDE_URL} target="_blank" rel="noopener noreferrer" className="btn btn-outline"><Icons.Book size={18}/> Használati útmutató</a>
