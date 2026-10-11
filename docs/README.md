@@ -24,6 +24,8 @@ kottakönyvekkel internet nélkül is működik. Androidra alkalmazásként is t
 9. [Gyakori kérdések](09-gyik.md)
 10. [Az adatok karbantartása](10-karbantartas.md) – új könyv, kotta, borítókép, énekleírás feltöltése (a webhely
     gazdájának)
+11. [Saját kottakönyv: a zip-fájl formátuma](11-kottakonyv-zip.md) – a Kottakönyvek oldalon importálható könyv
+    összeállítása
 
 ## Röviden: az első istentisztelet
 

@@ -259,6 +259,14 @@ a letétek értékelése, az énekek transzponálása és az ujjrendek a böngé
   rész alcímként, és a cím végén zárójelben álló évszám (pl. „Korálkönyv - Genfi zsoltárok (2010)”). A kötés színe a
   könyv mappájának nevéből adódik, így könyvenként más, de mindig ugyanaz.
 - Telefonon a borító kis kép a kártya jobb felső sarkában, a szöveg körbefolyja.
+- **Adatlap:** a kártyára (a gombokon és a kapcsolón kívül) vagy a címére kattintva (`BookDetailsModal`): nagy borító,
+  cím, szerző, leírás, `copyright`, a kották száma, és énekszám szerint a letétek és az előjátékok (`bookHymnNumbers`;
+  az énekszám a kotta `scoreId`-jéhez tartozó ének száma). Ha egy énekhez több kotta van, utána zárójelben a darabszám.
+- **Saját kottakönyv importálása** (`BookImportModal`): zip-fájlból, előnézettel. A zip formátuma:
+  [docs/11-kottakonyv-zip.md](docs/11-kottakonyv-zip.md). Az importált könyv a letöltött könyvek mellé kerül
+  (`orgonatar-konyv:sajat-<…>:…`, a letöltés adatlapján `"imported": true`), a lista végén, „Saját” jelöléssel; nincs
+  szerveren lévő változata, így frissítés helyett újra importálható (az azonos `id`-jű könyv lecserélődik). A szerveren
+  lévő könyvével egyező `id` nem importálható.
 
 ## Kottakönyvek letöltése, offline működés
 

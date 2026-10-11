@@ -22,6 +22,29 @@ szükséged van.
 Nagyobb kijelzőn a kártyák két-három oszlopban állnak, telefonon egymás alatt. Telefonon a borító kis kép a kártya jobb
 felső sarkában.
 
+## A könyv adatlapja
+
+A kártyára (vagy a könyv címére) koppintva megnyílik a könyv adatlapja: nagy borító, a cím, a szerző, a leírás és a
+kották száma, alatta énekszám szerint felsorolva a **letétek** és az **előjátékok**. Ha a könyvben egy énekhez több
+kotta is van, az énekszám után zárójelben a darabszám áll, pl. „42 (2)”. A le nem töltött könyvek adatlapja is
+megnyitható, így letöltés előtt látszik, mi van bennük.
+
+## Saját kottakönyv importálása
+
+A **Kottakönyv importálása** gombbal (a kártyák fölött) zip-fájlból vehetsz fel új könyvet, pl. a saját letéteidet.
+
+1. **Zip-fájl kiválasztása:** a zipben a könyv adatai (`index.json`) és a kottafájlok vannak (a formátum:
+   [Saját kottakönyv: a zip-fájl formátuma](11-kottakonyv-zip.md)).
+2. Az ablak megmutatja a könyv címét, a letétek és az előjátékok számát, és szól, ha egy kotta hiányzik a zipből.
+3. **Importálás:** a könyv a többi könyv után, **Saját** jelöléssel jelenik meg, és a letöltött könyvekhez hasonlóan
+   internet nélkül is használható.
+
+- A könyv csak erre a készülékre kerül. Másik eszközön ugyanezzel a zip-fájllal importálható.
+- Ha ugyanazt a könyvet (azonos azonosítóval) újra importálod, a gomb **Csere** lesz: a régi példány helyére az új
+  kerül, így a könyv javított, bővített változata is felvehető.
+- A **Törlés** gomb eltávolítja a készülékről; visszatenni újbóli importálással lehet.
+- Importálni csak akkor lehet, ha a program a megszokott, `https://` kezdetű címén van megnyitva.
+
 ## Frissítés
 
 Ha egy letöltött könyvbe új kották kerülnek a szerveren, a kártyán megjelenik az **Új kották érhetők el** felirat és a

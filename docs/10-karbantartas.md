@@ -182,4 +182,4 @@ A két forrást összevetettük. Ahol eltértek, a nyomtatott könyv adata kerü
 
 ---
 
-[← Gyakori kérdések](09-gyik.md) · [Tartalom](README.md)
+[← Gyakori kérdések](09-gyik.md) · [Tartalom](README.md) · [Tovább: Saját kottakönyv (zip) →](11-kottakonyv-zip.md)
