@@ -6,6 +6,11 @@ A kották kottakönyvekben vannak. Egy könyv egy gyűjtemény, pl. egy korálk�
 a lejátszóban csak a **letöltött** (és bekapcsolt) könyvek kottái jelennek meg, ezért először itt töltsd le, amire
 szükséged van.
 
+> FONTOS!
+> A felsorolt könyvek csak tervezett tartalom a jelenleg elérhető kiadványok alapján.
+> Szerzői jogi okok miatt a programba először csak az egyhazzene.reformatus.hu oldalon közzétett régi korálkönyvek (1959, 2010) és további kiadványok kerülnek be!
+> A jelenleg is kereskedelmi forgalomban kapható könyvek egyelőre csak helykitöltőként szerepelnek!
+
 ![A Kottakönyvek oldal](kepek/konyvek.webp)
 
 1. **Beépített könyv:** mindig elérhető, és magától a készülékre mentődik, le sem kell tölteni.
