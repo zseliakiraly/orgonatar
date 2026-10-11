@@ -21,6 +21,11 @@
         h1 { font-family: 'Old Standard TT', Georgia, serif; font-weight: 400; font-size: 2.2rem; line-height: 1.15; margin: 0; color: var(--teal); }
         .tagline { margin: 6px 0 0; color: var(--muted); }
         p { margin: 0 0 14px; }
+        .lead { font-size: 1.12rem; }
+        .features { list-style: none; padding: 0; margin: 24px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px 24px; }
+        .features li { display: flex; gap: 12px; align-items: flex-start; color: var(--muted); }
+        .features .ic { width: 22px; height: 22px; margin-top: 2px; stroke-width: 1.75; color: var(--gold); }
+        .features strong { display: block; color: var(--ink); font-weight: 600; }
         .choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 32px 0; }
         .choice { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 22px; display: flex; flex-direction: column; }
         .choice h2 { font-family: 'Old Standard TT', Georgia, serif; font-weight: 400; font-size: 1.4rem; margin: 0 0 8px; color: var(--teal); }
@@ -44,6 +49,8 @@
         .choice h2 .ic { width: 26px; height: 26px; stroke-width: 1.75; color: var(--gold); }
         footer a { display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
         footer a:hover, footer a:focus-visible { text-decoration: underline; }
+        footer .imprint { margin: 10px 0 0; font-size: 0.82rem; }
+        footer .imprint a { display: inline; }
         footer .ic { width: 16px; height: 16px; }
         @media (max-width: 480px) { header { flex-direction: column; align-items: flex-start; } h1 { font-size: 1.8rem; } }
     </style>
@@ -58,9 +65,14 @@
         </div>
     </header>
 
-    <p>Ezt a programot azért készítettem, hogy orgonajáték közben egyszerre láthassam a letétet, az előjátékot és az énekszöveget is.</p>
-    <p>A program dinamikusan rajzolja a kottákat, a kíséret transzponálható, nagyítható-kicsinyíthető és ujjrendeket is be lehet írni.</p>
-    <p>A liturgia énekei listába menthetőek és "éles helyzetben" lapozató. A a listák megoszthatók, és a letöltött kottakönyvek internet nélkül is használhatók.</p>
+    <p class="lead">Az OrgonaTárat azért készítettem, hogy orgonálás közben egy képernyőn lássam az ének letétjét, előjátékát és szövegét. Az énekekhez a korálkönyvekből összegyűjtött letétek tartoznak, az énekeskönyv szövegével együtt.</p>
+
+    <ul class="features">
+        <li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg><div><strong>Rugalmas kotta</strong>A kottákat a program maga rajzolja ki: a kíséret transzponálható, nagyítható és kicsinyíthető, és ujjrendet is írhatsz bele.</div></li>
+        <li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15V6" /><path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" /><path d="M12 12H3" /><path d="M16 6H3" /><path d="M12 18H3" /></svg><div><strong>Énekrend</strong>Az istentisztelet énekeit listába mentheted, és szolgálat közben egyetlen érintéssel lapozhatsz közöttük.</div></li>
+        <li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" x2="15.42" y1="13.51" y2="17.49" /><line x1="15.41" x2="8.59" y1="6.51" y2="10.49" /></svg><div><strong>Megosztás</strong>A listákat linkkel vagy QR-kóddal küldheted el például a lelkésznek vagy egy másik kántornak.</div></li>
+        <li><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h.01" /><path d="M8.5 16.429a5 5 0 0 1 7 0" /><path d="M5 12.859a10 10 0 0 1 5.17-2.69" /><path d="M19 12.859a10 10 0 0 0-2.007-1.523" /><path d="M2 8.82a15 15 0 0 1 4.177-2.643" /><path d="M22 8.82a15 15 0 0 0-11.288-3.764" /><path d="m2 2 20 20" /></svg><div><strong>Internet nélkül</strong>A letöltött kottakönyvek internetkapcsolat nélkül is megnyílnak, a templomban is.</div></li>
+    </ul>
 
     <div class="choices">
         <section class="choice">
@@ -89,6 +101,7 @@
         <a href="help/" target="_blank" rel="noopener"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v14" /><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" /></svg>Használati útmutató</a> ·
         <a href="kottakonyv-keszito.html"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v6" /><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20" /><path d="M9 10h6" /></svg>Kottakönyv-készítő</a> ·
         <a href="mailto:feedback@zseli.hu?subject=OrgonaT%C3%A1r"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>Visszajelzés</a>
+        <p class="imprint">Készítette: [Név] · <a href="mailto:feedback@zseli.hu">feedback@zseli.hu</a> · Tárhely: [tárhelyszolgáltató neve, címe] · <a href="adatvedelem.html">Adatkezelési tájékoztató</a></p>
     </footer>
 </main>
 </body>
