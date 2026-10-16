@@ -813,7 +813,7 @@
    ["Én ellenségimnek ereje,", "Kezedben minden tehetsége.", "Benned bízom, én Istenem,", "Mert te vagy én segedelmem.", "Az Isten jóvoltát jelenti,", "Nyavalyámnak elejét veszi,", "És megláttatja énvélem,", "Hogy elvész én ellenségem."],
    ["Mert te vagy, Uram, én oltalmam,", "Reménységem és bizodalmam;", "Azért, ó, én erősségem,", "Mindenütt neved dicsérem,", "Hogy nekem az én szükségemben,", "Segedelmem vagy ínségemben;", "Te vagy én erős kőváram,"]
  ] },
- { "number": "60", "title": "Minket, Úr Isten, elhagyál", "keywords": ["zsoltár", "anyaszentegyház", "ellenség", "segítségkérés", "szabadítás"], "scoreId": "108",
+ { "number": "60", "title": "Minket, Úr Isten, elhagyál", "keywords": ["zsoltár", "anyaszentegyház", "ellenség", "segítségkérés", "szabadítás"], "scoreId": "60",
    "bible": "Zsolt 60", "textAuthor": "Th. de Bèze", "textYear": "", "translator": "Szenci Molnár A.", "translationYear": "", "melodyAuthor": "P. Davantès, Genf", "melodyYear": "1562", "source": "Genf, 1562", "highlightedVerses": "",
    "description": [
    ["A 60. zsoltár Isten népének a nehézségek között való helytállásáról és az övéit megsegítő Isten hatalmas tetteiről szól. (Csomasz Tóth K.)"]
@@ -869,7 +869,7 @@
    ["És nagy félelemmel mindenek", "Hirdetik az Isten dolgát,", "Beszélik annak nagy voltát,", "Melyet innen eszükbe vesznek,", "És megértenek."],
    ["De szíve a hű embereknek", "Örvend az erős Istenben", "És az ő nagy kegyelmében.", "Az igaz hívek örvendeznek", "És dicsekednek."]
  ] },
- { "number": "65", "title": "A Sionnak hegyén, Úr Isten", "keywords": ["zsoltár", "anyaszentegyház", "boldogság", "bűnök bocsánata", "Isten hatalma", "kegyelem", "pünkösd", "reggel", "újév"], "scoreId": "72",
+ { "number": "65", "title": "A Sionnak hegyén, Úr Isten", "keywords": ["zsoltár", "anyaszentegyház", "boldogság", "bűnök bocsánata", "Isten hatalma", "kegyelem", "pünkösd", "reggel", "újév"], "scoreId": "65",
    "bible": "Zsolt 65", "textAuthor": "Th. de Bèze", "textYear": "", "translator": "Szenci Molnár A.", "translationYear": "", "melodyAuthor": "G. Franc, Strasbourg", "melodyYear": "1545", "source": "Strasbourg, 1545", "highlightedVerses": "",
    "description": [
    ["Az Istentől nyert lelki-testi jókért való hálaadásról, az istentiszteleti közösség áldásairól, és Isten üdvözítő tetteinek a természet dolgaiban tükröződő képeiről szól ez a költői szépségekben gazdag, életörömmel és Isten iránti hálával teljes zsoltár. Régen aratás idején, olykor Pünkösd ünnepén is szokták énekelni. (Csomasz Tóth K.)"]
@@ -963,7 +963,7 @@
    ["A te hűségedet, Úr Isten,", "Hirdetem, éneklem,", "Mindennek beszélem.", "Dicsérlek lantnak zengésében,", "Ó, szentek dicsősége,", "Izráelnek szentsége!"],
    ["Ajkaimmal vígan dicsérem", "A te hatalmadat", "És nagy irgalmadat.", "Lelkemet hozzád fölemelem:", "Megtartád életemet,", "Hogy dicsérjelek téged!"]
  ] },
- { "number": "72", "title": "Uram, a te ítéletedet Adjad a királynak", "keywords": ["zsoltár", "messiási", "pünkösd", "vízkereszt"], "scoreId": "72",
+ { "number": "72", "title": "Uram, a te ítéletedet Adjad a királynak", "keywords": ["zsoltár", "messiási", "pünkösd", "vízkereszt"], "scoreId": "65",
    "bible": "Zsolt 72", "textAuthor": "C. Marot", "textYear": "", "translator": "Szenci Molnár A.", "translationYear": "", "melodyAuthor": "G. Franc, Strasbourg", "melodyYear": "1545", "source": "Strasbourg, 1545", "highlightedVerses": "",
    "description": [
    ["Messiási zsoltár, mely Isten országára és magára a Messiásra vonatkozó jövendölésként az igazi uralkodó alakját rajzolja meg. „Ne szűnjünk meg ezzel a zsoltárral fohászkodni — különösen egy új esztendő kezdetén —, hogy érvényesüljön napjainkban és világunkban az isteni igazság és megítélés! Annál is inkább, mert minden kornak és társadalomnak szüksége van vezetőre, nevezzék akár elnöknek, akár fejedelemnek.\" - írja Fekete Csaba, aki hozzáteszi: \"Az eszményi uralkodót személyes és közösségi életünkben csak a békesség fejedelme, csak Isten küldötte, Jézus Krisztus mint földi ország nélküli király testesíti meg.”"]
@@ -2403,7 +2403,7 @@
    ["A híveknek számuk vagyon,", "Nevük nála írva vagyon,", "Hajuk szála számon vagyon:", "Rájuk gondja van oly nagyon."],
    ["Ne félj azért háborúdban,", "Ó, én lelkem, nyavalyádban;", "Erős légy bizodalmadban,", "Mert vagy Isten oltalmában."]
  ] },
- { "number": "171", "title": "Seregeknek Ura, felséges Isten", "keywords": ["zsoltár", "könyörgés", "dicséret"], "scoreId": "284",
+ { "number": "171", "title": "Seregeknek Ura, felséges Isten", "keywords": ["zsoltár", "könyörgés", "dicséret"], "scoreId": "192",
    "bible": "Zsolt 84", "textAuthor": "Debrecen", "textYear": "1723", "translator": "", "translationYear": "", "melodyAuthor": "Debrecen (Drága dolog az Úr Istent dicsérni)", "melodyYear": "1774", "source": "Debrecen, 1723, 1736, 1778; Debrecen, 1774", "highlightedVerses": "",
    "description": [
    ["A 84. bibliai zsoltárra készült, Isten háza után vágyakozó zsoltárimádságot számos alkalommal énekelhetjük, de különösen alkalmas templomszentelésre és évfordulós megemlékezésekre."]
@@ -3111,7 +3111,7 @@
    ["Adjad nékünk most is te Szentlelkedet,", "Ne hallgassuk hiába szent igédet,", "Sőt, aszerint féljük szent nevedet,", "Magasztaljuk mindig Felségedet."],
    ["Dicsértessék már az Atya Úr Isten;", "Szent Igéje, Megváltó Fiú Isten;", "Vélük együtt Szentlélek Úr Isten:", "Szentháromság egy örök Úr Isten!"]
  ] },
- { "number": "235", "title": "Fordítsd, Úr Isten, kegyes füleidet", "keywords": ["főének", "Isten igéje", "dicséret"], "scoreId": "235",
+ { "number": "235", "title": "Fordítsd, Úr Isten, kegyes füleidet", "keywords": ["főének", "Isten igéje", "dicséret"], "scoreId": "232",
    "bible": "", "textAuthor": "Várad", "textYear": "1566", "translator": "", "translationYear": "", "melodyAuthor": "P. Tritonius", "melodyYear": "1507", "source": "Várad, 1566", "highlightedVerses": "",
    "description": [
    ["Úr Jézus Krisztus, igaz világosság, Út, élet, öröm, egyetlen igazság,", "Ki a halálból a te szent véreddel Minket megváltál. (5.vers)", "Már az 1566-os váradi énekeskönyvben szereplő könyörgés."]
@@ -3798,7 +3798,7 @@
    ["Szabadítsál meg minket a gonosztól,", "Bűntől, ördögtől, minden álnokságtól,", "Ellenséginktől, hirtelen haláltól,", "És kárhozattól."],
    ["Dicsőség néked mennyben, örök Isten!", "Ki mihozzánk vagy nagy türelmességben:", "Hallgass meg minket e könyörgésünkben,", "Áldj meg hitünkben!"]
  ] },
- { "number": "332", "title": "Mennybéli felséges Isten", "keywords": ["Miatyánk", "bűnbánat", "dicséret"], "scoreId": "333",
+ { "number": "332", "title": "Mennybéli felséges Isten", "keywords": ["Miatyánk", "bűnbánat", "dicséret"], "scoreId": "332",
    "bible": "Mt 6,9–13", "textAuthor": "M. Luther alapján", "textYear": "", "translator": "Amszterdam", "translationYear": "1685", "melodyAuthor": "Lipcse", "melodyYear": "1539", "source": "Lipcse, 1539", "highlightedVerses": "",
    "description": [
    ["Miatyánk"]
@@ -3815,7 +3815,7 @@
    ["Ne vígy minket kísértésbe,", "Mely rajtunk erőt vehetne;", "Jól tudod, mily gyarlók vagyunk,", "Könnyen tántorodik lábunk;", "Szabadíts meg a gonosztól,", "Ki tőrt vet nekünk akárhol."],
    ["Így kérjük tőled ezeket,", "Mi néped és örökséged:", "Tied az ország, s hatalom,", "Égi, földi birodalom;", "Dicsőségnevednek légyen,", "Hallgasd meg imánkat.", "Ámen!"]
  ] },
- { "number": "333", "title": "Mi Atyánk, ó, kegyes Isten", "keywords": ["Miatyánk", "bűnbánat"], "scoreId": "333",
+ { "number": "333", "title": "Mi Atyánk, ó, kegyes Isten", "keywords": ["Miatyánk", "bűnbánat"], "scoreId": "332",
    "bible": "Mt 6,9–13", "textAuthor": "Oppenheim", "textYear": "1612", "translator": "", "translationYear": "", "melodyAuthor": "a 332. ének dallamára vagy a 117. genfizsoltárra énekelhető", "melodyYear": "", "source": "Oppenheim, 1612", "highlightedVerses": "",
    "description": [
    ["Miatyánk"]
@@ -5883,7 +5883,7 @@
    ["Adjad szent ajándékodat,", "Bátorítsad lelkünket,", "Hogy vallhassuk a Krisztust!", "Adjad, hogy mi legyőzhessük", "Az ördög csalárdságát!", "Te vagy mi biztatónk, minden oltalmunk."],
    ["Biztasd félelmes szívünket,", "Hogy kétségbe ne essünk", "Halálunknak idején,", "De nagy bátorsággal, vígan", "E világból távozzunk!", "Jövel, vigasztaló Szentlélek Isten!"]
  ] },
- { "number": "546", "title": "Adj, Úr Isten, nékünk Szentlelket", "keywords": ["pünkösd", "Szentlélek", "Isten igéje"], "scoreId": "546",
+ { "number": "546", "title": "Adj, Úr Isten, nékünk Szentlelket", "keywords": ["pünkösd", "Szentlélek", "Isten igéje"], "scoreId": "230",
    "bible": "", "textAuthor": "Debrecen", "textYear": "1560", "translator": "", "translationYear": "", "melodyAuthor": "Kolozsvár (Hallgass meg minket, nagy Úr Isten)", "melodyYear": "1744", "source": "Debrecen, 1560; Kolozsvár, 1744", "highlightedVerses": "",
    "description": [
    ["Huszár Gál első énekeskönyvének elején található először, de egészen 1806-ig minden énekeskönyvben szerepel ez a könyörgés."]
@@ -5894,7 +5894,7 @@
    ["Te vagy, Krisztus, mi Üdvözítőnk,", "Szent Atyádnál békességszerzőnk;", "Mi életünk vagy te, lakozzál bennünk,", "Hogy minden mi dolgunkban téged dicsérjünk", "És dicsőítsünk."],
    ["Ó, Szentlélek, kérünk tégedet:", "Bátorítsad a mi szívünket;", "Vigasztalj meg minket s igazgass minket,", "Hogy hallván, megérthessük te szent igédet,", "Üdvösségünket."]
  ] },
- { "number": "547", "title": "Szentlélek, öröm Lelke", "keywords": ["pünkösd", "Szentlélek"], "scoreId": "547",
+ { "number": "547", "title": "Szentlélek, öröm Lelke", "keywords": ["pünkösd", "Szentlélek"], "scoreId": "390",
    "bible": "", "textAuthor": "P. Gerhardt", "textYear": "1653", "translator": "Szénási S., Túrmezei E.", "translationYear": "", "melodyAuthor": "Lyon (Várj, ember szíve)", "melodyYear": "1557", "source": "Lyon, 1557", "highlightedVerses": "",
    "description": [
    ["A Szentlélek áldott munkálkodásáról szóló ének Paul Gerhardt egyik pünkösdi versének részlete. Dallamául legismertebb adventi énekünkét használjuk."]
@@ -7687,7 +7687,7 @@
    ["Ha vár a feladat, sürget a munka,", "Testem is, lelkem is erőtelen,", "Az Úr a segítőm, amint megmondta,", "Krisztusnak kegyelme elég nekem!"],
    ["Ha eljön maholnap utolsó órám,", "A földi vándorlást bevégezem,", "Az Úrnak orcája ragyog majd énrám,", "Kegyelme örökre elég nekem!"]
  ] },
- { "number": "765", "title": "Ez a világ csak baj halma", "keywords": ["bizalom"], "scoreId": "165",
+ { "number": "765", "title": "Ez a világ csak baj halma", "keywords": ["bizalom"], "scoreId": "765",
    "bible": "", "textAuthor": "Borkó J.", "textYear": "1928", "translator": "", "translationYear": "", "melodyAuthor": "Debrecen", "melodyYear": "1780", "source": "Debrecen, 1780, 1791, 1811", "highlightedVerses": "",
    "description": [],
    "verses": [
@@ -7695,7 +7695,7 @@
    ["Mint őz, szarvas a vizekre,", "Vágyom azért oly helyekre,", "Ahol lelkem nyugtot talál,", "Jézusommal egy úton jár."],
    ["Legyen bár tövissel rakva,", "Nyugodt szívvel járok rajta,", "Jézus terhe könnyű s édes,", "Igája gyönyörűséges."]
  ] },
- { "number": "766", "title": "Jézus, te vagy nékem őriző pásztorom", "keywords": ["bizalom", "kereszt"], "scoreId": "766",
+ { "number": "766", "title": "Jézus, te vagy nékem őriző pásztorom", "keywords": ["bizalom", "kereszt"], "scoreId": "165",
    "bible": "", "textAuthor": "Borkó J.", "textYear": "1928", "translator": "", "translationYear": "", "melodyAuthor": "Kolozsvár", "melodyYear": "1744", "source": "Kolozsvár, 1744", "highlightedVerses": "",
    "description": [
    ["Az Úr az én pásztorom, nem szűkölködöm... Ha a halál árnyéka völgyében járok is, nem félek semmi bajtól, mert te velem vagy... Bizony, jóságod és szereteted kísér életem minden napján, és az Úr házában lakom egész életemben. Zsolt 23"]
