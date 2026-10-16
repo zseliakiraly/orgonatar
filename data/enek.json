@@ -736,7 +736,7 @@
    ["De én, aki jó hittel bízom", "A nagy Úr Istenben,", "Az ő házába plántáltatom,", "És zöldellek szépen:", "Mint az ékes, zöld olajfa,", "Mely nem szárad soha."],
    ["Én téged örökké dicsérlek,", "Mert megtartál engem,", "És a te nevedben remélek,", "Míg leszen életem.", "Mert jó a te híveiddel", "Lakoznom örömmel."]
  ] },
- { "number": "53", "title": "A bolond így szól az ő szívében", "keywords": ["zsoltár", "bűnösök büntetése", "kétféle életút"], "scoreId": "53",
+ { "number": "53", "title": "A bolond így szól az ő szívében", "keywords": ["zsoltár", "bűnösök büntetése", "kétféle életút"], "scoreId": "14",
    "bible": "Zsolt 53", "textAuthor": "Th. de Bèze", "textYear": "", "translator": "Szenci Molnár A.", "translationYear": "", "melodyAuthor": "L. Bourgeois, Lyon", "melodyYear": "1547", "source": "Lyon, 1547", "highlightedVerses": "",
    "description": [
    ["A további strófák a 14. zsoltárnál megtalálhatók."]
@@ -3262,7 +3262,7 @@
    ["Urunk, ez a szívünk vágya:", "Adjad jól megértenünk,", "Mi az, ami terhel minket,", "Mi az, ami kell nekünk."],
    ["Urunk, töltsd be Szentlelkeddel", "Minden földi gyermeked,", "Hogy megtisztult, boldog szívvel", "Teljesítsük tervedet!"]
  ] },
- { "number": "247", "title": "Dicsérjük Istent! Mind, ki féli itt lent", "keywords": ["főének", "dicséret", "bizalom"], "scoreId": "247",
+ { "number": "247", "title": "Dicsérjük Istent! Mind, ki féli itt lent", "keywords": ["főének", "dicséret", "bizalom"], "scoreId": "190",
    "bible": "", "textAuthor": "P. Gerhardt", "textYear": "1653", "translator": "Túrmezei E.", "translationYear": "", "melodyAuthor": "J. Crüger", "melodyYear": "1653", "source": "", "highlightedVerses": "",
    "description": [
    ["E főénekek közé sorolt dicséret dallamát eddig is énekelhettük, most azonban eredeti szövegét is átvettük az evangélikus énekeskönyvből. \"Éneklés közben úgy érezzük, mintha egyre csak emelkednénk\" - írja Bence Gábor a dallamról, melynek szövegével Isten jelenlétét és segítségét is kérjük keresztyén életutunkra."]
@@ -6128,7 +6128,7 @@
    ["Sőt, légy erős kőfala te népednek,", "Szaporítsad számukat híveidnek,", "Vezéreljed nyelvét hirdetőidnek,", "Kik nevedért gyakran bosszút szenvednek."],
    ["Szent az Atya, mindenek megtartója,", "Szent a Fiú, mindenek Megváltója;", "Ó, Szentlélek, hívek bátorítója,", "Szent, szent, szent a te neved, minden vallja!"]
  ] },
- { "number": "583", "title": "Keserves szívvel", "keywords": ["egyház", "könyörgés"], "scoreId": "583",
+ { "number": "583", "title": "Keserves szívvel", "keywords": ["egyház", "könyörgés"], "scoreId": "169",
    "bible": "JSir 5", "textAuthor": "Debrecen", "textYear": "1560", "translator": "", "translationYear": "", "melodyAuthor": "Kolozsvár", "melodyYear": "1744", "source": "Debrecen, 1560; Kolozsvár, 1744", "highlightedVerses": "",
    "description": [
    ["Jeremiás próféta imádságából"],
@@ -7649,7 +7649,7 @@
    ["Már szolgád lettem, Jézusom,", "Ki értem áldozál;", "Más uram nincsen, jól tudom,", "Mert bűnből kihozál."],
    ["Légy áldott, Krisztusom, te nagy!", "Hadd adjam át szívem:", "Vedd szívesen, hogy hol te vagy,", "E szív is ott legyen."]
  ] },
- { "number": "762", "title": "Uram, tied vagyok én", "keywords": ["bizalom", "örök élet"], "scoreId": "762",
+ { "number": "762", "title": "Uram, tied vagyok én", "keywords": ["bizalom", "örök élet"], "scoreId": "326",
    "bible": "", "textAuthor": "K. Kunrád", "textYear": "", "translator": "Hamar I.", "translationYear": "", "melodyAuthor": "Kolozsvár", "melodyYear": "1744", "source": "Kolozsvár, 1744", "highlightedVerses": "",
    "description": [
    ["Uram, te megvizsgálsz és ismersz engem. Tudod, ha leülök vagy ha felállok, messziről is észreveszed szándékomat. Szemmel tartod járásomat és pihenésemet, gondod van minden utamra. Csontjaim nem voltak rejtve előtted, amikor titkon formálódtam, mintha a föld mélyén képződtem volna. Alaktalan testemet már látták szemeid; könyvedben minden meg volt írva, a napok is, amelyeket nekem szántál, bár még egy sem volt meg belőlük. Zsolt 139"]
