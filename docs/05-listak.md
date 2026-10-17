@@ -86,7 +86,10 @@ Fizikai billentyűzeten is működik: számok, Backspace, Enter, Escape.
 ![A lista szerkesztője](kepek/lista-szerkeszto.webp)
 
 1. **Átnevezés:** a név melletti ceruzával. A naptár gomb itt is működik.
-2. **Megosztás:** lásd: [Megosztás és importálás](07-megosztas.md).
+2. **Megosztás:** lásd: [Megosztás és importálás](07-megosztas.md). Mellette a **nyomtató** gomb a lista
+   nyomtatható változata: a lista neve és dátuma, az énekek számmal, címmel, versszakokkal, előjátékkal és letéttel,
+   valamint az énekek regisztrációja és megjegyzése. A böngészőben a nyomtatás ablaka nyílik meg (itt PDF-be is
+   menthető), az Android-alkalmazásban egy HTML-fájl a megosztás ablakával (pl. a Chrome-ban megnyitva nyomtatható).
 3. **Lejátszás:** a lista megnyitása a lejátszóban.
 4. **Fogantyú:** az ének húzással áthelyezhető a listában.
    - Egérrel bárhol megfogható.

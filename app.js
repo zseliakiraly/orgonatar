@@ -28,6 +28,7 @@ const Icons = {
     Eye: (props) => <IconBase {...props}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></IconBase>,
     Sun: (props) => <IconBase {...props}><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></IconBase>,
     Moon: (props) => <IconBase {...props}><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></IconBase>,
+    Printer: (props) => <IconBase {...props}><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect width="12" height="8" x="6" y="14"></rect></IconBase>,
     EyeOff: (props) => <IconBase {...props}><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path><line x1="2" x2="22" y1="2" y2="22"></line></IconBase>,
     LayoutBottom: (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><line x1="3" x2="21" y1="15" y2="15" /></IconBase>,
     LayoutSidebar: (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><line x1="15" x2="15" y1="3" y2="21" /></IconBase>,
@@ -4732,7 +4733,7 @@ const DRAG_START_DISTANCE = 5;   // px; ennyi elmozdulás után indul a húzás
 const DRAG_SCROLL_EDGE = 60;     // px; a görgethető terület ilyen közel lévő szélén görget
 const DRAG_SCROLL_SPEED = 14;    // px képkockánként, a szélén
 
-const PlaylistEditor = ({ playlist, onRemoveItem, onEditItem, onAddItem, onPlay, onReorder, onRename, onShare, getScoreInfo }) => {
+const PlaylistEditor = ({ playlist, onRemoveItem, onEditItem, onAddItem, onPlay, onReorder, onRename, onShare, onPrint, getScoreInfo }) => {
     const [drag, setDrag] = useState(null);   // { from, to, dy, shift } a kirajzoláshoz
     const dragRef = useRef(null);
     const suppressClickRef = useRef(false);   // húzás (vagy a fogantyú megnyomása) után a kattintás nem nyitja meg az éneket
@@ -4825,6 +4826,7 @@ const PlaylistEditor = ({ playlist, onRemoveItem, onEditItem, onAddItem, onPlay,
                     <button onClick={onRename} className="header-icon-btn" title="Átnevezés" aria-label="Lista átnevezése"><Icons.Edit size={18}/></button>
                  </div>
                  <div className="header-actions">
+                    {playlist.items.length > 0 && <button onClick={onPrint} className="header-icon-btn" title={NATIVE ? 'Nyomtatható változat (HTML-fájl)' : 'Nyomtatás, PDF'} aria-label="Lista nyomtatása"><Icons.Printer size={20}/></button>}
                     <button onClick={onShare} className="header-icon-btn" title="Megosztás" aria-label="Lista megosztása"><Icons.Share size={20}/></button>
                     <button onClick={() => onPlay(playlist)} className="btn btn-success" aria-label="Lejátszás"><Icons.Play size={20} /><span className="btn-label">Lejátszás</span></button>
                  </div>
@@ -4877,6 +4879,58 @@ const PlaylistEditor = ({ playlist, onRemoveItem, onEditItem, onAddItem, onPlay,
 
 // --- LISTÁK OLDAL ---
 // Nézetváltó a fejlécben: csempék (a lista énekeivel) vagy lista (soronként a név és a gombok)
+// --- A lista nyomtatása ---
+// Egyoldalas énekrend (a lelkésznek, a kántori pultra): sorszám, énekszám, cím, versszakok, előjáték és letét, és ha
+// van, az ének regisztrációja és megjegyzése. A böngészőben a nyomtatás ablaka nyílik meg (ott PDF-be is menthető);
+// az alkalmazásban (az Android WebView nem nyomtat) HTML-fájl, a megosztás ablakával, és pl. a Chrome-ban nyomtatható.
+const escapeHtml = (text) => String(text ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const playlistPrintHtml = (name, rows) => {
+    const m = DATED_NAME.exec(name);
+    const regText = (reg) => REGISTRATION_FIELDS.filter(f => reg[f.key]).map(f => `<b>${escapeHtml(f.label)}:</b> ${escapeHtml(reg[f.key])}`).join(' · ');
+    const body = rows.map(r => `
+<tr>
+ <td class="n">${r.index}.</td>
+ <td class="h">${escapeHtml(r.number)}</td>
+ <td><div class="t">${escapeHtml(r.title)}${r.verses ? ` <span class="v">${escapeHtml(r.verses)}</span>` : ''}</div>
+  ${r.prelude || r.variation ? `<div class="d">${[r.prelude && `Előjáték: ${escapeHtml(r.prelude)}`, r.variation && `Letét: ${escapeHtml(r.variation)}`].filter(Boolean).join(' · ')}</div>` : ''}
+  ${regText(r.registration) ? `<div class="r">${regText(r.registration)}</div>` : ''}
+  ${r.note ? `<div class="m">${escapeHtml(r.note).replace(/\n/g, '<br>')}</div>` : ''}</td>
+</tr>`).join('');
+    return `<!doctype html>
+<html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(name)}</title>
+<style>
+ @page { margin: 15mm; }
+ body { font-family: Georgia, 'Times New Roman', serif; color: #111; margin: 0 auto; max-width: 180mm; padding: 8mm 0; }
+ h1 { font-size: 20pt; margin: 0 0 2mm; } .date { font-size: 12pt; color: #555; margin-bottom: 6mm; }
+ table { width: 100%; border-collapse: collapse; font-size: 11pt; }
+ td { vertical-align: top; padding: 2.5mm 2mm; border-bottom: 0.3mm solid #bbb; }
+ tr { break-inside: avoid; }
+ .n { width: 8mm; color: #777; } .h { width: 14mm; font-size: 16pt; font-weight: bold; }
+ .t { font-weight: bold; font-size: 12pt; } .v { font-weight: normal; color: #444; margin-left: 2mm; }
+ .d, .r, .m { font-family: Arial, Helvetica, sans-serif; font-size: 9pt; color: #444; margin-top: 1mm; } .m { font-style: italic; }
+ footer { margin-top: 6mm; font-family: Arial, sans-serif; font-size: 8pt; color: #888; text-align: right; }
+</style></head><body>
+<h1>${escapeHtml(m ? m[2] : name)}</h1>
+${m ? `<div class="date">${escapeHtml(m[1].replace(/-/g, '. '))}.</div>` : ''}
+<table>${body}</table>
+<footer>Református OrgonaTár</footer>
+</body></html>`;
+};
+const printPlaylist = (name, rows) => {
+    const html = playlistPrintHtml(name, rows);
+    if (NATIVE) { downloadText(`${safeFileName(name)}.html`, html, 'text/html;charset=utf-8'); return; }
+    const frame = document.createElement('iframe');
+    frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+    frame.onload = () => {
+        frame.contentWindow.focus();
+        frame.contentWindow.print();
+        setTimeout(() => frame.remove(), 60000); // a nyomtatás ablaka egyes böngészőkben nem állítja meg a programot
+    };
+    frame.srcdoc = html;
+    document.body.appendChild(frame);
+};
+
 const PlaylistViewToggle = ({ view, onChange }) => (
     <div className="playlist-view-toggle" role="group" aria-label="Nézet">
         {PLAYLIST_VIEWS.map(v => (
@@ -5677,6 +5731,13 @@ function OrganistApp() {
 
     // Megosztás és importálás
     const sharingPlaylist = playlists.find(p => sameId(p.id, sharingPlaylistId)) || null;
+    const printRows = (pl) => pl.items.map((it, i) => {
+        const info = getScoreInfo(it.hymn.scoreId, it.variationId, it.preludeId);
+        const notes = hymnNotesOf(it.hymn.number);
+        return { index: i + 1, number: it.hymn.number, title: it.hymn.title, verses: it.verses.length ? `${formatVerses(it.verses)}. vers` : '',
+            variation: [info.variationName, info.variationComposer].filter(x => x && x !== '?').join(', '), prelude: info.preludeName,
+            registration: notes.registration, note: notes.note };
+    });
     const shareRows = (pl) => pl.items.map(resolveItem).map(it => ({ number: it.hymn.number, verses: formatVerses(it.verses), title: it.hymn.title }));
     // Megvan-e ezen az eszközön a kódban szereplő letét és előjáték (be van-e kapcsolva, le van-e töltve a könyvük)
     const scoresAvailable = (item) => {
@@ -5847,7 +5908,7 @@ function OrganistApp() {
 
                 {view === 'playlist_editor' && <PlaylistEditor playlist={selectedPlaylist} onRemoveItem={(itemId) => handleRemoveItemRequest(selectedPlaylist.id, itemId)}
                     onEditItem={(item) => setEditingItem({ playlistId: selectedPlaylist.id, itemId: item.id })} onAddItem={handleAddHymnToEditor} onPlay={startPlaylist} onReorder={handleReorderPlaylist}
-                    onRename={() => setRenamingPlaylistId(selectedPlaylist.id)} onShare={() => setSharingPlaylistId(selectedPlaylist.id)} getScoreInfo={getScoreInfo} />}
+                    onRename={() => setRenamingPlaylistId(selectedPlaylist.id)} onShare={() => setSharingPlaylistId(selectedPlaylist.id)} onPrint={() => printPlaylist(selectedPlaylist.name, printRows(selectedPlaylist))} getScoreInfo={getScoreInfo} />}
 
                 {view === 'library' && (selectedHymn ? (
                     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
