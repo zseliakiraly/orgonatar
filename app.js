@@ -5121,15 +5121,13 @@ const AboutView = ({ menuButton, appVersion, onCheckUpdate }) => (
             </p>
         )}
         <div className="content-box">
-            <p>Református énekek orgonakíséretei, a 2021-es énekeskönyvhöz igazítva. Több korálkönyvből válogattam, elsősorban saját használatra - így számos kíséret kimaradt, például a "művészi" B letétek és az egyszerű C letétek a genfi korálkönyvből, továbbá minden ének, ahol változott a dallam vagy a ritmus. Ahol hangnem változott, ott a régi letét transzponálva lett.</p>
+            <p>Református énekek orgonakíséretei és énekszövegei, a 2021-es énekeskönyvhöz igazítva.</p>
+            <p>Több korálkönyvből válogattam, elsősorban saját használatra - így számos kíséret kimaradt, például a "művészi" B letétek és az egyszerű C letétek a genfi korálkönyvből, továbbá minden ének, ahol változott a dallam vagy a ritmus. Ahol hangnem változott, ott a régi letétet transzponáltam.</p>
         </div>
         <div className="about-actions">
             <a href={GUIDE_URL} target="_blank" rel="noopener noreferrer" className="btn btn-outline"><Icons.Book size={18}/> Használati útmutató</a>
             <a href={feedbackMailto()} className="btn btn-outline about-feedback"><Icons.Mail size={18}/> Hiba bejelentése</a>
         </div>
-        <p className="about-feedback-note">
-            Hibát találtál, vagy javaslatod van? Írj a <a href={`mailto:${FEEDBACK_EMAIL}`}>{FEEDBACK_EMAIL}</a> címre.
-        </p>
         <p className="about-credits">
             A kottákat a <a href="https://www.verovio.org" target="_blank" rel="noopener noreferrer">Verovio</a> rajzolja
             (LGPL-3.0 licenc, <a href={`https://github.com/rism-digital/verovio/tree/version-${VEROVIO_VERSION}`} target="_blank" rel="noopener noreferrer">forráskód</a>).
@@ -5137,7 +5135,8 @@ const AboutView = ({ menuButton, appVersion, onCheckUpdate }) => (
         <p className="about-credits">
             Az énekek adatai (szerzők, igehely, források, kiemelt versek) a Református Énekeskönyvből (RÉ21), leírásaik
             a <a href="https://enekeskonyv.reformatus.hu/digitalis-reformatus-enekeskonyv/" target="_blank" rel="noopener noreferrer">Digitális
-            Református Énekeskönyvből</a> valók. © Szerzők és jogutódjaik, © Magyarországi Református Egyház.
+            Református Énekeskönyvből</a> valók. <br/>
+            © Szerzők és jogutódjaik, © Magyarországi Református Egyház.
         </p>
     </div>
 );
