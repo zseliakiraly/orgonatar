@@ -26,6 +26,8 @@ const Icons = {
     X: (props) => <IconBase {...props}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></IconBase>,
     ChevronDown: (props) => <IconBase {...props}><path d="m6 9 6 6 6-6"/></IconBase>,
     Eye: (props) => <IconBase {...props}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></IconBase>,
+    Sun: (props) => <IconBase {...props}><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></IconBase>,
+    Moon: (props) => <IconBase {...props}><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></IconBase>,
     EyeOff: (props) => <IconBase {...props}><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path><line x1="2" x2="22" y1="2" y2="22"></line></IconBase>,
     LayoutBottom: (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><line x1="3" x2="21" y1="15" y2="15" /></IconBase>,
     LayoutSidebar: (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><line x1="15" x2="15" y1="3" y2="21" /></IconBase>,
@@ -196,7 +198,7 @@ const SCORE_WIDTHS = ['100%', '90%', '80%', '70%', '60%', '50%'].map(w => ({ id:
 // A Listák oldal nézetei: csempék (a lista énekeivel; alapértelmezett) vagy lista (soronként a név és a gombok)
 const PLAYLIST_VIEWS = [{ id: 'tiles', name: 'Csempék' }, { id: 'list', name: 'Lista' }];
 
-const DEFAULT_SETTINGS = { theme: 'pergamen', background: 'plain', uiFont: UI_FONTS[0].id, serifFont: SERIF_FONTS[0].id, showLyrics: true, showClock: true, sidebarSide: 'right', scoreMaxWidth: '100%', scoreFont: SCORE_FONTS[0].id, bookActive: {}, skipFullscreenPrompt: false, playlistView: 'tiles', settingsVersion: SETTINGS_VERSION };
+const DEFAULT_SETTINGS = { theme: 'pergamen', background: 'plain', uiFont: UI_FONTS[0].id, serifFont: SERIF_FONTS[0].id, showLyrics: true, showClock: true, keepAwake: true, sidebarSide: 'right', scoreMaxWidth: '100%', scoreFont: SCORE_FONTS[0].id, bookActive: {}, skipFullscreenPrompt: false, playlistView: 'tiles', settingsVersion: SETTINGS_VERSION };
 
 // --- ANDROID-ALKALMAZÁS ---
 // Az Android-alkalmazás (Capacitor, android/ mappa) ugyanezt a programot futtatja. Ott a native.js betölti a készülék
@@ -2408,6 +2410,13 @@ const SettingsView = ({ settings, onUpdateSettings, menuButton, dataSection }) =
                             allowEmpty={false} width="110px" menuMinWidth={0} ariaLabel="Kotta szélessége" />
                     </SettingsRow>
 
+                    <SettingsRow title="Képernyő ébren tartása" hint="A lejátszóban és az ének oldalán nem sötétül el a kijelző">
+                        <button onClick={() => set({ keepAwake: !settings.keepAwake })} className="btn-ghost" role="switch" aria-checked={!!settings.keepAwake}
+                            title={settings.keepAwake ? 'A kijelző elsötétülhet' : 'A kijelző maradjon bekapcsolva'} style={{color: settings.keepAwake ? 'var(--col-accent-text)' : 'var(--col-ink-muted, #999)'}}>
+                            {settings.keepAwake ? <Icons.Sun size={24}/> : <Icons.Moon size={24}/>}
+                        </button>
+                    </SettingsRow>
+
                     <SettingsRow title="Óra a lejátszóban" hint="A lejátszó jobb felső sarkában">
                         <button onClick={() => set({ showClock: !settings.showClock })} className="btn-ghost" title={settings.showClock ? 'Óra elrejtése' : 'Óra megjelenítése'} style={{color: settings.showClock ? 'var(--col-accent-text)' : 'var(--col-ink-muted, #999)'}}>
                             {settings.showClock ? <Icons.Eye size={24}/> : <Icons.EyeOff size={24}/>}
@@ -4099,6 +4108,32 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, info = [], descrip
 
 // Óra a lejátszó fejlécében (óra:perc). Percváltáskor frissül; ha a tablet alvásból ébred, rögtön.
 // Külön komponens, hogy percenként csak az óra rajzolódjon újra, ne az egész lejátszó.
+// A kijelző ébren tartása (Beállítások: „Képernyő ébren tartása”), amíg kotta látszik. Az alkalmazásban a készülék
+// kezelője (KeepAwake, android/…/KeepAwakePlugin.java), a böngészőben a Screen Wake Lock API. A böngésző a zárat
+// elengedi, ha a lap a háttérbe kerül, ezért visszatéréskor újra kérjük.
+const useKeepAwake = (active) => {
+    useEffect(() => {
+        if (!active) return;
+        if (NATIVE && NATIVE.KeepAwake) {
+            NATIVE.KeepAwake.keepAwake().catch(() => {});
+            return () => { NATIVE.KeepAwake.allowSleep().catch(() => {}); };
+        }
+        if (!('wakeLock' in navigator)) return;
+        let lock = null, stopped = false;
+        const request = () => {
+            if (stopped || document.hidden || (lock && !lock.released)) return;
+            navigator.wakeLock.request('screen').then(l => { if (stopped) l.release().catch(() => {}); else lock = l; }).catch(() => {});
+        };
+        request();
+        document.addEventListener('visibilitychange', request);
+        return () => {
+            stopped = true;
+            document.removeEventListener('visibilitychange', request);
+            if (lock) lock.release().catch(() => {});
+        };
+    }, [active]);
+};
+
 const PlayerClock = () => {
     const [now, setNow] = useState(() => new Date());
     useEffect(() => {
@@ -5273,6 +5308,7 @@ function OrganistApp() {
     let view = activeTab;
     if (view === 'playlist_editor' && !selectedPlaylist) view = 'playlists';
     if (view === 'player' && playerQueue.length === 0) view = 'playlists';
+    useKeepAwake(!!settings.keepAwake && (view === 'player' || (view === 'library' && !!selectedHymn)));
 
     // Színséma (THEMES); a további szerepeket a .theme-* osztály adja
     const currentTheme = THEMES.find(t => t.id === settings.theme) || THEMES[0];

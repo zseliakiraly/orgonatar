@@ -26,6 +26,9 @@ Az oldalmenü fogaskerék gombja nyitja meg. Újra megnyomva oda visz vissza, ah
 
 - **Szövegpanel megjelenítése:** a szem ikonnal a kotta melletti szövegpanel elrejthető.
 - **Kotta szélessége:** a kotta legnagyobb szélessége (100–50%), ha keskenyebb kottát szeretnél.
+- **Képernyő ébren tartása:** bekapcsolva (alapértelmezés) a lejátszóban és az ének oldalán nem sötétül el a
+  kijelző, akkor sem, ha sokáig nem érsz hozzá. A többi oldalon a készülék szokásos beállítása érvényes. Ha a böngésző
+  nem tudja (pl. régebbi Safari), a kapcsolónak nincs hatása.
 - **Óra a lejátszóban:** a pontos idő a lejátszó jobb felső sarkában.
 
 Az oldalsó szövegpanel szélességét nem itt kell beállítani: a panel fogantyújával énekenként állítható (lásd:
