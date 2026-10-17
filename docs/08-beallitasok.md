@@ -14,7 +14,7 @@ Az oldalmenü fogaskerék gombja nyitja meg. Újra megnyomva oda visz vissza, ah
   - Egyszínű;
   - Átmenet – közép (belül kissé sötétebb);
   - Átmenet – szélek (a szélek felé sötétebb);
-  - Textúra (papírszemcse, a türkiz elemeken bőrkötés).
+  - Textúra (papírszemcse, a türkiz elemeken bőrkötés; alapértelmezett).
 - **Betűtípus:** a feliratok és az énekszövegek betűi (Figtree, Nunito Sans, Onest, DM Sans, Atkinson Hyperlegible
   Next). A menüben mindegyik a saját mintájával látszik.
 - **Énekszámok és oldalcímek:** talpas betű, a régi korálkönyvek mintájára (Old Standard TT, DM Serif Text, Libre

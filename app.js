@@ -153,7 +153,7 @@ const parseVerses = (text) => {
 // --- TÁROLÁS (a böngészőben localStorage, az alkalmazásban a saját tárhelye, lásd lent) ---
 const STORAGE_KEYS = { playlists: 'orgonista_playlists', settings: 'orgonista_settings', lyricsLayouts: 'orgonista_lyrics_layouts', hymnNotes: 'orgonista_hymn_notes', scoreRatings: 'orgonista_score_ratings', transpositions: 'orgonista_transpositions', fingerings: 'orgonista_fingerings' };
 
-const SETTINGS_VERSION = 2;
+const SETTINGS_VERSION = 3;
 
 // Kottafontok (a Verovio beépített SMuFL-betűkészletei közül); az első az alapértelmezett
 const SCORE_FONTS = [
@@ -199,7 +199,7 @@ const SCORE_WIDTHS = ['100%', '90%', '80%', '70%', '60%', '50%'].map(w => ({ id:
 // A Listák oldal nézetei: csempék (a lista énekeivel; alapértelmezett) vagy lista (soronként a név és a gombok)
 const PLAYLIST_VIEWS = [{ id: 'tiles', name: 'Csempék' }, { id: 'list', name: 'Lista' }];
 
-const DEFAULT_SETTINGS = { theme: 'pergamen', background: 'plain', uiFont: UI_FONTS[0].id, serifFont: SERIF_FONTS[0].id, showLyrics: true, showClock: true, keepAwake: true, sidebarSide: 'right', scoreMaxWidth: '100%', scoreFont: SCORE_FONTS[0].id, bookActive: {}, skipFullscreenPrompt: false, playlistView: 'tiles', settingsVersion: SETTINGS_VERSION };
+const DEFAULT_SETTINGS = { theme: 'pergamen', background: 'texture', uiFont: UI_FONTS[0].id, serifFont: SERIF_FONTS[0].id, showLyrics: true, showClock: true, keepAwake: true, sidebarSide: 'right', scoreMaxWidth: '100%', scoreFont: SCORE_FONTS[0].id, bookActive: {}, skipFullscreenPrompt: false, playlistView: 'tiles', settingsVersion: SETTINGS_VERSION };
 
 // --- ANDROID-ALKALMAZÁS ---
 // Az Android-alkalmazás (Capacitor, android/ mappa) ugyanezt a programot futtatja. Ott a native.js betölti a készülék
@@ -433,6 +433,8 @@ const loadSettings = () => {
     // 2. verzió: a Pergamen lett az alapértelmezett téma. A korábbi alapértéket ("papyrus"), amelyet az oldal
     // magától elmentett, egyszer átállítjuk (addig Pergament nem is lehetett választani).
     if ((stored.settingsVersion || 1) < 2 && settings.theme === 'papyrus') settings.theme = 'pergamen';
+    // 3. verzió: a Textúra lett az alapértelmezett háttér; a korábbi, magától elmentett alapértéket ("plain") egyszer átállítjuk
+    if ((stored.settingsVersion || 1) < 3 && settings.background === 'plain') settings.background = 'texture';
     // Az oldalsó szövegpanel szélessége már nem beállítás (énekenként a panel fogantyújával állítható): a régi érték
     // kimarad a tárolóból
     delete settings.lyricsWidth;
@@ -3243,15 +3245,26 @@ const saveLyricsLayout = (hymnNumber, layout) => {
 };
 // Átméretezés: a legkisebb méret px-ben, a legnagyobb a kottanézet hányadában (lent a magasság, oldalt a szélesség)
 const LYRICS_RESIZE_LIMITS = { bottom: { min: 64, max: 0.85 }, side: { min: 150, max: 0.7 } };
-// Az oldalsó panel alapszélessége, amíg az éneknél nem méretezték át: a kottanézet 15%-a, legalább 200 px
-const LYRICS_SIDE_WIDTH = { width: '15%', minWidth: '200px' };
+// Az alsó panel legkisebb alapmagassága: tableten 15rem (így a Megjegyzések lapon a leírás minden adata látszik görgetés
+// nélkül), alacsony képernyőn a kottanézet 40%-a, de legalább 150 px
+const LYRICS_BOTTOM_MIN_HEIGHT = 'clamp(150px, 40%, 15rem)';
+// Az oldalsó panel alapszélessége, amíg az éneknél nem méretezték át: 300 px (keskeny képernyőn legfeljebb a kottanézet 70%-a)
+const LYRICS_SIDE_WIDTH = { width: '300px', maxWidth: '70%' };
 
 // --- Megjegyzés és regisztráció énekenként ---
 // A szövegpanel Megjegyzések lapján az énekhez írt megjegyzés és a regisztráció (manuálonként és a pedálon). Csak ezen a
 // készüléken tárolódnak (orgonista_hymn_notes), énekszámonként; az üres mezők nem kerülnek a tárolóba.
-const REGISTRATION_FIELDS = [
-    { key: 'm3', label: '3. manuál' }, { key: 'm2', label: '2. manuál' }, { key: 'm1', label: '1. manuál' }, { key: 'ped', label: 'Pedál' }
-];
+// Alapból két manuál látszik; továbbiak (legfeljebb MAX_MANUALS) a „+ Manuál” gombbal adhatók hozzá, felülre. Egy
+// éneknél annyi manuál látszik, amennyi a legmagasabb kitöltött (de legalább kettő): az üresen hagyott új manuál eltűnik.
+const DEFAULT_MANUALS = 2, MAX_MANUALS = 5;
+const manualField = (n) => ({ key: `m${n}`, label: `${n}. manuál` });
+// a mezők felülről lefelé: a legfelső manuáltól az elsőig, végül a pedál
+const registrationFields = (manuals) => [...Array.from({ length: manuals }, (_, i) => manualField(manuals - i)), { key: 'ped', label: 'Pedál' }];
+const REGISTRATION_FIELDS = registrationFields(MAX_MANUALS);   // az összes tárolható mező
+const manualCountOf = (registration) => {
+    for (let n = MAX_MANUALS; n > DEFAULT_MANUALS; n--) if ((registration[`m${n}`] || '').trim()) return n;
+    return DEFAULT_MANUALS;
+};
 const loadAllHymnNotes = () => {
     const all = loadJSON(STORAGE_KEYS.hymnNotes, {});
     return all && typeof all === 'object' && !Array.isArray(all) ? all : {};
@@ -3512,10 +3525,34 @@ const useVisibleArea = () => {
     return area;
 };
 
-// A Megjegyzések lap: a leírás (az enek.json-ból: az ének adatai és a szabad leírás), a megjegyzés és a regisztráció;
-// az utóbbi kettő koppintásra szerkeszthető (a regisztrációnál a megérintett sor kapja a fókuszt)
+// A Megjegyzések lap: a regisztráció, a megjegyzés és a leírás (az enek.json-ból: az ének adatai és a szabad leírás);
+// az első kettő koppintásra szerkeszthető (a regisztrációnál a megérintett sor kapja a fókuszt)
 const HymnNotes = ({ info, description, notes, onEdit }) => (
     <div className="hymn-notes">
+        <section className="hymn-notes-section">
+            <div className="hymn-notes-title-row">
+                <h4 className="hymn-notes-title">Regisztráció</h4>
+                {manualCountOf(notes.registration) < MAX_MANUALS && (
+                    <button type="button" className="hymn-notes-add" onClick={() => onEdit({ kind: 'registration', field: manualField(manualCountOf(notes.registration) + 1).key, manuals: manualCountOf(notes.registration) + 1 })}
+                        title="Újabb manuál hozzáadása (felülre)">+ Manuál</button>
+                )}
+            </div>
+            <div className="hymn-notes-edit hymn-notes-registration">
+                {registrationFields(manualCountOf(notes.registration)).map(f => (
+                    <button key={f.key} type="button" className="hymn-notes-reg-row" onClick={() => onEdit({ kind: 'registration', field: f.key })}
+                        aria-label={`Regisztráció szerkesztése: ${f.label}`}>
+                        <span className="hymn-notes-reg-label">{f.label}</span>
+                        <span className={`hymn-notes-reg-value${notes.registration[f.key] ? '' : ' empty'}`}>{notes.registration[f.key] || '–'}</span>
+                    </button>
+                ))}
+            </div>
+        </section>
+        <section className="hymn-notes-section">
+            <h4 className="hymn-notes-title">Megjegyzés</h4>
+            <button type="button" className="hymn-notes-edit hymn-notes-note-box" onClick={() => onEdit({ kind: 'note' })} aria-label="Megjegyzés szerkesztése">
+                {notes.note ? <span className="hymn-notes-note">{notes.note}</span> : <span className="hymn-notes-empty">Koppints ide, és írj megjegyzést…</span>}
+            </button>
+        </section>
         <section className="hymn-notes-section">
             <h4 className="hymn-notes-title">Leírás</h4>
             {info.length > 0 && (
@@ -3533,24 +3570,6 @@ const HymnNotes = ({ info, description, notes, onEdit }) => (
             ))}
             {info.length === 0 && description.length === 0 && <p className="hymn-notes-empty">Ehhez az énekhez még nincs leírás.</p>}
         </section>
-        <section className="hymn-notes-section">
-            <h4 className="hymn-notes-title">Megjegyzés</h4>
-            <button type="button" className="hymn-notes-edit hymn-notes-note-box" onClick={() => onEdit({ kind: 'note' })} aria-label="Megjegyzés szerkesztése">
-                {notes.note ? <span className="hymn-notes-note">{notes.note}</span> : <span className="hymn-notes-empty">Koppints ide, és írj megjegyzést…</span>}
-            </button>
-        </section>
-        <section className="hymn-notes-section">
-            <h4 className="hymn-notes-title">Regisztráció</h4>
-            <div className="hymn-notes-edit hymn-notes-registration">
-                {REGISTRATION_FIELDS.map(f => (
-                    <button key={f.key} type="button" className="hymn-notes-reg-row" onClick={() => onEdit({ kind: 'registration', field: f.key })}
-                        aria-label={`Regisztráció szerkesztése: ${f.label}`}>
-                        <span className="hymn-notes-reg-label">{f.label}</span>
-                        <span className={`hymn-notes-reg-value${notes.registration[f.key] ? '' : ' empty'}`}>{notes.registration[f.key] || '–'}</span>
-                    </button>
-                ))}
-            </div>
-        </section>
     </div>
 );
 
@@ -3563,7 +3582,15 @@ const HymnNotesEditor = ({ hymnNumber, hymnTitle, notes, editing, onSave, onCanc
     const isNote = editing.kind === 'note';
     const [note, setNote] = useState(notes.note);
     const [registration, setRegistration] = useState(notes.registration);
+    const [manuals, setManuals] = useState(() => Math.max(manualCountOf(notes.registration), editing.manuals || 0));
+    const fields = registrationFields(manuals);
     const fieldRefs = useRef({});
+    const focusRef = useRef(null);   // a hozzáadott manuál mezője kapja a fókuszt
+    useEffect(() => {
+        if (focusRef.current && fieldRefs.current[focusRef.current]) fieldRefs.current[focusRef.current].focus();
+        focusRef.current = null;
+    }, [manuals]);
+    const addManual = () => { focusRef.current = manualField(manuals + 1).key; setManuals(manuals + 1); };
     const save = () => onSave(isNote ? { ...notes, note } : { ...notes, registration });
     const actionsRef = useRef({});
     actionsRef.current = { save, onCancel };
@@ -3586,7 +3613,7 @@ const HymnNotesEditor = ({ hymnNumber, hymnTitle, notes, editing, onSave, onCanc
     const regKeyDown = (e, i) => {
         if (e.key !== 'Enter' || e.ctrlKey || e.metaKey || e.isComposing) return;
         e.preventDefault();
-        const next = REGISTRATION_FIELDS[i + 1];
+        const next = fields[i + 1];
         if (next) fieldRefs.current[next.key].focus();
         else save();
     };
@@ -3604,14 +3631,21 @@ const HymnNotesEditor = ({ hymnNumber, hymnTitle, notes, editing, onSave, onCanc
                     {isNote ? (
                         <textarea ref={el => { fieldRefs.current.note = el; }} className="input note-sheet-text" value={note}
                             onChange={e => setNote(e.target.value)} placeholder="pl. tempó, az előjáték hossza, mire kell figyelni" aria-label="Megjegyzés" />
-                    ) : REGISTRATION_FIELDS.map((f, i) => (
-                        <label key={f.key} className="note-sheet-reg">
-                            <span className="note-sheet-reg-label">{f.label}</span>
-                            <input ref={el => { fieldRefs.current[f.key] = el; }} type="text" className="input" value={registration[f.key]}
-                                onChange={e => { const value = e.target.value; setRegistration(r => ({ ...r, [f.key]: value })); }}
-                                onKeyDown={e => regKeyDown(e, i)} enterKeyHint={i < REGISTRATION_FIELDS.length - 1 ? 'next' : 'done'} />
-                        </label>
-                    ))}
+                    ) : (
+                        <>
+                            {manuals < MAX_MANUALS && (
+                                <button type="button" className="btn note-sheet-add" onClick={addManual}>+ Manuál hozzáadása</button>
+                            )}
+                            {fields.map((f, i) => (
+                                <label key={f.key} className="note-sheet-reg">
+                                    <span className="note-sheet-reg-label">{f.label}</span>
+                                    <input ref={el => { fieldRefs.current[f.key] = el; }} type="text" className="input" value={registration[f.key]}
+                                        onChange={e => { const value = e.target.value; setRegistration(r => ({ ...r, [f.key]: value })); }}
+                                        onKeyDown={e => regKeyDown(e, i)} enterKeyHint={i < fields.length - 1 ? 'next' : 'done'} />
+                                </label>
+                            ))}
+                        </>
+                    )}
                 </div>
                 <div className="note-sheet-footer">
                     <button onClick={onCancel} className="btn">Mégse</button>
@@ -3651,7 +3685,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, info = [], descrip
         notes = { hymn: hymnNumber, ...hymnNotesOf(hymnNumber) };
         setNotes(notes);
     }
-    const [editing, setEditing] = useState(null);   // { hymn, kind: 'note' } vagy { hymn, kind: 'registration', field }
+    const [editing, setEditing] = useState(null);   // { hymn, kind: 'note' } vagy { hymn, kind: 'registration', field, manuals? }
     // a lebegő gomb (FAB) panelje: nagyítás, transzponálás, értékelés
     const [fabOpen, setFabOpen] = useState(false);
     const fabRef = useRef(null);
@@ -4001,7 +4035,7 @@ const ScoreViewer = ({ score, variationId, preludeId, lyrics, info = [], descrip
     const panelStyle = { '--lyrics-scale': lyricsLayout.fontScale };
     if (isSide) Object.assign(panelStyle, panelSize ? { width: `${panelSize * 100}%`, minWidth: 0 } : LYRICS_SIDE_WIDTH);
     else Object.assign(panelStyle, panelSize ? { height: `${panelSize * 100}%`, minHeight: 0, maxHeight: 'none' }
-        : { height: 'auto', minHeight: '150px', maxHeight: lyricsMode === 'block' ? '30%' : '50%' });
+        : { height: 'auto', minHeight: LYRICS_BOTTOM_MIN_HEIGHT, maxHeight: lyricsMode === 'block' ? '30%' : '50%' });
     const resizeHandle = (
         <div className="lyrics-resize" onPointerDown={startResize} role="separator" aria-orientation={isSide ? 'vertical' : 'horizontal'}
             aria-label="Szövegpanel átméretezése" title="Húzd a szövegpanel átméretezéséhez (dupla koppintás: alapméret)" />
