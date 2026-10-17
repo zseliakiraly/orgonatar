@@ -17,6 +17,11 @@ A Könyvtár az énekeskönyv összes énekét mutatja, énekszám szerint.
 4. **Letétek és előjátékok száma** a letöltött, bekapcsolt könyvekből. Ha egy sincs: „nincs kotta”.
 5. Az ének **kulcsszavai**. Egy kulcsszóra koppintva arra szűr, újra koppintva a szűrés megszűnik.
 
+**Utoljára:** ha az ének szerepelt egy dátummal kezdődő nevű listán (a lista naptár gombjával), a kártyán az is
+látszik, mikor szólt utoljára (pl. „utoljára 3 hete”). A mai napnál későbbi dátumú (tervezett) listák nem számítanak.
+Ugyanez látszik az énekválasztóban (a lista szerkesztőjében és a gyors megnyitásnál) is; a szerkesztett lista énekei
+ott nem számítanak, így az is látszik, ha egy éneket nemrég már játszottál.
+
 ![A kulcsszavas szűrő](kepek/konyvtar-kulcsszo.webp)
 
 A szűrő menüjében (1) a kulcsszavak mellett az énekek száma látszik. A szűrő a keresővel együtt is használható.

@@ -998,7 +998,8 @@ const KEYPAD_MAX_DIGITS = 4;
 
 // Énekválasztó: bal oldalon kereső és találati lista, jobb oldalon nagygombos számbillentyűzet. A billentyűzet a
 // keresőbe ír, de nem adja rá a fókuszt. Fizikai billentyűzeten is működik: számok, Backspace, Enter, Escape.
-const HymnSelectorModal = ({ isOpen, onClose, onSelect, hymnBook, title = 'Ének választása', action = 'kiválasztása', ItemIcon = Icons.Plus }) => {
+const EMPTY_MAP = new Map();
+const HymnSelectorModal = ({ isOpen, onClose, onSelect, hymnBook, lastUsed = EMPTY_MAP, title = 'Ének választása', action = 'kiválasztása', ItemIcon = Icons.Plus }) => {
     const [search, setSearch] = useState('');
     const inputRef = useRef(null);
     const latestRef = useRef({});
@@ -1056,7 +1057,8 @@ const HymnSelectorModal = ({ isOpen, onClose, onSelect, hymnBook, title = 'Ének
                         <div className="hymn-selector-list">
                             {filtered.map(h => (
                                 <button key={h.number} onClick={() => onSelect(h)} className="hymn-selector-item">
-                                    <div><span className="hymn-selector-item-hymn-number hymn-number">{h.number}</span><span className="hymn-selector-item-hymn-title">{h.title}</span></div>
+                                    <div><span className="hymn-selector-item-hymn-number hymn-number">{h.number}</span><span className="hymn-selector-item-hymn-title">{h.title}</span>
+                                        {lastUsed.has(String(h.number)) && <span className="hymn-selector-item-last" title={lastUsedTitle(lastUsed.get(String(h.number)))}>{daysAgoLabel(lastUsed.get(String(h.number)))}</span>}</div>
                                     <ItemIcon size={18} className="icon-plus"/>
                                 </button>
                             ))}
@@ -1070,6 +1072,7 @@ const HymnSelectorModal = ({ isOpen, onClose, onSelect, hymnBook, title = 'Ének
                     <div className="hymn-keypad-display hymn-number">{number || ' '}</div>
                     <div className={`hymn-keypad-hint ${number && !exact ? 'not-found' : ''}`}>
                         {exact ? exact.title : number ? 'Nincs ilyen számú ének' : ' '}
+                        {exact && lastUsed.has(String(exact.number)) && <span className="hymn-keypad-last">utoljára {daysAgoLabel(lastUsed.get(String(exact.number)))}</span>}
                     </div>
                     <div className="hymn-keypad-grid">
                         {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => (
@@ -4602,7 +4605,7 @@ const ScorebooksView = ({ books, downloads, bookActive, online, onToggle, onDown
 // Egy ének kártyája: szám és cím, jobbra a kották száma és a kulcsszavak (koppintásra szűrnek). Memo: csak akkor
 // rajzolódik újra, ha a saját adatai (vagy a kulcsszó-szűrő) változnak.
 const NO_SCORES = { variations: 0, preludes: 0 };
-const HymnCard = React.memo(({ hymn, counts, keywordFilter, onOpen, onKeyword }) => (
+const HymnCard = React.memo(({ hymn, counts, lastUsed, keywordFilter, onOpen, onKeyword }) => (
     <div onClick={() => onOpen(hymn.number)} className="card list-item hymn-card">
         <div className="card-decoration"></div>
         <div className="hymn-card-head">
@@ -4614,6 +4617,7 @@ const HymnCard = React.memo(({ hymn, counts, keywordFilter, onOpen, onKeyword })
             {counts.variations || counts.preludes
                 ? <span className="hymn-card-counts">{counts.variations} letét · {counts.preludes} előjáték</span>
                 : <span className="hymn-card-counts none">nincs kotta</span>}
+            {lastUsed && <span className="hymn-card-last" title={lastUsedTitle(lastUsed)}>utoljára {daysAgoLabel(lastUsed)}</span>}
             <span className="hymn-card-keywords">
                 {hymnKeywords(hymn).map((keyword, i) => (
                     <React.Fragment key={keyword}>
@@ -4639,18 +4643,18 @@ const HymnCard = React.memo(({ hymn, counts, keywordFilter, onOpen, onKeyword })
 // végére görget, a következő csoport azonnal jön.
 // (A teljes, több száz kártyás lista egyszerre felépítve tableten közel egy másodpercig foglalná le a programot.)
 const LIBRARY_GROUP = 50;
-const HymnGroup = React.memo(({ hymns, start, slot, scoreCounts, keywordFilter, onOpen, onKeyword }) => {
+const HymnGroup = React.memo(({ hymns, start, slot, scoreCounts, lastUsed, keywordFilter, onOpen, onKeyword }) => {
     const items = hymns.slice(start, start + LIBRARY_GROUP);
     return (
         <div className="hymn-group" style={{containIntrinsicSize: `auto ${Math.round(items.length * slot)}px`}}>
             {items.map(h => (
                 <HymnCard key={h.number} hymn={h} counts={scoreCounts.get(String(h.scoreId ?? h.number)) || NO_SCORES}
-                    keywordFilter={keywordFilter} onOpen={onOpen} onKeyword={onKeyword} />
+                    lastUsed={lastUsed.get(String(h.number))} keywordFilter={keywordFilter} onOpen={onOpen} onKeyword={onKeyword} />
             ))}
         </div>
     );
 });
-const HymnList = ({ hymns, scoreCounts, keywordFilter, onOpen, onKeyword }) => {
+const HymnList = ({ hymns, scoreCounts, lastUsed, keywordFilter, onOpen, onKeyword }) => {
     const [shown, setShown] = useState({ hymns, groups: 1 });
     let groups = shown.groups;
     if (shown.hymns !== hymns) { groups = 1; setShown({ hymns, groups }); } // új találati lista: elölről
@@ -4701,7 +4705,7 @@ const HymnList = ({ hymns, scoreCounts, keywordFilter, onOpen, onKeyword }) => {
         <>
             <div ref={topRef} hidden />
             {Array.from({ length: Math.min(groups, total) }, (_, i) => (
-                <HymnGroup key={i} hymns={hymns} start={i * LIBRARY_GROUP} slot={slot} scoreCounts={scoreCounts}
+                <HymnGroup key={i} hymns={hymns} start={i * LIBRARY_GROUP} slot={slot} scoreCounts={scoreCounts} lastUsed={lastUsed}
                     keywordFilter={keywordFilter} onOpen={onOpen} onKeyword={onKeyword} />
             ))}
             {visible < hymns.length && <div ref={pendingRef} className="library-pending" style={{height: `${Math.round((hymns.length - visible) * slot)}px`}} aria-hidden="true" />}
@@ -4875,6 +4879,35 @@ const PlaylistViewToggle = ({ view, onChange }) => (
 // A lista neve a listás nézetben, az énekkártyák mintájára: az elején álló dátum (ÉÉÉÉ-HH-NN, a naptár gombbal kerül
 // oda) talpas betűvel, mint az énekszám, utána a név többi része
 const DATED_NAME = /^(\d{4}-\d{2}-\d{2})\s+(\S.*)$/;
+// Mikor szólt utoljára egy ének: a dátummal kezdődő nevű listákból (a naptár gombbal), a mai napig. Énekszám → a
+// legutóbbi dátum (ÉÉÉÉ-HH-NN). A kihagyott lista (pl. a szerkesztett) nem számít.
+const localDateStamp = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const lastUsedDates = (playlists, skipId = null) => {
+    const today = localDateStamp(), last = new Map();
+    for (const p of playlists) {
+        const m = DATED_NAME.exec(p.name);
+        if (!m || m[1] > today || sameId(p.id, skipId)) continue;
+        for (const it of p.items) {
+            const key = String(it.hymnNumber);
+            if (!last.has(key) || last.get(key) < m[1]) last.set(key, m[1]);
+        }
+    }
+    return last;
+};
+// „ma”, „tegnap”, „5 napja”, „3 hete”, „4 hónapja”, „2 éve”
+const daysAgoLabel = (stamp) => {
+    const [y, mo, d] = stamp.split('-').map(Number);
+    const now = new Date();
+    const days = Math.round((Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - Date.UTC(y, mo - 1, d)) / 86400000);
+    if (days <= 0) return 'ma';
+    if (days === 1) return 'tegnap';
+    if (days < 14) return `${days} napja`;
+    if (days < 61) return `${Math.floor(days / 7)} hete`;
+    if (days < 365) return `${Math.floor(days / 30.44)} hónapja`;
+    return `${Math.floor(days / 365.25)} éve`;
+};
+const lastUsedTitle = (stamp) => `Utoljára a ${stamp.replace(/-/g, '. ')}. listán`;
+
 const PlaylistRowName = ({ name }) => {
     const m = DATED_NAME.exec(name);
     return (
@@ -5467,6 +5500,9 @@ function OrganistApp() {
     let view = activeTab;
     if (view === 'playlist_editor' && !selectedPlaylist) view = 'playlists';
     if (view === 'player' && playerQueue.length === 0) view = 'playlists';
+    // mikor szólt utoljára egy ének (a dátumos listákból); a szerkesztett lista énekválasztójában a lista maga nem számít
+    const lastUsed = useMemo(() => lastUsedDates(playlists), [playlists]);
+    const lastUsedEditing = useMemo(() => lastUsedDates(playlists, selectedPlaylistId), [playlists, selectedPlaylistId]);
     useKeepAwake(!!settings.keepAwake && (view === 'player' || (view === 'library' && !!selectedHymn)));
 
     // Frissítésjelző (Android-alkalmazás): induláskor és internetkapcsolat visszatértekor, ha esedékes. A lejátszó
@@ -5724,8 +5760,8 @@ function OrganistApp() {
                 {backupRestore && <RestoreBackupModal backup={backupRestore} playlists={playlists} onClose={() => setBackupRestore(null)}
                     onRestore={() => restoreBackup(backupRestore, playlists).catch(err => { setBackupRestore(null); setAlertMessage(`A visszatöltés nem sikerült: ${err && err.message}`); })} />}
                 {listsImport && <ImportPlaylistsModal lists={listsImport} playlists={playlists} onClose={() => setListsImport(null)} onImport={handleLoadPlaylists} />}
-                <HymnSelectorModal isOpen={isHymnSelectorOpen} onClose={() => setIsHymnSelectorOpen(false)} onSelect={handleHymnSelected} hymnBook={hymnBook} />
-                <HymnSelectorModal isOpen={isQuickOpenOpen} onClose={() => setIsQuickOpenOpen(false)} onSelect={handleQuickOpen} hymnBook={hymnBook} title="Gyors megnyitás" action="megnyitása" ItemIcon={Icons.ChevronRight} />
+                <HymnSelectorModal isOpen={isHymnSelectorOpen} onClose={() => setIsHymnSelectorOpen(false)} onSelect={handleHymnSelected} hymnBook={hymnBook} lastUsed={lastUsedEditing} />
+                <HymnSelectorModal isOpen={isQuickOpenOpen} onClose={() => setIsQuickOpenOpen(false)} onSelect={handleQuickOpen} hymnBook={hymnBook} lastUsed={lastUsed} title="Gyors megnyitás" action="megnyitása" ItemIcon={Icons.ChevronRight} />
                 <DeleteConfirmModal isOpen={!!itemToDelete} onClose={() => setItemToDelete(null)} onConfirm={confirmDeleteItem} title="Ének törlése" message="Biztosan el szeretnéd távolítani ezt az éneket a listáról?" />
                 <DeleteConfirmModal isOpen={!!playlistToDelete} onClose={() => setPlaylistToDelete(null)} onConfirm={confirmDeletePlaylist} title="Lista törlése" message={`Biztosan törölni szeretnéd a(z) "${playlistToDelete?.name}" listát?`} />
                 <DeleteConfirmModal isOpen={!!bookToDelete} onClose={() => setBookToDelete(null)} onConfirm={confirmDeleteBook}
@@ -5827,7 +5863,7 @@ function OrganistApp() {
                                     {keywordFilter && <button type="button" className="btn-ghost library-clear" onClick={() => setKeywordFilter('')}>Szűrés törlése</button>}
                                 </div>
                             )}
-                            <HymnList hymns={filteredHymns} scoreCounts={scoreCounts} keywordFilter={keywordFilter} onOpen={openHymnCard} onKeyword={toggleKeywordFilter} />
+                            <HymnList hymns={filteredHymns} scoreCounts={scoreCounts} lastUsed={lastUsed} keywordFilter={keywordFilter} onOpen={openHymnCard} onKeyword={toggleKeywordFilter} />
                             {filteredHymns.length === 0 && <p className="library-empty">Nincs a keresésnek megfelelő ének.</p>}
                         </div>
                     </div>
