@@ -1218,6 +1218,14 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .hymn-number, .page-title { font-family: var(--font-serif); font-weight: 700; font-size-adjust: cap-height 0.7; }
 .hymn-number { font-variant-numeric: lining-nums tabular-nums; }
 .header-title.page-title { font-size: 1.5rem; letter-spacing: 0.01em; }
+/* A fejlécek régies (talpas) feliratai a bőrkötésbe nyomott aranyozásként: a betű fölött árnyék, alatta halvány
+   fény, mintha a felszín alá süllyedne. A lejátszó világos fejlécén ugyanez világos papírra illő árnyalatokkal. */
+.header .page-title, .header .hymn-number {
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+.player-view .header .page-title, .player-view .header .hymn-number {
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.18), 0 1px 0 rgba(255, 255, 255, 0.8);
+}
 
 /* --- Scorebook View --- */
 /* Nagyobb kijelzőn több oszlop: egy kártya legalább 440 px széles (1280 px-es tableten fekve 2, 1600 px-en 3 oszlop) */
@@ -1230,7 +1238,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     width: 100%;
 }
 
-/* Kártya: balra fent a cím és az adatok, alatta a leírás és a letöltés (a sor aljára igazítva, így egy sorban a
+/* Kártya: balra fent a cím és az adatok, alatta a letöltés (a sor aljára igazítva, így egy sorban a
    gombok egy vonalba kerülnek), jobbra a borító. Egy sorban a kártyák egyforma magasak. */
 .card.list-item.scorebook-item {
     display: grid;
@@ -1260,7 +1268,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 
 .scorebook-title {
     margin: 0;
-    font-size: 1rem;
+    font-size: 1.1rem;
 }
 
 .scorebook-toggle {
@@ -1270,14 +1278,8 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 }
 
 .scorebook-details {
-    font-size: 0.8rem;
+    font-size: 0.95rem;
     color: var(--col-ink-muted, #666);
-}
-
-.scorebook-description {
-    font-size: 0.75rem;
-    color: var(--col-ink-muted, #888);
-    line-height: 1.2;
 }
 
 .scorebook-empty {
@@ -1345,13 +1347,28 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 }
 .scorebook-status {
     display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem;
-    margin-top: 4px; font-size: 0.8rem; color: var(--col-ink-muted, #666);
+    margin-top: 4px; font-size: 0.95rem; color: var(--col-ink-muted, #666);
 }
-.scorebook-status .btn { padding: 0.3rem 0.8rem; font-size: 0.85rem; }
+.scorebook-status .btn { padding: 0.35rem 0.9rem; font-size: 0.95rem; }
 .scorebook-update { font-weight: bold; color: var(--col-accent-text, var(--col-accent)); }
-.scorebook-warning { font-size: 0.8rem; color: var(--col-red); }
+.scorebook-warning { font-size: 0.9rem; color: var(--col-red); }
 .scorebook-progress { height: 4px; margin-top: 4px; border-radius: 2px; overflow: hidden; background-color: var(--col-border, #ddd); }
 .scorebook-progress > div { height: 100%; background-color: var(--col-accent); transition: width 0.2s; }
+
+/* Nagyobb kijelzőn nagyobb betűk a kártyán; tableten (érintőképernyő) legalább 1,5 rem, hogy kartávolságból is olvasható legyen */
+@media (min-width: 641px) {
+    .scorebook-title { font-size: 1.35rem; }
+    .scorebook-details, .scorebook-status, .scorebook-status .btn { font-size: 1.15rem; }
+    .scorebook-badge { font-size: 0.85rem; }
+}
+@media (min-width: 641px) and (pointer: coarse) {
+    .scorebook-title { font-size: 1.75rem; }
+    .scorebook-details, .scorebook-status, .scorebook-status .btn, .scorebook-warning { font-size: 1.5rem; }
+    .scorebook-badge { font-size: 1.1rem; }
+    .scorebook-toggle { transform: none; }
+    /* a szövegnek több hely jut, a borító keskenyebb */
+    .card.list-item.scorebook-item { grid-template-columns: minmax(0, 1fr) clamp(140px, 38%, 320px); }
+}
 
 /* Borító. A kép a kártya jobb felében középen, teljes egészében látszik; mögötte ugyanaz a kép elmosva, halványan,
    balra elfogyva tölti ki a helyet. Kép nélkül rajzolt, bőrkötéses borító (a cím, az alcím és az évszám aranyozva),

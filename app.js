@@ -4253,8 +4253,6 @@ const ScorebookCard = ({ book, download, active, onToggle, onDownload, onCancel,
             </div>
 
             <div className="scorebook-body">
-                {data && data.description && <div className="scorebook-description">{data.description}</div>}
-
                 <div className="scorebook-status">
                     {status && <span>{status}</span>}
                     {hasUpdate && !progress && !book.builtin && <span className="scorebook-update">Új kották érhetők el</span>}
@@ -4270,7 +4268,7 @@ const ScorebookCard = ({ book, download, active, onToggle, onDownload, onCancel,
     );
 };
 
-// A könyv adatlapja (a kártyára kattintva): nagy borító, cím, szerző, leírás, a kották száma, és énekszám szerint a
+// A könyv adatlapja (a kártyára kattintva; a leírás csak itt látszik): nagy borító, cím, szerző, leírás, a kották száma, és énekszám szerint a
 // letétek és az előjátékok; ha egy énekhez több kotta is van, az énekszám után zárójelben a darabszám.
 const BookHymnList = ({ title, items, count }) => (
     <section className="book-details-section">
