@@ -1268,7 +1268,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 
 .scorebook-title {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: 1.35rem;
 }
 
 .scorebook-toggle {
@@ -1355,19 +1355,9 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .scorebook-progress { height: 4px; margin-top: 4px; border-radius: 2px; overflow: hidden; background-color: var(--col-border, #ddd); }
 .scorebook-progress > div { height: 100%; background-color: var(--col-accent); transition: width 0.2s; }
 
-/* Nagyobb kijelzőn nagyobb betűk a kártyán; tableten (érintőképernyő) 1,2 rem, hogy kartávolságból is olvasható legyen */
+/* A könyv neve akkora, mint a kottatárban az énekszám (.hymn-card-number), telefonon is */
 @media (min-width: 641px) {
-    .scorebook-title { font-size: 1.35rem; }
-    .scorebook-details, .scorebook-status, .scorebook-status .btn { font-size: 1.15rem; }
-    .scorebook-badge { font-size: 0.85rem; }
-}
-@media (min-width: 641px) and (pointer: coarse) {
-    .scorebook-title { font-size: 1.45rem; }
-    .scorebook-details, .scorebook-status, .scorebook-status .btn, .scorebook-warning { font-size: 1.2rem; }
-    .scorebook-badge { font-size: 0.9rem; }
-    .scorebook-toggle { transform: none; }
-    /* a szövegnek több hely jut, a borító keskenyebb */
-    .card.list-item.scorebook-item { grid-template-columns: minmax(0, 1fr) clamp(140px, 38%, 320px); }
+    .scorebook-title { font-size: 1.6rem; line-height: 1.2; }
 }
 
 /* Borító. A kép a kártya jobb felében középen, teljes egészében látszik; mögötte ugyanaz a kép elmosva, halványan,
