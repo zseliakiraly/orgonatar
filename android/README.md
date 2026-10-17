@@ -62,6 +62,14 @@ be vannak állítva a titkok:
 FTP nélkül: a kiadás után az APK-t az Actions futás oldaláról (vagy a Releases oldalról) letöltve, `orgonatar.apk`
 néven kell feltölteni az aldomain gyökerébe (cPanel → File Manager → Upload).
 
+### Frissítésjelző
+
+Kiadáskor (címke) a munkafolyamat az APK mellé egy `orgonatar-apk.json` fájlt is feltölt (változat, sorszám). Az
+alkalmazás ezt a PHP API-n keresztül kérdezi le (`api/?apk`), legfeljebb 12 óránként, és ha a telepítettnél újabb
+változat van (a sorszám, a `versionCode` szerint), felajánlja a letöltését. A lejátszó közben nem szól. A „Később”
+után az adott változatról egy hétig nem szól újra; a Névjegy oldalon a **Frissítés keresése** gombbal bármikor
+megnézhető. FTP nélkül az `orgonatar-apk.json`-t is kézzel kell feltölteni (a Releases oldalról) az APK mellé.
+
 ## Telepítés a telefonra
 
 1. A telefonon nyisd meg a <https://orgonatar.martone.hu/> kezdőoldalt, és töltsd le az APK-t

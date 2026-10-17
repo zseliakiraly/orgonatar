@@ -4900,12 +4900,61 @@ const feedbackMailto = () => {
     return `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent('OrgonaTár hibabejelentő')}&body=${encodeURIComponent(body)}`;
 };
 
-const AboutView = ({ menuButton }) => (
+// --- Frissítésjelző (csak az Android-alkalmazásban) ---
+// Play Áruház nélkül az alkalmazás magától nem tud az új APK-ról: a PHP API megmondja a legutóbb kiadott változatot
+// (api/?apk, az orgonatar-apk.json-ból, amelyet a GitHub Actions tölt fel), és ha az újabb a telepítettnél (a
+// sorszám, versionCode szerint), a program felajánlja a letöltését. Legfeljebb 12 óránként kérdez; a „Később” után az
+// adott változatról egy hétig nem szól újra.
+const APK_URL = NATIVE && SERVER_URL ? new URL('../orgonatar.apk', SERVER_URL).href : null;
+const UPDATE_STORE_KEY = 'orgonatar_update';
+const UPDATE_CHECK_INTERVAL = 12 * 3600 * 1000;
+const UPDATE_SNOOZE = 7 * 24 * 3600 * 1000;
+const appVersionInfo = () => (NATIVE && NATIVE.App ? NATIVE.App.getInfo().catch(() => null) : Promise.resolve(null));
+// az újabb változat adatai, vagy null (nincs újabb, vagy nem kérdezhető le)
+const fetchAppUpdate = async () => {
+    if (!NATIVE || !API_URL || !APK_URL) return null;
+    const info = await appVersionInfo();
+    const response = await fetch(`${API_URL}?apk`, { cache: 'no-store' });
+    if (!info || !response.ok) return null;
+    const latest = await response.json();
+    const current = parseInt(info.build, 10), build = parseInt(latest && latest.build, 10);
+    return Number.isFinite(current) && build > current ? { version: String(latest.version || build), build, current: info.version } : null;
+};
+// induláskor és internetkapcsolat visszatértekor: ha esedékes, és az adott változatot nem halasztották el
+const dueAppUpdate = async () => {
+    const state = loadJSON(UPDATE_STORE_KEY, {}) || {};
+    if (Date.now() - (state.checked || 0) < UPDATE_CHECK_INTERVAL) return null;
+    const update = await fetchAppUpdate();
+    saveJSON(UPDATE_STORE_KEY, { ...state, checked: Date.now() });
+    if (!update || (state.snoozed === update.build && Date.now() - (state.snoozedAt || 0) < UPDATE_SNOOZE)) return null;
+    return update;
+};
+const snoozeAppUpdate = (build) => saveJSON(UPDATE_STORE_KEY, { ...(loadJSON(UPDATE_STORE_KEY, {}) || {}), snoozed: build, snoozedAt: Date.now() });
+
+const AppUpdateModal = ({ update, onClose }) => (
+    <Modal title="Új változat érhető el" onClose={onClose} maxWidth="520px" footer={
+        <>
+            <button onClick={onClose} className="btn">Később</button>
+            <a href={APK_URL} target="_blank" rel="noopener" onClick={onClose} className="btn btn-primary"><Icons.Download size={18}/> Letöltés</a>
+        </>
+    }>
+        <p>Megjelent az OrgonaTár <strong>{update.version}</strong> változata{update.current ? ` (ezen a készüléken: ${update.current})` : ''}.</p>
+        <p className="settings-note">A letöltött APK-t megnyitva az új változat a régi helyére települ: a listák, a letöltött
+            könyvek és a beállítások megmaradnak.</p>
+    </Modal>
+);
+
+const AboutView = ({ menuButton, appVersion, onCheckUpdate }) => (
     <div className="about-view">
         {menuButton}
         <Logo className="about-logo" />
         <h1 className="page-title text-3xl text-galaxy mb-2">Református OrgonaTár</h1>
         <p className="text-accent uppercase font-bold tracking-widest mb-8">Fazekas Márton</p>
+        {appVersion && (
+            <p className="about-version">Változat: {appVersion}
+                {onCheckUpdate && <button onClick={onCheckUpdate} className="btn btn-ghost about-update-btn"><Icons.Download size={16}/> Frissítés keresése</button>}
+            </p>
+        )}
         <div className="content-box">
             <p>Református énekek orgonakíséretei, a 2021-es énekeskönyvhöz igazítva. Több korálkönyvből válogattam, elsősorban saját használatra - így számos kíséret kimaradt, például a "művészi" B letétek és az egyszerű C letétek a genfi korálkönyvből, továbbá minden ének, ahol változott a dallam vagy a ritmus. Ahol hangnem változott, ott a régi letét transzponálva lett.</p>
         </div>
@@ -4982,6 +5031,8 @@ function OrganistApp() {
     const [fingerImport, setFingerImport] = useState(null); // az ujjrendek importálása a kezdő szöveggel (null: zárva)
     const [listsImport, setListsImport] = useState(null);   // a fájlból betöltendő listák (null: zárva)
     const [backupRestore, setBackupRestore] = useState(null); // a visszatöltendő teljes mentés (null: zárva)
+    const [appUpdate, setAppUpdate] = useState(null);         // az alkalmazás újabb változata (null: nincs, vagy zárva)
+    const [appVersion, setAppVersion] = useState(null);       // a telepített változat (csak az alkalmazásban)
     const [alertMessage, setAlertMessage] = useState(null);
     const [isFullscreenModalOpen, setIsFullscreenModalOpen] = useState(() => FULLSCREEN_SUPPORTED && !isFullscreen() && !settings.skipFullscreenPrompt);
 
@@ -5418,6 +5469,24 @@ function OrganistApp() {
     if (view === 'player' && playerQueue.length === 0) view = 'playlists';
     useKeepAwake(!!settings.keepAwake && (view === 'player' || (view === 'library' && !!selectedHymn)));
 
+    // Frissítésjelző (Android-alkalmazás): induláskor és internetkapcsolat visszatértekor, ha esedékes. A lejátszó
+    // közben nem szól (istentisztelet alatt ne ugorjon fel ablak), csak utána.
+    useEffect(() => { appVersionInfo().then(info => setAppVersion(info && info.version ? info.version : null)); }, []);
+    useEffect(() => {
+        if (!APK_URL || !online || view === 'player' || appUpdate) return;
+        let cancelled = false;
+        dueAppUpdate().then(update => { if (update && !cancelled) setAppUpdate(update); }).catch(() => {});
+        return () => { cancelled = true; };
+    }, [online, view === 'player']);
+    const closeAppUpdate = () => { snoozeAppUpdate(appUpdate.build); setAppUpdate(null); };
+    const checkAppUpdateNow = () => {
+        fetchAppUpdate().then(update => {
+            saveJSON(UPDATE_STORE_KEY, { ...(loadJSON(UPDATE_STORE_KEY, {}) || {}), checked: Date.now() });
+            if (update) setAppUpdate(update);
+            else setAlertMessage({ title: 'Frissítés keresése', text: 'A legfrissebb változat van telepítve.' });
+        }).catch(() => setAlertMessage({ title: 'Frissítés keresése', text: 'A szerver nem érhető el. Próbáld újra később, internetkapcsolattal.' }));
+    };
+
     // Színséma (THEMES); a további szerepeket a .theme-* osztály adja
     const currentTheme = THEMES.find(t => t.id === settings.theme) || THEMES[0];
     const themeName = currentTheme.id;
@@ -5651,6 +5720,7 @@ function OrganistApp() {
                     <ImportFingeringModal key={fingerImport} initialText={fingerImport} blockInfo={blockInfo} hymnByNumber={hymnByNumber}
                         onClose={() => setFingerImport(null)} onImport={handleImportFingerings} />
                 )}
+                {appUpdate && view !== 'player' && <AppUpdateModal update={appUpdate} onClose={closeAppUpdate} />}
                 {backupRestore && <RestoreBackupModal backup={backupRestore} playlists={playlists} onClose={() => setBackupRestore(null)}
                     onRestore={() => restoreBackup(backupRestore, playlists).catch(err => { setBackupRestore(null); setAlertMessage(`A visszatöltés nem sikerült: ${err && err.message}`); })} />}
                 {listsImport && <ImportPlaylistsModal lists={listsImport} playlists={playlists} onClose={() => setListsImport(null)} onImport={handleLoadPlaylists} />}
@@ -5691,7 +5761,7 @@ function OrganistApp() {
                     dataSection={<DataSection playlistCount={playlists.length} onExportPlaylists={exportPlaylists} onPlaylistsFile={openPlaylistsFile} onExportBackup={exportBackup} onBackupFile={openBackupFile}
                         onExportFingerings={exportFingerings} onImportFingerings={() => setFingerImport('')} />} />}
 
-                {view === 'about' && <AboutView menuButton={menuToggle('floating')} />}
+                {view === 'about' && <AboutView menuButton={menuToggle('floating')} appVersion={appVersion} onCheckUpdate={APK_URL ? checkAppUpdateNow : null} />}
 
                 {view === 'playlist_editor' && <PlaylistEditor playlist={selectedPlaylist} onRemoveItem={(itemId) => handleRemoveItemRequest(selectedPlaylist.id, itemId)}
                     onEditItem={(item) => setEditingItem({ playlistId: selectedPlaylist.id, itemId: item.id })} onAddItem={handleAddHymnToEditor} onPlay={startPlaylist} onReorder={handleReorderPlaylist}

@@ -826,6 +826,8 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
     margin: 0;
 }
 /* Útmutató és hibabejelentés: két gomb egymás mellett (keskeny kijelzőn egymás alatt) */
+.about-version { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.5rem; margin: -1.25rem 0 1.5rem; font-size: 14px; color: var(--col-ink-muted, #666); }
+.about-update-btn { font-size: 14px; padding: 0.25rem 0.6rem; }
 .about-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; max-width: 600px; margin: 1.5rem auto 0; }
 .about-actions .btn { justify-content: center; min-width: 13.5rem; }
 .about-feedback-note { max-width: 600px; margin: 0.75rem auto 0; font-size: 14px; color: var(--col-ink-muted, #666); }

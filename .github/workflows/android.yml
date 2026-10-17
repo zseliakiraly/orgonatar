@@ -77,9 +77,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         # az orgonatar.apk állandó nevű másolat: a kezdőoldal (landing/index.html) linkje a legutóbbi kiadásé
+        # az orgonatar-apk.json az alkalmazás frissítésjelzőjének (api/?apk): a változat és a sorszám (versionCode)
         run: |
           cp dist/*.apk "$RUNNER_TEMP/orgonatar.apk"
-          gh release create "$GITHUB_REF_NAME" dist/*.apk "$RUNNER_TEMP/orgonatar.apk" --title "OrgonaTár $GITHUB_REF_NAME" --generate-notes
+          printf '{"version":"%s","build":%s,"date":"%s"}\n' "${GITHUB_REF_NAME#v}" "$GITHUB_RUN_NUMBER" "$(date -u +%F)" > "$RUNNER_TEMP/orgonatar-apk.json"
+          gh release create "$GITHUB_REF_NAME" dist/*.apk "$RUNNER_TEMP/orgonatar.apk" "$RUNNER_TEMP/orgonatar-apk.json" --title "OrgonaTár $GITHUB_REF_NAME" --generate-notes
       - name: Feltöltés a tárhelyre (orgonatar.martone.hu/orgonatar.apk)
         if: startsWith(github.ref, 'refs/tags/v')
         env:
@@ -90,9 +92,12 @@ jobs:
         # Ideiglenes néven tölt fel, és csak a végén nevezi át, így félbeszakadt feltöltés sem ront el letöltést.
         run: |
           if [ -z "$FTP_HOST" ]; then
-            echo "::notice title=Nincs FTP-beállítás::Az APK-t kézzel kell feltölteni: orgonatar.martone.hu/orgonatar.apk"
+            echo "::notice title=Nincs FTP-beállítás::Az APK-t és az orgonatar-apk.json-t (a Releases oldalról) kézzel kell feltölteni az orgonatar.martone.hu gyökerébe"
             exit 0
           fi
           curl --fail --silent --show-error --ssl-reqd --user "$FTP_USER:$FTP_PASSWORD" \
             -T "$RUNNER_TEMP/orgonatar.apk" "ftp://$FTP_HOST/orgonatar.apk.uj" \
             -Q "-RNFR orgonatar.apk.uj" -Q "-RNTO orgonatar.apk"
+          # az APK után: a frissítésjelző csak akkor szól, amikor az új APK már letölthető
+          curl --fail --silent --show-error --ssl-reqd --user "$FTP_USER:$FTP_PASSWORD" \
+            -T "$RUNNER_TEMP/orgonatar-apk.json" "ftp://$FTP_HOST/orgonatar-apk.json"
