@@ -1355,6 +1355,21 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .scorebook-progress { height: 4px; margin-top: 4px; border-radius: 2px; overflow: hidden; background-color: var(--col-border, #ddd); }
 .scorebook-progress > div { height: 100%; background-color: var(--col-accent); transition: width 0.2s; }
 
+/* Nagyobb kijelzőn nagyobb betűk a kártyán; tableten (érintőképernyő) legalább 1,5 rem, hogy kartávolságból is olvasható legyen */
+@media (min-width: 641px) {
+    .scorebook-title { font-size: 1.35rem; }
+    .scorebook-details, .scorebook-status, .scorebook-status .btn { font-size: 1.15rem; }
+    .scorebook-badge { font-size: 0.85rem; }
+}
+@media (min-width: 641px) and (pointer: coarse) {
+    .scorebook-title { font-size: 1.75rem; }
+    .scorebook-details, .scorebook-status, .scorebook-status .btn, .scorebook-warning { font-size: 1.5rem; }
+    .scorebook-badge { font-size: 1.1rem; }
+    .scorebook-toggle { transform: none; }
+    /* a szövegnek több hely jut, a borító keskenyebb */
+    .card.list-item.scorebook-item { grid-template-columns: minmax(0, 1fr) clamp(140px, 38%, 320px); }
+}
+
 /* Borító. A kép a kártya jobb felében középen, teljes egészében látszik; mögötte ugyanaz a kép elmosva, halványan,
    balra elfogyva tölti ki a helyet. Kép nélkül rajzolt, bőrkötéses borító (a cím, az alcím és az évszám aranyozva),
    mögötte a kötés színének halvány árnyalata. */
