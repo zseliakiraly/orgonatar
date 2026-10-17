@@ -75,6 +75,10 @@ Két helyről lehet énekeket a listára tenni.
 4. **Számbillentyűzet:** a **Törlés** törli a beírt számot, a **⌫** az utolsó számjegyet.
 5. A **kiválasztás** gombja. Utána a Hozzáadás ablak nyílik meg, már cél lista nélkül (az ének erre a listára kerül).
 
+Ha a lista neve dátummal kezdődik, és az a nap egy ünnepkörbe esik (pl. advent), a kereső alatt megjelenik az
+**Ünnepkör** gomb: bekapcsolva csak az ünnepkör kulcsszavához tartozó énekek látszanak. Az énekek mellett az is
+látszik, mikor szóltak utoljára (lásd: [Könyvtár](03-konyvtar.md#könyvtár)).
+
 Fizikai billentyűzeten is működik: számok, Backspace, Enter, Escape.
 
 ## A lista szerkesztője

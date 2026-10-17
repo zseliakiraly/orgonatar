@@ -999,17 +999,20 @@ const KEYPAD_MAX_DIGITS = 4;
 // Énekválasztó: bal oldalon kereső és találati lista, jobb oldalon nagygombos számbillentyűzet. A billentyűzet a
 // keresőbe ír, de nem adja rá a fókuszt. Fizikai billentyűzeten is működik: számok, Backspace, Enter, Escape.
 const EMPTY_MAP = new Map();
-const HymnSelectorModal = ({ isOpen, onClose, onSelect, hymnBook, lastUsed = EMPTY_MAP, title = 'Ének választása', action = 'kiválasztása', ItemIcon = Icons.Plus }) => {
+const HymnSelectorModal = ({ isOpen, onClose, onSelect, hymnBook, lastUsed = EMPTY_MAP, season = null, title = 'Ének választása', action = 'kiválasztása', ItemIcon = Icons.Plus }) => {
     const [search, setSearch] = useState('');
+    const [seasonOnly, setSeasonOnly] = useState(false); // csak az ünnepkör énekei (egyházi év)
     const inputRef = useRef(null);
     const latestRef = useRef({});
     useEffect(() => {
         if (!isOpen) return;
         setSearch('');
+        setSeasonOnly(false);
         if (!TOUCH_DEVICE) setTimeout(() => inputRef.current?.focus(), 100);
     }, [isOpen]);
     const searchIndex = useMemo(() => buildSearchIndex(hymnBook || []), [hymnBook]);
-    const filtered = useMemo(() => searchHymns(searchIndex, search), [searchIndex, search]);
+    const found = useMemo(() => searchHymns(searchIndex, search), [searchIndex, search]);
+    const filtered = useMemo(() => (seasonOnly && season ? found.filter(h => hymnKeywords(h).includes(season.keyword)) : found), [found, seasonOnly, season]);
     const number = /^\d+$/.test(search.trim()) ? search.trim() : '';
     const exact = number ? filtered.find(h => String(h.number) === number) || null : null;
 
@@ -1053,6 +1056,15 @@ const HymnSelectorModal = ({ isOpen, onClose, onSelect, hymnBook, lastUsed = EMP
                         <Icons.Search className="search-icon" size={18}/>
                         <ClearableInput inputRef={inputRef} type="text" className="input search" placeholder="Keresés számra, címre vagy szövegre..." value={search} onClear={() => setSearch('')} onChange={e => setSearch(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') confirm(); }} />
                     </div>
+                    {season && (
+                        <div className="hymn-picker-season">
+                            <span className="hymn-picker-season-label"><Icons.Calendar size={16}/> Ünnepkör:</span>
+                            <button type="button" className={`keyword-chip${seasonOnly ? ' active' : ''}`} aria-pressed={seasonOnly}
+                                onClick={() => setSeasonOnly(v => !v)} title={seasonOnly ? 'Minden ének' : `Csak a(z) „${season.keyword}” kulcsszavú énekek`}>
+                                {season.label}
+                            </button>
+                        </div>
+                    )}
                     <div className="hymn-picker-results">
                         <div className="hymn-selector-list">
                             {filtered.map(h => (
@@ -4908,6 +4920,38 @@ const daysAgoLabel = (stamp) => {
 };
 const lastUsedTitle = (stamp) => `Utoljára a ${stamp.replace(/-/g, '. ')}. listán`;
 
+// --- Egyházi év ---
+// Egy nap (ÉÉÉÉ-HH-NN) ünnepköre az énekek kulcsszavával (data/enek.json), vagy null. A mozgó ünnepek a húsvéthoz
+// igazodnak (Gergely-naptár szerinti húsvétvasárnap), az advent első vasárnapja a karácsony előtti negyedik vasárnap.
+const easterSunday = (year) => {
+    const a = year % 19, b = Math.floor(year / 100), c = year % 100, d = Math.floor(b / 4), e = b % 4;
+    const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31), day = ((h + l - 7 * m + 114) % 31) + 1;
+    return Date.UTC(year, month - 1, day);
+};
+const DAY_MS = 86400000;
+const churchSeasonOf = (stamp) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(stamp || '');
+    if (!m) return null;
+    const year = +m[1], month = +m[2], day = +m[3], t = Date.UTC(year, month - 1, day);
+    const fromEaster = Math.round((t - easterSunday(year)) / DAY_MS);
+    const christmas = Date.UTC(year, 11, 25);
+    const advent1 = christmas - (new Date(christmas).getUTCDay() || 7) * DAY_MS - 21 * DAY_MS;
+    if (month === 12 && day === 31 || month === 1 && day === 1) return { keyword: 'óév-újév', label: 'Óév-újév' };
+    if (month === 12 && day >= 25) return { keyword: 'karácsony', label: 'Karácsony' };
+    if (t >= advent1 && t < christmas) return { keyword: 'advent', label: 'Advent' };
+    if (month === 1 && day >= 6 && day <= 13) return { keyword: 'vízkereszt', label: 'Vízkereszt' };
+    if (fromEaster >= -46 && fromEaster < -7) return { keyword: 'böjt', label: 'Böjt' };
+    if (fromEaster >= -7 && fromEaster < 0) return { keyword: 'nagyhét', label: 'Nagyhét' };
+    if (fromEaster >= 0 && fromEaster < 7) return { keyword: 'húsvét', label: 'Húsvét' };
+    if (fromEaster >= 39 && fromEaster < 49) return { keyword: 'mennybemenetel', label: 'Mennybemenetel' };
+    if (fromEaster >= 49 && fromEaster < 56) return { keyword: 'pünkösd', label: 'Pünkösd' };
+    if (fromEaster === 56) return { keyword: 'Szentháromság', label: 'Szentháromság' };
+    if (month === 10 && day >= 25 || month === 11 && day === 1) return { keyword: 'reformáció', label: 'Reformáció' };
+    return null;
+};
+
 const PlaylistRowName = ({ name }) => {
     const m = DATED_NAME.exec(name);
     return (
@@ -5502,6 +5546,7 @@ function OrganistApp() {
     if (view === 'player' && playerQueue.length === 0) view = 'playlists';
     // mikor szólt utoljára egy ének (a dátumos listákból); a szerkesztett lista énekválasztójában a lista maga nem számít
     const lastUsed = useMemo(() => lastUsedDates(playlists), [playlists]);
+    const todaySeason = churchSeasonOf(localDateStamp()); // az egyházi év ünnepköre ma (vagy null)
     const lastUsedEditing = useMemo(() => lastUsedDates(playlists, selectedPlaylistId), [playlists, selectedPlaylistId]);
     useKeepAwake(!!settings.keepAwake && (view === 'player' || (view === 'library' && !!selectedHymn)));
 
@@ -5760,8 +5805,9 @@ function OrganistApp() {
                 {backupRestore && <RestoreBackupModal backup={backupRestore} playlists={playlists} onClose={() => setBackupRestore(null)}
                     onRestore={() => restoreBackup(backupRestore, playlists).catch(err => { setBackupRestore(null); setAlertMessage(`A visszatöltés nem sikerült: ${err && err.message}`); })} />}
                 {listsImport && <ImportPlaylistsModal lists={listsImport} playlists={playlists} onClose={() => setListsImport(null)} onImport={handleLoadPlaylists} />}
-                <HymnSelectorModal isOpen={isHymnSelectorOpen} onClose={() => setIsHymnSelectorOpen(false)} onSelect={handleHymnSelected} hymnBook={hymnBook} lastUsed={lastUsedEditing} />
-                <HymnSelectorModal isOpen={isQuickOpenOpen} onClose={() => setIsQuickOpenOpen(false)} onSelect={handleQuickOpen} hymnBook={hymnBook} lastUsed={lastUsed} title="Gyors megnyitás" action="megnyitása" ItemIcon={Icons.ChevronRight} />
+                <HymnSelectorModal isOpen={isHymnSelectorOpen} onClose={() => setIsHymnSelectorOpen(false)} onSelect={handleHymnSelected} hymnBook={hymnBook} lastUsed={lastUsedEditing}
+                    season={churchSeasonOf(selectedPlaylist && (DATED_NAME.exec(selectedPlaylist.name) || [])[1])} />
+                <HymnSelectorModal isOpen={isQuickOpenOpen} onClose={() => setIsQuickOpenOpen(false)} onSelect={handleQuickOpen} hymnBook={hymnBook} lastUsed={lastUsed} season={todaySeason} title="Gyors megnyitás" action="megnyitása" ItemIcon={Icons.ChevronRight} />
                 <DeleteConfirmModal isOpen={!!itemToDelete} onClose={() => setItemToDelete(null)} onConfirm={confirmDeleteItem} title="Ének törlése" message="Biztosan el szeretnéd távolítani ezt az éneket a listáról?" />
                 <DeleteConfirmModal isOpen={!!playlistToDelete} onClose={() => setPlaylistToDelete(null)} onConfirm={confirmDeletePlaylist} title="Lista törlése" message={`Biztosan törölni szeretnéd a(z) "${playlistToDelete?.name}" listát?`} />
                 <DeleteConfirmModal isOpen={!!bookToDelete} onClose={() => setBookToDelete(null)} onConfirm={confirmDeleteBook}
@@ -5855,6 +5901,10 @@ function OrganistApp() {
                                 placeholder="Minden kulcsszó" width="190px" menuMaxHeight={420} ariaLabel="Szűrés kulcsszóra"
                                 className={`library-keyword${keywordFilter ? ' active' : ''}`}
                                 renderOption={(k) => <span className="keyword-option"><span className="keyword-option-name">{k.name}</span><span className="keyword-option-count">{k.count}</span></span>} />
+                            {todaySeason && keywordFilter !== todaySeason.keyword && (
+                                <button type="button" className="btn btn-outline library-season" onClick={() => setKeywordFilter(todaySeason.keyword)}
+                                    title={`Szűrés: ${todaySeason.keyword} (a mai nap ünnepköre)`}><Icons.Calendar size={18}/><span>{todaySeason.label}</span></button>
+                            )}
                         </div>
                         <div className="library-scroll" style={{flex:1, overflowY:'auto', padding:'1rem'}}>
                             {(keywordFilter || searchQuery.trim()) && (
