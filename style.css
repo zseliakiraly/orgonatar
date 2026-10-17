@@ -1287,7 +1287,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 
 .scorebook-title {
     margin: 0;
-    font-size: 1.35rem;
+    font-size: 1.15rem;
 }
 
 .scorebook-toggle {
@@ -1373,11 +1373,6 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .scorebook-warning { font-size: 0.9rem; color: var(--col-red); }
 .scorebook-progress { height: 4px; margin-top: 4px; border-radius: 2px; overflow: hidden; background-color: var(--col-border, #ddd); }
 .scorebook-progress > div { height: 100%; background-color: var(--col-accent); transition: width 0.2s; }
-
-/* A könyv neve akkora, mint a kottatárban az énekszám (.hymn-card-number), telefonon is */
-@media (min-width: 641px) {
-    .scorebook-title { font-size: 1.6rem; line-height: 1.2; }
-}
 
 /* Borító. A kép a kártya jobb felében középen, teljes egészében látszik; mögötte ugyanaz a kép elmosva, halványan,
    balra elfogyva tölti ki a helyet. Kép nélkül rajzolt, bőrkötéses borító (a cím, az alcím és az évszám aranyozva),
