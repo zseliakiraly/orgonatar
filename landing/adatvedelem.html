@@ -12,7 +12,11 @@
         @font-face { font-family: 'Old Standard TT'; font-display: swap; src: url('webkantor/fonts/old-standard-tt/old-standard-tt-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA,U+1E00-1E9F; }
         :root { --bg: #F7F4EB; --card: #FAF7F0; --border: #D8CEB7; --ink: #221C18; --muted: #574B40; --teal: #123540; --teal-mid: #194C5C; --gold: #9E7B3B; --gold-text: #826531; }
         * { box-sizing: border-box; }
+        /* Textúra, mint a program alapértelmezett hátterén (a style.css --tex-* SVG-zajai): papírszemcse halvány foltokkal,
+           a türkiz gombokon bőrkötés */
+        :root { --tex-paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45  0 0 0 0 0.45  0 0 0 0 0.45  0 0 -0.36 0 0.18'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"); --tex-paper-cloud: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='c' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.008' numOctaves='3' seed='8' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.6  0 0 0 0 0.6  0 0 0 0 0.6  0 0 -0.20 0 0.10'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23c)'/%3E%3C/svg%3E"); }
         body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Figtree', system-ui, sans-serif; line-height: 1.55; }
+        body { background-image: var(--tex-paper-grain), var(--tex-paper-cloud); background-blend-mode: multiply; }
         main { max-width: 760px; margin: 0 auto; padding: 48px 20px 64px; }
         h1 { font-family: 'Old Standard TT', Georgia, serif; font-weight: 400; font-size: 2rem; line-height: 1.15; margin: 0 0 24px; color: var(--teal); }
         h2 { font-size: 1.05rem; margin: 28px 0 8px; color: var(--teal); }

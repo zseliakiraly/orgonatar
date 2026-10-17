@@ -14,7 +14,13 @@
         @font-face { font-family: 'Old Standard TT'; font-display: swap; src: url('webkantor/fonts/old-standard-tt/old-standard-tt-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA,U+1E00-1E9F; }
         :root { --bg: #F7F4EB; --card: #FAF7F0; --border: #D8CEB7; --ink: #221C18; --muted: #574B40; --teal: #123540; --teal-mid: #194C5C; --gold: #9E7B3B; --gold-text: #826531; }
         * { box-sizing: border-box; }
+        /* Textúra, mint a program alapértelmezett hátterén (a style.css --tex-* SVG-zajai): papírszemcse halvány foltokkal,
+           a türkiz gombokon bőrkötés */
+        :root { --tex-paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45  0 0 0 0 0.45  0 0 0 0 0.45  0 0 -0.36 0 0.18'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"); --tex-paper-cloud: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='c' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.008' numOctaves='3' seed='8' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.6  0 0 0 0 0.6  0 0 0 0 0.6  0 0 -0.20 0 0.10'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23c)'/%3E%3C/svg%3E"); --tex-leather: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='l' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.4' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeDiffuseLighting surfaceScale='1.6' lighting-color='%23fff'%3E%3CfeDistantLight azimuth='225' elevation='55'/%3E%3C/feDiffuseLighting%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='0.3' intercept='0.254'/%3E%3CfeFuncG type='linear' slope='0.3' intercept='0.254'/%3E%3CfeFuncB type='linear' slope='0.3' intercept='0.254'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23l)'/%3E%3C/svg%3E"); }
         body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Figtree', system-ui, sans-serif; line-height: 1.55; }
+        body { background-image: var(--tex-paper-grain), var(--tex-paper-cloud); background-blend-mode: multiply; }
+        .choice, .install { background-image: var(--tex-paper-grain); background-blend-mode: multiply; }
+        .btn { background-image: var(--tex-leather); background-blend-mode: soft-light; }
         main { max-width: 760px; margin: 0 auto; padding: 48px 20px 64px; }
         header { display: flex; align-items: center; gap: 20px; margin-bottom: 28px; }
         header img { width: 88px; height: 88px; flex: none; }
@@ -27,16 +33,16 @@
         .features .ic { width: 22px; height: 22px; margin-top: 2px; stroke-width: 1.75; color: var(--gold); }
         .features strong { display: block; color: var(--ink); font-weight: 600; }
         .choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 32px 0; }
-        .choice { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 22px; display: flex; flex-direction: column; }
+        .choice { background-color: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 22px; display: flex; flex-direction: column; }
         .choice h2 { font-family: 'Old Standard TT', Georgia, serif; font-weight: 400; font-size: 1.4rem; margin: 0 0 8px; color: var(--teal); }
         .choice p { color: var(--muted); flex: 1; }
-        .btn { display: inline-block; text-align: center; text-decoration: none; font-weight: 600; padding: 12px 18px; border-radius: 8px; background: var(--teal); color: #fff; }
-        .btn:hover, .btn:focus-visible { background: var(--teal-mid); }
-        .btn.gold { background: var(--gold); }
-        .btn.gold:hover, .btn.gold:focus-visible { background: var(--gold-text); }
+        .btn { display: inline-block; text-align: center; text-decoration: none; font-weight: 600; padding: 12px 18px; border-radius: 8px; background-color: var(--teal); color: #fff; }
+        .btn:hover, .btn:focus-visible { background-color: var(--teal-mid); }
+        .btn.gold { background-color: var(--gold); }
+        .btn.gold:hover, .btn.gold:focus-visible { background-color: var(--gold-text); }
         .maker { margin: 0 0 32px; }
         .maker .btn { align-self: flex-start; }
-        .install { background: #EFE8D8; border: 1px solid var(--border); border-radius: 12px; padding: 4px 22px 18px; margin: 0 0 32px; }
+        .install { background-color: #EFE8D8; border: 1px solid var(--border); border-radius: 12px; padding: 4px 22px 18px; margin: 0 0 32px; }
         .install h3 { margin-top: 18px; }
         .install .small { margin: 0; }
         .small { font-size: 0.9rem; color: var(--muted); }
