@@ -48,6 +48,13 @@ másik eszközre is átvihetők. A mentett fájl a böngésző adatainak törlé
 
 ![Adatok mentése és megosztása: ujjrendek és jelek (1), liturgikus listák (2)](kepek/adatok-mentese.webp)
 
+- **Minden adat:** teljes biztonsági mentés egy fájlban: a listák, az ujjrendek és jelek, a megjegyzések és
+  regisztrációk, a letétek értékelése, a transzponálások, a szövegpanel énekenkénti elrendezése és a beállítások.
+  - **Mentés fájlba:** `orgonatar-mentes-<dátum>.json`. Készülékcsere vagy az alkalmazás újratelepítése előtt ezt
+    érdemes elmenteni.
+  - **Visszatöltés:** előtte egy ablak mutatja, mi van a fájlban. A listák a meglévők mellé kerülnek (a már meglévők
+    kimaradnak). A többi adatnál a mentésben szereplő énekek (letétek) adata felülírja az ezen az eszközön lévőt, a
+    többi megmarad. A beállítások a mentésből jönnek. Utána a program újraindul.
 - **Ujjrendek és jelek:** a sorban látszik, hány letéthez és összesen hány hanghoz van ujjrend, pedál- vagy
   játékmódjel ezen az eszközön.
   - **Mentés fájlba:** minden ujjrend és jel egy fájlba (`orgonatar-ujjrendek-<dátum>.json`).

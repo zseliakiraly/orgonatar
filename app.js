@@ -1435,6 +1435,64 @@ const decodePlaylistsFile = (text) => {
 // ugyanaz a lista (név és énekek): fájlból betöltéskor a már meglévők kimaradnak
 const samePlaylist = (a, b) => a.name === b.name && JSON.stringify(a.items.map(listItemData)) === JSON.stringify(b.items.map(listItemData));
 
+// Teljes mentés: minden saját adat egy fájlban (beállítások, listák, megjegyzések és regisztrációk, értékelések,
+// transzponálások, a szövegpanel énekenkénti elrendezése, ujjrendek). Visszatöltéskor a listák a meglévők mellé
+// kerülnek (a már meglévők kimaradnak), a többinél a mentésben szereplő ének (letét) adata felülírja az itteni, a többi
+// megmarad; a beállítások a mentésből jönnek.
+const BACKUP_FILE_TYPE = 'orgonatar-mentes';
+const plainObject = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : null);
+const BACKUP_MAPS = [
+    { key: 'hymnNotes', storage: STORAGE_KEYS.hymnNotes, label: 'ének megjegyzése vagy regisztrációja' },
+    { key: 'scoreRatings', storage: STORAGE_KEYS.scoreRatings, label: 'értékelt letét' },
+    { key: 'transpositions', storage: STORAGE_KEYS.transpositions, label: 'transzponált ének' },
+    { key: 'lyricsLayouts', storage: STORAGE_KEYS.lyricsLayouts, label: 'ének szövegpanel-elrendezése' }
+];
+const backupFileText = (playlists) => {
+    const data = { settings: loadJSON(STORAGE_KEYS.settings, {}), playlists: playlists.map(p => ({ id: p.id, name: p.name, items: p.items.map(listItemData) })),
+        fingerings: loadFingerings() };
+    BACKUP_MAPS.forEach(m => { data[m.key] = plainObject(loadJSON(m.storage, {})) || {}; });
+    return JSON.stringify({ type: BACKUP_FILE_TYPE, version: 1, saved: new Date().toISOString(), data }, null, 1);
+};
+// a mentés tartalma ellenőrizve (null: nem ilyen fájl)
+const decodeBackupFile = (text) => {
+    let file;
+    try { file = JSON.parse(text); } catch (e) { return null; }
+    const data = file && file.type === BACKUP_FILE_TYPE && plainObject(file.data);
+    if (!data) return null;
+    const backup = {
+        saved: typeof file.saved === 'string' ? file.saved : null,
+        settings: plainObject(data.settings),
+        playlists: decodePlaylistsFile(JSON.stringify({ type: LISTS_FILE_TYPE, playlists: Array.isArray(data.playlists) ? data.playlists : [] })) || [],
+        fingerings: cleanFingerStore(plainObject(data.fingerings) || {})
+    };
+    BACKUP_MAPS.forEach(m => { backup[m.key] = plainObject(data[m.key]) || {}; });
+    return backup;
+};
+// a fájlból jött listák a meglévők mellé: az eredeti azonosító (a létrehozás ideje: a listák sorrendje) marad, ha
+// szabad; különben új
+const appendPlaylists = (existing, lists) => {
+    const used = new Set(existing.map(p => String(p.id)));
+    let next = Date.now();
+    return [...existing, ...lists.map(list => {
+        let id = list.id;
+        if (!id || used.has(String(id))) { while (used.has(String(next))) next++; id = next; }
+        used.add(String(id));
+        return { id, name: list.name, items: list.items.map(it => ({ ...it, id: newItemId() })) };
+    })];
+};
+// A mentés visszaírása a tárolóba; utána a program újraindul (így minden nézet a visszatöltött adatokat mutatja)
+const restoreBackup = async (backup, playlists) => {
+    const fresh = backup.playlists.filter(list => !playlists.some(p => samePlaylist(p, list)));
+    saveJSON(STORAGE_KEYS.playlists, appendPlaylists(playlists, fresh));
+    BACKUP_MAPS.forEach(m => saveJSON(m.storage, { ...(plainObject(loadJSON(m.storage, {})) || {}), ...backup[m.key] }));
+    const fingerings = loadFingerings();
+    Object.entries(backup.fingerings).forEach(([block, classes]) => { fingerings[block] = { ...(fingerings[block] || {}), ...classes }; });
+    saveJSON(STORAGE_KEYS.fingerings, fingerings);
+    if (backup.settings) saveJSON(STORAGE_KEYS.settings, { ...loadJSON(STORAGE_KEYS.settings, {}), ...backup.settings });
+    if (NATIVE) { saveNativeStore(); await nativeStore.saving; }
+    window.location.reload();
+};
+
 const safeFileName = (name) => (name.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim() || 'lista').slice(0, 80);
 
 // Külső könyvtárak igény szerint (libs/qr): QR-kód rajzolása és – ha a böngésző nem ismeri fel magától – olvasása
@@ -1933,6 +1991,43 @@ const ImportPlaylistsModal = ({ lists, playlists, onClose, onImport }) => {
     );
 };
 
+// A teljes mentés visszatöltése: mi van a fájlban, és mi történik vele
+const RestoreBackupModal = ({ backup, playlists, onClose, onRestore }) => {
+    const [busy, setBusy] = useState(false);
+    const freshLists = backup.playlists.filter(list => !playlists.some(p => samePlaylist(p, list))).length;
+    const fingerStatsOf = fingerStats(backup.fingerings);
+    const rows = [
+        { count: backup.playlists.length, label: 'liturgikus lista', detail: backup.playlists.length > freshLists ? `ebből ${backup.playlists.length - freshLists} már megvan, az kimarad` : '' },
+        ...BACKUP_MAPS.map(m => ({ count: Object.keys(backup[m.key]).length, label: m.label })),
+        { count: fingerStatsOf.blocks, label: 'letét ujjrendje' }
+    ].filter(r => r.count);
+    const saved = backup.saved && !isNaN(new Date(backup.saved)) ? new Date(backup.saved).toLocaleString('hu-HU', { dateStyle: 'long', timeStyle: 'short' }) : null;
+    const restore = () => { setBusy(true); onRestore(); };
+    return (
+        <Modal title="Mentés visszatöltése" onClose={onClose} maxWidth="640px" placement="upper" footer={
+            <>
+                <button onClick={onClose} className="btn" disabled={busy}>Mégse</button>
+                <button onClick={restore} disabled={busy} className="btn btn-primary">Visszatöltés</button>
+            </>
+        }>
+            <div className="import-list">
+                <p className="import-message info">{saved ? `A mentés ideje: ${saved}. ` : ''}A fájlban:</p>
+                <div className="import-items">
+                    {rows.map((r, i) => (
+                        <div key={i} className="playlist-card-item lists-import-item">
+                            <span className="lists-import-name">{r.count} {r.label}</span>
+                            {r.detail && <span className="lists-import-detail">{r.detail}</span>}
+                        </div>
+                    ))}
+                    {backup.settings && <div className="playlist-card-item lists-import-item"><span className="lists-import-name">a beállítások</span></div>}
+                </div>
+                <p className="settings-note">A listák a meglévők mellé kerülnek. A többi adatnál a mentésben szereplő énekek adata
+                    felülírja az ezen az eszközön lévőt, a többi megmarad. Visszatöltés után a program újraindul.</p>
+            </div>
+        </Modal>
+    );
+};
+
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, title, message }) => {
     if(!isOpen) return null;
     return (
@@ -2314,9 +2409,9 @@ const serifFontOption = (font) => (
 
 // Adatok mentése és megosztása: az ujjrendek (mentés fájlba, importálás kódból, linkből, fájlból vagy QR-kódból) és az
 // összes lista (mentés fájlba, betöltés fájlból). A mentett fájlokkal az adatok másik eszközre is átvihetők.
-const DataSection = ({ playlistCount, onExportPlaylists, onPlaylistsFile, onExportFingerings, onImportFingerings }) => {
+const DataSection = ({ playlistCount, onExportPlaylists, onPlaylistsFile, onExportFingerings, onImportFingerings, onExportBackup, onBackupFile }) => {
     const [stats, setStats] = useState(() => fingerStats(loadFingerings()));
-    const fileRef = useRef(null);
+    const fileRef = useRef(null), backupRef = useRef(null);
     useEffect(() => {
         const update = () => setStats(fingerStats(loadFingerings()));
         window.addEventListener(FINGERINGS_CHANGED, update);
@@ -2327,8 +2422,20 @@ const DataSection = ({ playlistCount, onExportPlaylists, onPlaylistsFile, onExpo
         e.target.value = '';
         if (file) onPlaylistsFile(file);
     };
+    const openBackup = (e) => {
+        const file = e.target.files && e.target.files[0];
+        e.target.value = '';
+        if (file) onBackupFile(file);
+    };
     return (
         <SettingsSection title="Adatok mentése és megosztása">
+            <SettingsRow title="Minden adat" hint="Listák, ujjrendek, megjegyzések, regisztrációk, értékelések, transzponálások és beállítások">
+                <div className="data-actions">
+                    <button onClick={onExportBackup} className="btn btn-outline"><Icons.Download size={18}/> Mentés fájlba</button>
+                    <button onClick={() => backupRef.current.click()} className="btn btn-outline"><Icons.File size={18}/> Visszatöltés</button>
+                    <input ref={backupRef} type="file" accept=".json,application/json" className="import-file-input" onChange={openBackup} tabIndex={-1} aria-hidden="true" />
+                </div>
+            </SettingsRow>
             <SettingsRow title="Ujjrendek és jelek" hint={stats.notes ? `${stats.blocks} letét, összesen ${stats.notes} jelölt hang` : 'Még nincs ujjrend ezen az eszközön'}>
                 <div className="data-actions">
                     <button onClick={onExportFingerings} disabled={!stats.notes} className="btn btn-outline"><Icons.Download size={18}/> Mentés fájlba</button>
@@ -4874,6 +4981,7 @@ function OrganistApp() {
     const [importText, setImportText] = useState(null); // az importálás ablaka a kezdő szöveggel (null: zárva)
     const [fingerImport, setFingerImport] = useState(null); // az ujjrendek importálása a kezdő szöveggel (null: zárva)
     const [listsImport, setListsImport] = useState(null);   // a fájlból betöltendő listák (null: zárva)
+    const [backupRestore, setBackupRestore] = useState(null); // a visszatöltendő teljes mentés (null: zárva)
     const [alertMessage, setAlertMessage] = useState(null);
     const [isFullscreenModalOpen, setIsFullscreenModalOpen] = useState(() => FULLSCREEN_SUPPORTED && !isFullscreen() && !settings.skipFullscreenPrompt);
 
@@ -5446,6 +5554,13 @@ function OrganistApp() {
         downloadText(`orgonatar-ujjrendek-${todayStamp()}.json`, fingeringsFileText(store, blocks), 'application/json;charset=utf-8');
     };
     const exportPlaylists = () => downloadText(`orgonatar-listak-${todayStamp()}.json`, playlistsFileText(playlists), 'application/json;charset=utf-8');
+    const exportBackup = () => downloadText(`orgonatar-mentes-${todayStamp()}.json`, backupFileText(playlists), 'application/json;charset=utf-8');
+    const openBackupFile = async (file) => {
+        let backup = null;
+        try { backup = decodeBackupFile(await file.text()); } catch (e) { /* olvashatatlan fájl */ }
+        if (backup) setBackupRestore(backup);
+        else setAlertMessage('Ez a fájl nem az OrgonaTár teljes mentése (a „Minden adat” sor Mentés fájlba gombjával készül).');
+    };
     const openPlaylistsFile = async (file) => {
         let lists = null;
         try { lists = decodePlaylistsFile(await file.text()); } catch (e) { /* olvashatatlan fájl */ }
@@ -5453,18 +5568,9 @@ function OrganistApp() {
         else setAlertMessage(lists ? 'A fájlban nincs lista.' : 'Ez a fájl nem az OrgonaTár listáinak mentése.');
     };
     const handleLoadPlaylists = (lists) => {
-        // az eredeti azonosító (a létrehozás ideje: a listák sorrendje) marad, ha szabad; különben új
-        const used = new Set(playlists.map(p => String(p.id)));
-        let next = Date.now();
-        const added = lists.map(list => {
-            let id = list.id;
-            if (!id || used.has(String(id))) { while (used.has(String(next))) next++; id = next; }
-            used.add(String(id));
-            return { id, name: list.name, items: list.items.map(it => ({ ...it, id: newItemId() })) };
-        });
-        setPlaylists(prev => [...prev, ...added]);
+        setPlaylists(prev => appendPlaylists(prev, lists));
         setListsImport(null);
-        setAlertMessage({ title: 'Listák betöltve', text: `${added.length} lista betöltve.` });
+        setAlertMessage({ title: 'Listák betöltve', text: `${lists.length} lista betöltve.` });
     };
     const handleReorderPlaylist = (fromIndex, toIndex) => {
         setPlaylists(prev => prev.map(p => {
@@ -5545,6 +5651,8 @@ function OrganistApp() {
                     <ImportFingeringModal key={fingerImport} initialText={fingerImport} blockInfo={blockInfo} hymnByNumber={hymnByNumber}
                         onClose={() => setFingerImport(null)} onImport={handleImportFingerings} />
                 )}
+                {backupRestore && <RestoreBackupModal backup={backupRestore} playlists={playlists} onClose={() => setBackupRestore(null)}
+                    onRestore={() => restoreBackup(backupRestore, playlists).catch(err => { setBackupRestore(null); setAlertMessage(`A visszatöltés nem sikerült: ${err && err.message}`); })} />}
                 {listsImport && <ImportPlaylistsModal lists={listsImport} playlists={playlists} onClose={() => setListsImport(null)} onImport={handleLoadPlaylists} />}
                 <HymnSelectorModal isOpen={isHymnSelectorOpen} onClose={() => setIsHymnSelectorOpen(false)} onSelect={handleHymnSelected} hymnBook={hymnBook} />
                 <HymnSelectorModal isOpen={isQuickOpenOpen} onClose={() => setIsQuickOpenOpen(false)} onSelect={handleQuickOpen} hymnBook={hymnBook} title="Gyors megnyitás" action="megnyitása" ItemIcon={Icons.ChevronRight} />
@@ -5580,7 +5688,7 @@ function OrganistApp() {
 
                 {/* Content Views */}
                 {view === 'settings' && <SettingsView settings={settings} onUpdateSettings={setSettings} menuButton={menuToggle('corner')}
-                    dataSection={<DataSection playlistCount={playlists.length} onExportPlaylists={exportPlaylists} onPlaylistsFile={openPlaylistsFile}
+                    dataSection={<DataSection playlistCount={playlists.length} onExportPlaylists={exportPlaylists} onPlaylistsFile={openPlaylistsFile} onExportBackup={exportBackup} onBackupFile={openBackupFile}
                         onExportFingerings={exportFingerings} onImportFingerings={() => setFingerImport('')} />} />}
 
                 {view === 'about' && <AboutView menuButton={menuToggle('floating')} />}
