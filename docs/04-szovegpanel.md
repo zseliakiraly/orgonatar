@@ -52,7 +52,11 @@ Ha a panelen jobbra vagy lejjebb még van szöveg, a szélén árnyék jelzi.
 ![A Megjegyzések lap](kepek/megjegyzesek.webp)
 
 1. **Megjegyzések fül.** A pötty jelzi, ha az énekhez van megjegyzés vagy regisztráció.
-2. **Leírás:** az ének adatai, soronként:
+2. **Regisztráció:** alapból három mező (2. manuál, 1. manuál, Pedál). Egy sorra koppintva szerkeszthető. A cím
+   melletti **+ Manuál** (vagy a szerkesztőben a **+ Manuál hozzáadása**) újabb manuált ad hozzá felülre (legfeljebb
+   5-öt). Az éneknél annyi manuál látszik, amennyi a legmagasabb kitöltött; az üresen hagyott új manuál eltűnik.
+3. **Megjegyzés:** saját jegyzet az énekhez, pl. tempó, az előjáték hossza. Koppintásra szerkeszthető.
+4. **Leírás:** az ének adatai, soronként:
    - **Igehely:** a kapcsolódó igehely;
    - **Szöveg:** a szöveg szerzője vagy eredete, évszámmal;
    - **Fordítás:** a fordító, évszámmal;
@@ -64,12 +68,9 @@ Ha a panelen jobbra vagy lejjebb még van szöveg, a szélén árnyék jelzi.
 
    Csak a megadott adatok látszanak; ha egyik sincs, „Ehhez az énekhez még nincs leírás.” áll. Csak olvasható, a
    program adataiból jön (lásd: [Az adatok karbantartása](10-karbantartas.md#az-ének-adatai)).
-3. **Megjegyzés:** saját jegyzet az énekhez, pl. tempó, az előjáték hossza. Koppintásra szerkeszthető.
-4. **Regisztráció:** alapból három mező (2. manuál, 1. manuál, Pedál). Egy sorra koppintva szerkeszthető. A cím
-   melletti **+ Manuál** (vagy a szerkesztőben a **+ Manuál hozzáadása**) újabb manuált ad hozzá felülre (legfeljebb
-   5-öt). Az éneknél annyi manuál látszik, amennyi a legmagasabb kitöltött; az üresen hagyott új manuál eltűnik.
 
-Lent a három rész egymás mellett áll, oldalt egymás alatt. A T− / T+ ennek a lapnak a betűméretét is állítja.
+Lent a három rész ebben a sorrendben áll egymás mellett (balról jobbra), oldalt egymás alatt. A T− / T+ ennek a
+lapnak a betűméretét is állítja.
 
 ### Szerkesztés
 

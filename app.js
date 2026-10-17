@@ -3525,33 +3525,10 @@ const useVisibleArea = () => {
     return area;
 };
 
-// A Megjegyzések lap: a leírás (az enek.json-ból: az ének adatai és a szabad leírás), a megjegyzés és a regisztráció;
-// az utóbbi kettő koppintásra szerkeszthető (a regisztrációnál a megérintett sor kapja a fókuszt)
+// A Megjegyzések lap: a regisztráció, a megjegyzés és a leírás (az enek.json-ból: az ének adatai és a szabad leírás);
+// az első kettő koppintásra szerkeszthető (a regisztrációnál a megérintett sor kapja a fókuszt)
 const HymnNotes = ({ info, description, notes, onEdit }) => (
     <div className="hymn-notes">
-        <section className="hymn-notes-section">
-            <h4 className="hymn-notes-title">Leírás</h4>
-            {info.length > 0 && (
-                <dl className="hymn-info">
-                    {info.map(row => (
-                        <div key={row.label} className="hymn-info-row">
-                            <dt className="hymn-info-label">{row.label}</dt>
-                            <dd className="hymn-info-value">{row.value}</dd>
-                        </div>
-                    ))}
-                </dl>
-            )}
-            {description.map((lines, i) => (
-                <p key={i} className="hymn-notes-desc">{lines.map((line, j) => <React.Fragment key={j}>{j > 0 && <br/>}{line}</React.Fragment>)}</p>
-            ))}
-            {info.length === 0 && description.length === 0 && <p className="hymn-notes-empty">Ehhez az énekhez még nincs leírás.</p>}
-        </section>
-        <section className="hymn-notes-section">
-            <h4 className="hymn-notes-title">Megjegyzés</h4>
-            <button type="button" className="hymn-notes-edit hymn-notes-note-box" onClick={() => onEdit({ kind: 'note' })} aria-label="Megjegyzés szerkesztése">
-                {notes.note ? <span className="hymn-notes-note">{notes.note}</span> : <span className="hymn-notes-empty">Koppints ide, és írj megjegyzést…</span>}
-            </button>
-        </section>
         <section className="hymn-notes-section">
             <div className="hymn-notes-title-row">
                 <h4 className="hymn-notes-title">Regisztráció</h4>
@@ -3569,6 +3546,29 @@ const HymnNotes = ({ info, description, notes, onEdit }) => (
                     </button>
                 ))}
             </div>
+        </section>
+        <section className="hymn-notes-section">
+            <h4 className="hymn-notes-title">Megjegyzés</h4>
+            <button type="button" className="hymn-notes-edit hymn-notes-note-box" onClick={() => onEdit({ kind: 'note' })} aria-label="Megjegyzés szerkesztése">
+                {notes.note ? <span className="hymn-notes-note">{notes.note}</span> : <span className="hymn-notes-empty">Koppints ide, és írj megjegyzést…</span>}
+            </button>
+        </section>
+        <section className="hymn-notes-section">
+            <h4 className="hymn-notes-title">Leírás</h4>
+            {info.length > 0 && (
+                <dl className="hymn-info">
+                    {info.map(row => (
+                        <div key={row.label} className="hymn-info-row">
+                            <dt className="hymn-info-label">{row.label}</dt>
+                            <dd className="hymn-info-value">{row.value}</dd>
+                        </div>
+                    ))}
+                </dl>
+            )}
+            {description.map((lines, i) => (
+                <p key={i} className="hymn-notes-desc">{lines.map((line, j) => <React.Fragment key={j}>{j > 0 && <br/>}{line}</React.Fragment>)}</p>
+            ))}
+            {info.length === 0 && description.length === 0 && <p className="hymn-notes-empty">Ehhez az énekhez még nincs leírás.</p>}
         </section>
     </div>
 );
