@@ -26,6 +26,9 @@ Az oldalmenü fogaskerék gombja nyitja meg. Újra megnyomva oda visz vissza, ah
 
 - **Szövegpanel megjelenítése:** a szem ikonnal a kotta melletti szövegpanel elrejthető.
 - **Kotta szélessége:** a kotta legnagyobb szélessége (100–50%), ha keskenyebb kottát szeretnél.
+- **Képernyő ébren tartása:** bekapcsolva (alapértelmezés) a lejátszóban és az ének oldalán nem sötétül el a
+  kijelző, akkor sem, ha sokáig nem érsz hozzá. A többi oldalon a készülék szokásos beállítása érvényes. Ha a böngésző
+  nem tudja (pl. régebbi Safari), a kapcsolónak nincs hatása.
 - **Óra a lejátszóban:** a pontos idő a lejátszó jobb felső sarkában.
 
 Az oldalsó szövegpanel szélességét nem itt kell beállítani: a panel fogantyújával énekenként állítható (lásd:
@@ -45,6 +48,13 @@ másik eszközre is átvihetők. A mentett fájl a böngésző adatainak törlé
 
 ![Adatok mentése és megosztása: ujjrendek és jelek (1), liturgikus listák (2)](kepek/adatok-mentese.webp)
 
+- **Minden adat:** teljes biztonsági mentés egy fájlban: a listák, az ujjrendek és jelek, a megjegyzések és
+  regisztrációk, a letétek értékelése, a transzponálások, a szövegpanel énekenkénti elrendezése és a beállítások.
+  - **Mentés fájlba:** `orgonatar-mentes-<dátum>.json`. Készülékcsere vagy az alkalmazás újratelepítése előtt ezt
+    érdemes elmenteni.
+  - **Visszatöltés:** előtte egy ablak mutatja, mi van a fájlban. A listák a meglévők mellé kerülnek (a már meglévők
+    kimaradnak). A többi adatnál a mentésben szereplő énekek (letétek) adata felülírja az ezen az eszközön lévőt, a
+    többi megmarad. A beállítások a mentésből jönnek. Utána a program újraindul.
 - **Ujjrendek és jelek:** a sorban látszik, hány letéthez és összesen hány hanghoz van ujjrend, pedál- vagy
   játékmódjel ezen az eszközön.
   - **Mentés fájlba:** minden ujjrend és jel egy fájlba (`orgonatar-ujjrendek-<dátum>.json`).

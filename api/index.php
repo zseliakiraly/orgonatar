@@ -7,12 +7,16 @@
 //   GET api/?path=data/genfi/index.json       egy könyv adatai
 //   GET api/?path=data/genfi/001.mxl          egy kottafájl
 //   GET api/                                  az API adatai (működik-e)
+//   GET api/?apk                              a legutóbb kiadott APK változata (az alkalmazás frissítésjelzőjéhez)
 // Feltételes kérésekkel (If-None-Match, If-Modified-Since) a változatlan fájl nem jön le újra (304).
 // Más webhelyről (az alkalmazás a https://localhost címről kérdez) is hívható (CORS).
 
 const API_VERSION = 1;
 // A data/ mappa helye: alapesetben az api/ mappa mellett (a webes program gyökerében)
 define('DATA_DIR', dirname(__DIR__) . DIRECTORY_SEPARATOR . 'data');
+// A kiadott APK adatai (változat, sorszám): a GitHub Actions tölti fel az APK mellé, az aldomain gyökerébe
+// (az API helye: <aldomain gyökere>/webkantor/api/)
+define('APK_INFO_FILE', dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'orgonatar-apk.json');
 
 const CONTENT_TYPES = [
     'json' => 'application/json; charset=utf-8',
@@ -51,6 +55,16 @@ if ($method === 'OPTIONS') {
 if ($method !== 'GET' && $method !== 'HEAD') {
     header('Allow: GET, HEAD, OPTIONS');
     fail(405, 'csak olvasni lehet');
+}
+
+if (isset($_GET['apk'])) {
+    $info = is_readable(APK_INFO_FILE) ? json_decode((string) file_get_contents(APK_INFO_FILE), true) : null;
+    if (!is_array($info) || !isset($info['build'])) fail(404, 'nincs kiadott APK');
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo json_encode(['version' => isset($info['version']) ? (string) $info['version'] : '', 'build' => (int) $info['build'],
+        'date' => isset($info['date']) ? (string) $info['date'] : ''], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
 $path = isset($_GET['path']) ? (string) $_GET['path'] : '';

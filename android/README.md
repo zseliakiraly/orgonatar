@@ -5,7 +5,7 @@ keretrendszerrel csomagolva. A különbség:
 
 - A beállítások, a listák, az ujjrendek és a letöltött kottakönyvek az **alkalmazás saját tárhelyére** kerülnek
   (nem a böngésző localStorage-ába és Cache Storage-ába). Ha az alkalmazást törlik, ezek is törlődnek: a listákat
-  előtte érdemes elmenteni (Beállítások → Adatok → Mentés fájlba).
+  előtte érdemes elmenteni (Beállítások → Adatok mentése → Minden adat → Mentés fájlba).
 - A **beépített könyv** (az énekeskönyv, `"builtin": true` a `kottakonyvek.json`-ban) az APK része: internet nélküli
   telepítés után is megvan. Ha a szerveren változik az `index.json`-ja, az alkalmazás magától letölti az új változatot.
 - A többi könyv kérésre töltődik le a szerverről, a **PHP API-n** keresztül (`api/`). Internet nélkül a beépített és a
@@ -61,6 +61,14 @@ be vannak állítva a titkok:
 
 FTP nélkül: a kiadás után az APK-t az Actions futás oldaláról (vagy a Releases oldalról) letöltve, `orgonatar.apk`
 néven kell feltölteni az aldomain gyökerébe (cPanel → File Manager → Upload).
+
+### Frissítésjelző
+
+Kiadáskor (címke) a munkafolyamat az APK mellé egy `orgonatar-apk.json` fájlt is feltölt (változat, sorszám). Az
+alkalmazás ezt a PHP API-n keresztül kérdezi le (`api/?apk`), legfeljebb 12 óránként, és ha a telepítettnél újabb
+változat van (a sorszám, a `versionCode` szerint), felajánlja a letöltését. A lejátszó közben nem szól. A „Később”
+után az adott változatról egy hétig nem szól újra; a Névjegy oldalon a **Frissítés keresése** gombbal bármikor
+megnézhető. FTP nélkül az `orgonatar-apk.json`-t is kézzel kell feltölteni (a Releases oldalról) az APK mellé.
 
 ## Telepítés a telefonra
 

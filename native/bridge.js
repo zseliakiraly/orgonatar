@@ -1,6 +1,6 @@
 // Az Android-alkalmazás kapcsolata a készülékkel (Capacitor). Csak az alkalmazásba kerül (www/native.js, a
 // scripts/build-www.mjs fordítja), a webes változatba nem. Az app.js a window.OrgonatarNative-on keresztül éri el.
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
@@ -14,4 +14,7 @@ if (Capacitor.isNativePlatform()) {
     });
 }
 
-window.OrgonatarNative = { Capacitor, Filesystem, Directory, Encoding, Share };
+// A kijelző ébren tartása: az alkalmazás saját bővítménye (android/app/src/main/java/hu/zseli/orgonatar/KeepAwakePlugin.java)
+const KeepAwake = registerPlugin('KeepAwake');
+
+window.OrgonatarNative = { Capacitor, App, Filesystem, Directory, Encoding, Share, KeepAwake };
